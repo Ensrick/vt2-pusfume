@@ -1,0 +1,4 @@
+.build/
+.release-stage/
+.temp/
+pusfume/bundleV2/

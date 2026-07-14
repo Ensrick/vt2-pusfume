@@ -1,0 +1,12 @@
+mod = [
+	"pusfume"
+]
+
+package = [
+	"resource_packages/pusfume/pusfume"
+]
+
+lua = [
+	"scripts/mods/pusfume/*"
+]
+
