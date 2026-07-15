@@ -5,6 +5,9 @@ local M = {}
 local CAREER_CARD_WIDTH = 124
 local LEGACY_OVERFLOW_COLUMN = 5
 local LEGACY_OVERFLOW_Y = 144
+local MODEL_PREVIEW_OFFSET = { 140, -20, 150 }
+local MODEL_PREVIEW_SIZE = { 576, 675 }
+local MODEL_PREVIEW_TEXTURE = "pusfume_model_preview"
 local TOP_ROW_OFFSET_Y = 0
 local state = {
     card_seen = false,
@@ -14,9 +17,85 @@ local state = {
     legacy_target_row = nil,
     modern_card_seen = false,
     modern_hook_installed = false,
+    preview_hook_installed = false,
+    preview_widget_seen = false,
+    donor_preview_suppressed = false,
     selection_seen = false,
     target_column = nil,
 }
+
+local function is_pusfume_selection(window, registry, profile_index, career_index)
+    profile_index = profile_index or window._selected_profile_index
+    career_index = career_index or window._selected_career_index
+
+    local profile = profile_index and SPProfiles[profile_index]
+    local career = profile and career_index and profile.careers[career_index]
+
+    return career and career.name == registry.CAREER_NAME
+end
+
+local function sync_preview_visibility(window, visible)
+    window._pusfume_preview_selected = visible == true
+
+    local widget = window._pusfume_model_preview_widget
+
+    if widget then
+        widget.content.visible = window._pusfume_preview_selected
+    end
+end
+
+local function create_model_preview_widget(window)
+    if window._pusfume_model_preview_widget then
+        return
+    end
+
+    local widget_definition = {
+        scenegraph_id = "screen",
+        element = {
+            passes = {
+                {
+                    content_check_function = function(content)
+                        return content.visible
+                    end,
+                    pass_type = "texture",
+                    style_id = "texture_id",
+                    texture_id = "texture_id",
+                },
+            },
+        },
+        content = {
+            texture_id = MODEL_PREVIEW_TEXTURE,
+            visible = false,
+        },
+        style = {
+            texture_id = {
+                color = { 255, 255, 255, 255 },
+                horizontal_alignment = "center",
+                texture_size = MODEL_PREVIEW_SIZE,
+                vertical_alignment = "center",
+            },
+        },
+        offset = MODEL_PREVIEW_OFFSET,
+    }
+    local widget = UIWidget.init(widget_definition)
+
+    window._pusfume_model_preview_widget = widget
+    table.insert(window._additional_widgets, widget)
+    sync_preview_visibility(window, window._pusfume_preview_selected)
+    state.preview_widget_seen = true
+
+    mod:info("[pusfume] Model-derived selector preview initialized at 1920x1080 virtual scale")
+end
+
+local function suppress_donor_preview(world_previewer)
+    -- clear_units does not cancel queued spawns or package polling on its own.
+    world_previewer._requested_hero_spawn_data = nil
+    world_previewer._delayed_hero_spawn_data = nil
+    world_previewer:clear_asynchronous_data()
+    world_previewer:_unload_all_packages()
+    world_previewer:clear_units()
+    world_previewer:hide_character()
+end
 
 local function rightmost_base_career_column(registry)
     local max_columns = 0
@@ -185,11 +264,14 @@ end
 local function track_selection(registry, profile_index, career_index)
     local profile = SPProfiles[profile_index]
     local career = profile and profile.careers[career_index]
+    local selected = career and career.name == registry.CAREER_NAME
 
-    if career and career.name == registry.CAREER_NAME then
+    if selected then
         state.selection_seen = true
         mod:info("[pusfume] Hero selector previewed Pusfume")
     end
+
+    return selected
 end
 
 local function install_modern_hooks(registry)
@@ -202,7 +284,7 @@ local function install_modern_hooks(registry)
     end)
 
     mod:hook_safe(HeroWindowCharacterSelectionConsole, "_select_hero", function(window, profile_index, career_index)
-        track_selection(registry, profile_index, career_index)
+        sync_preview_visibility(window, track_selection(registry, profile_index, career_index))
     end)
 
     state.modern_hook_installed = true
@@ -218,15 +300,46 @@ local function install_legacy_hooks(registry)
     end)
 
     mod:hook_safe(CharacterSelectionStateCharacter, "_select_hero", function(window, profile_index, career_index)
-        track_selection(registry, profile_index, career_index)
+        sync_preview_visibility(window, track_selection(registry, profile_index, career_index))
     end)
 
     state.legacy_hook_installed = true
 end
 
+local function install_preview_hooks(registry)
+    if state.preview_hook_installed or not CharacterSelectionStateCharacter then
+        return
+    end
+
+    mod:hook_safe(CharacterSelectionStateCharacter, "create_ui_elements", function(window)
+        create_model_preview_widget(window)
+    end)
+
+    mod:hook(CharacterSelectionStateCharacter, "_spawn_hero_unit", function(func, window, hero_name)
+        if is_pusfume_selection(window, registry) then
+            local world_previewer = window.world_previewer
+
+            suppress_donor_preview(world_previewer)
+            sync_preview_visibility(window, true)
+            state.donor_preview_suppressed = true
+
+            mod:info("[pusfume] Suppressed Ranger Veteran menu unit; using model-derived UI preview")
+
+            return
+        end
+
+        sync_preview_visibility(window, false)
+
+        return func(window, hero_name)
+    end)
+
+    state.preview_hook_installed = true
+end
+
 function M.install(registry)
     install_modern_hooks(registry)
     install_legacy_hooks(registry)
+    install_preview_hooks(registry)
 
     state.hook_installed = state.modern_hook_installed or state.legacy_hook_installed
 

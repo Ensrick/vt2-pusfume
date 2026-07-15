@@ -27,11 +27,18 @@ $configPath = Join-Path $repoRoot "pusfume\itemV2.cfg"
 $backendPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_backend.lua"
 $assetsPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_assets.lua"
 $uiPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_ui.lua"
+$dataPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\pusfume_data.lua"
+$packagePath = Join-Path $repoRoot "pusfume\resource_packages\pusfume\pusfume.package"
+$previewPath = Join-Path $repoRoot "pusfume\textures\pusfume\pusfume_model_preview.png"
+$previewTexturePath = Join-Path $repoRoot "pusfume\textures\pusfume\pusfume_model_preview.texture"
+$previewMaterialPath = Join-Path $repoRoot "pusfume\materials\pusfume\pusfume_model_preview.material"
 $mainText = Get-Content -LiteralPath $mainPath -Raw
 $configText = Get-Content -LiteralPath $configPath -Raw
 $backendText = Get-Content -LiteralPath $backendPath -Raw
 $assetsText = Get-Content -LiteralPath $assetsPath -Raw
 $uiText = Get-Content -LiteralPath $uiPath -Raw
+$dataText = Get-Content -LiteralPath $dataPath -Raw
+$packageText = Get-Content -LiteralPath $packagePath -Raw
 $mainVersion = [regex]::Match($mainText, 'MOD_VERSION\s*=\s*"([^"]+)"').Groups[1].Value
 $configVersion = [regex]::Match($configText, 'Prototype v([^";]+)').Groups[1].Value
 
@@ -47,6 +54,23 @@ Test-Condition ($uiText -match 'UIWidgets\.create_hero_widget') `
     "five-row career grid" "full-size overflow career widget is created"
 Test-Condition ($uiText -match 'LEGACY_OVERFLOW_Y\s*=\s*144') `
     "five-row career grid" "Pusfume card occupies the row above Saltzpyre"
+Test-Condition ($uiText -match 'mod:hook\(CharacterSelectionStateCharacter, "_spawn_hero_unit"') `
+    "selector preview" "Pusfume donor menu spawn is intercepted"
+Test-Condition ($uiText -match 'world_previewer:clear_units\(\)' -and `
+    $uiText -match 'world_previewer:hide_character\(\)') `
+    "selector preview" "existing donor unit is cleared and hidden"
+Test-Condition ($uiText -match '_requested_hero_spawn_data\s*=\s*nil' -and `
+    $uiText -match 'world_previewer:_unload_all_packages\(\)') `
+    "selector preview" "queued donor spawn and package loading are cancelled"
+Test-Condition (Test-Path -LiteralPath $previewPath) "selector preview asset" "PNG exists"
+Test-Condition (Test-Path -LiteralPath $previewTexturePath) "selector preview asset" "texture recipe exists"
+Test-Condition (Test-Path -LiteralPath $previewMaterialPath) "selector preview asset" "GUI material exists"
+Test-Condition ($dataText -match '"pusfume_model_preview"' -and `
+    $dataText -match '"ingame_ui_settings"') `
+    "selector preview registration" "texture and active UI renderer are registered"
+Test-Condition ($packageText -match 'material\s*=\s*\[' -and `
+    $packageText -match '"materials/pusfume/\*"') `
+    "selector preview package" "custom material is included"
 Test-Condition ($mainText -match 'registry\.refresh_item_permissions\(\)') `
     "item permissions" "late-loaded items are refreshed"
 Test-Condition ($backendText -match 'mod:hook\(BackendUtils, "get_loadout_item"') `
