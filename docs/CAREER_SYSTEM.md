@@ -342,11 +342,13 @@ The public `Aussiemon/VT2-More-Items-Library` repository documents and implement
 
 The widget path expects valid localization and portrait keys. Donor textures can be used until original UI atlases are compiled.
 
-### 10.2 Legacy character selection
+### 10.2 Five-row character selection grid
 
-`scripts/ui/views/character_selection_view/states/character_selection_state_character.lua` contains a literal `for j = 1, 4` while constructing career widgets. It cannot display career index 5 without a deeper UI rewrite. Its later update loops iterate all careers, which also makes partial patches error-prone.
+`scripts/ui/views/character_selection_view/states/character_selection_state_character.lua` contains a literal `for j = 1, 4` while constructing career widgets, so vanilla never creates a widget for career index 5. Its later update loops already iterate all careers, allowing a carefully ordered fifth widget to reuse native selection behavior.
 
-The `/pusfume` command is the safe fallback because it uses the vanilla host-mediated `ProfileRequester` path.
+Pusfume supplies the missing fifth Bardin widget with the same `UIWidgets.create_hero_widget` definition used by the game. It inserts the widget immediately after Bardin's four careers in the flattened `_hero_widgets` array and increments only Bardin's `_num_hero_columns` entry. The card remains logically career index 5 for native mouse and controller selection, while its scenegraph offset places the full-size `110x130` widget at column 5 and one `144`-unit row above Saltzpyre. These are virtual UI coordinates and scale through VT2's normal resolution lookup at 4K.
+
+The `/pusfume` command remains the safe fallback because it uses the vanilla host-mediated `ProfileRequester` path.
 
 ### 10.3 Other UI assumptions
 

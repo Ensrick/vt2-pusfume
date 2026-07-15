@@ -4,7 +4,7 @@ An experimental, friends-only Vermintide 2 custom-career project by Ensrick and 
 
 Steam Workshop development item: [Pusfume - Custom Career Prototype](https://steamcommunity.com/sharedfiles/filedetails/?id=3764954245)
 
-The current milestone registers **Pusfume** as Bardin's fifth career. It uses Ranger Veteran's game-owned unit, animation set, talent tree, ability, and backend loadout as temporary adapters. The generated Pusfume career card is moved into a dedicated top-right slot in the Hero selector and keeps the game's normal click, preview, and confirmation flow. Registration checks, backend checks, UI tracking, and Ranger Veteran bot-takeover aliases are included. Every player in a lobby must install the same version.
+The current milestone registers **Pusfume** as Bardin's fifth career. It uses Ranger Veteran's game-owned unit, animation set, talent tree, ability, and backend loadout as temporary adapters. A full-size Pusfume card is placed one virtual UI row above Saltzpyre in the five-row selector and keeps the game's normal click, preview, and confirmation flow. Registration checks, backend checks, UI tracking, and Ranger Veteran bot-takeover aliases are included. Every player in a lobby must install the same version.
 
 ## Install and test
 
