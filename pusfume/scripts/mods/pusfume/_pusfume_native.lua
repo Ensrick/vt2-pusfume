@@ -6,6 +6,7 @@ local state = {
     hook_installed = false,
     probe_hook_installed = false,
     resource_available = false,
+    hero_preview_enabled = false,
 }
 
 local PROBE_LINKS = {
@@ -177,6 +178,8 @@ local function install_probe_hook()
 end
 
 function M.install(registry, config)
+    state.hero_preview_enabled = config.hero_preview_enabled == true
+
     if not state.cosmetic_registered then
         register_cosmetic(registry, config)
     end
@@ -185,6 +188,10 @@ function M.install(registry, config)
     install_probe_hook()
 
     return state.cosmetic_registered and state.hook_installed and state.probe_hook_installed
+end
+
+function M.preview_enabled()
+    return state.cosmetic_registered and state.hero_preview_enabled
 end
 
 function M.enabled()

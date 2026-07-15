@@ -73,8 +73,9 @@ Test-Condition ($nativeText -match 'PlayerUnitCosmeticExtension' -and `
 Test-Condition ($nativeBuildText -match '\[switch\]\$NoDeploy' -and `
     $nativeBuildText -match 'if \(-not \$NoDeploy\)') `
     "local deployment" "native builds deploy to the active Workshop item by default"
-Test-Condition ($uiText -match 'native\.enabled\(\)') `
-    "selector preview" "native builds retain VT2's stock 3D preview flow"
+Test-Condition ($uiText -match 'native\.preview_enabled\(\)' -and `
+    $nativeBuildText -match 'hero_preview_enabled\s*=\s*false') `
+    "selector preview" "native 3D preview fails closed to the stable image path"
 Test-Condition ($uiText -match 'CharacterSelectionStateCharacter') `
     "five-row career grid" "character selection state is hooked"
 Test-Condition ($uiText -match 'UIWidgets\.create_hero_widget') `

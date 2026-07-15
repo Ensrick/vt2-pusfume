@@ -318,7 +318,7 @@ local function install_preview_hooks(registry, native)
 
     mod:hook(CharacterSelectionStateCharacter, "_spawn_hero_unit", function(func, window, hero_name)
         if is_pusfume_selection(window, registry) then
-            if native.enabled() then
+            if native.preview_enabled() then
                 sync_preview_visibility(window, false)
                 state.native_preview_enabled = true
                 mod:info("[pusfume] Requesting native Pusfume hero preview")
@@ -337,7 +337,7 @@ local function install_preview_hooks(registry, native)
             sync_preview_visibility(window, true)
             state.donor_preview_suppressed = true
 
-            mod:info("[pusfume] Suppressed Ranger Veteran menu unit; using model-derived UI preview")
+            mod:info("[pusfume] Native hero preview disabled; using crash-safe model-derived UI preview")
 
             return
         end
