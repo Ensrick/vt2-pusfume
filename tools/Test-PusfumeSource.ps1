@@ -25,6 +25,8 @@ function Test-Condition {
 $mainPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\pusfume.lua"
 $configPath = Join-Path $repoRoot "pusfume\itemV2.cfg"
 $backendPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_backend.lua"
+$registryPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_registry.lua"
+$preflightPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_preflight.lua"
 $assetsPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_assets.lua"
 $uiPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_ui.lua"
 $dataPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\pusfume_data.lua"
@@ -35,6 +37,8 @@ $previewMaterialPath = Join-Path $repoRoot "pusfume\materials\pusfume\pusfume_mo
 $mainText = Get-Content -LiteralPath $mainPath -Raw
 $configText = Get-Content -LiteralPath $configPath -Raw
 $backendText = Get-Content -LiteralPath $backendPath -Raw
+$registryText = Get-Content -LiteralPath $registryPath -Raw
+$preflightText = Get-Content -LiteralPath $preflightPath -Raw
 $assetsText = Get-Content -LiteralPath $assetsPath -Raw
 $uiText = Get-Content -LiteralPath $uiPath -Raw
 $dataText = Get-Content -LiteralPath $dataPath -Raw
@@ -73,6 +77,13 @@ Test-Condition ($packageText -match 'material\s*=\s*\[' -and `
     "selector preview package" "custom material is included"
 Test-Condition ($mainText -match 'registry\.refresh_item_permissions\(\)') `
     "item permissions" "late-loaded items are refreshed"
+Test-Condition ($registryText -match 'function M\.refresh_career_color\(\)' -and `
+    $registryText -match 'color_definitions\[M\.CAREER_NAME\]\s*=\s*deep_clone\(donor_color\)') `
+    "career color" "Pusfume owns a distinct donor-derived color table"
+Test-Condition ($mainText -match 'registry\.refresh_career_color\(\)') `
+    "career color" "registration is refreshed across game-state changes"
+Test-Condition ($preflightText -match 'add\(checks, "career color"') `
+    "career color" "runtime preflight validates the player-list contract"
 Test-Condition ($backendText -match 'mod:hook\(BackendUtils, "get_loadout_item"') `
     "spawn guard" "BackendUtils item resolution is donor-aliased"
 Test-Condition ($backendText -match 'unresolved.*slot_melee.*slot_ranged' -or `
@@ -102,6 +113,16 @@ Test-Condition ($bridgeSources.Count -eq 63 -and $bridgeTargets.Count -eq 63) `
     "asset bridge" "$($bridgeSources.Count) parent-to-child links"
 Test-Condition ($duplicateBridgeTargets.Count -eq 0) "asset bridge" "child targets are unique"
 Test-Condition ($missingParentNodes.Count -eq 0) "asset bridge" "all parent nodes exist on Globadier"
+
+$playerListPath = Join-Path $SourceRoot "scripts\ui\views\ingame_player_list_ui_v2.lua"
+$playerListText = Get-Content -LiteralPath $playerListPath -Raw
+$colorsPath = Join-Path $SourceRoot "scripts\utils\colors.lua"
+$colorsText = Get-Content -LiteralPath $colorsPath -Raw
+
+Test-Condition ($playerListText -match 'Colors\.color_definitions\[career_name\]') `
+    "career color API" "vanilla player list directly indexes the career color"
+Test-Condition ($colorsText -match '(?s)dr_ranger\s*=\s*\{\s*255\s*,\s*187\s*,\s*235\s*,\s*30') `
+    "career color API" "Ranger Veteran donor color exists"
 
 $hookSets = @{
     BackendInterfaceItemPlayfab = @(

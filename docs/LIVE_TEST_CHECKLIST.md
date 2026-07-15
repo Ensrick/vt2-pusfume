@@ -1,12 +1,12 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.4.2-dev` intentionally locks itself in Chaos Wastes, Weaves, Versus, and other mechanisms that snapshot or constrain the vanilla career list.
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.4.3-dev` intentionally locks itself in Chaos Wastes, Weaves, Versus, and other mechanisms that snapshot or constrain the vanilla career list.
 
 ## Before opening Heroes
 
 1. Put Vermintide Mod Framework above Pusfume in the launcher mod order.
 2. Enter the Adventure Keep and run `/pusfume_preflight`.
-3. Expect zero failures. A warning that the five-row grid card has not rendered is normal at this stage.
+3. Expect zero failures, including a PASS for `career color`. A warning that the five-row grid card has not rendered is normal at this stage.
 4. If backend data is still marked as not initialized, wait for the Keep to finish loading and rerun the command.
 5. Confirm `spawn weapons` passes and names resolved melee and ranged items before selecting Pusfume.
 
@@ -29,6 +29,7 @@ Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.4.2-dev` inte
 4. Use the career ability once and confirm Ranger Veteran's smoke ability completes normally.
 5. Switch to another Bardin career, then back to Pusfume, checking that neither loadout nor talents disappear.
 6. Use `/pusfume` once as a fallback test. The command should print the host request and a `success` response.
+7. Open the in-game player list and keep it visible long enough for the portrait to refresh; confirm Pusfume's row renders without a Lua error.
 
 ## Failure capture
 

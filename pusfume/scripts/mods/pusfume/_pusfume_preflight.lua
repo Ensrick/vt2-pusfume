@@ -54,6 +54,17 @@ function M.collect(registry, career_index, backend, compat, ui)
         PROFILES_BY_CAREER_NAMES and PROFILES_BY_CAREER_NAMES[registry.CAREER_NAME] == profile and "PASS" or "FAIL",
         "PROFILES_BY_CAREER_NAMES points to Bardin")
 
+    local color_definitions = Colors and Colors.color_definitions
+    local career_color = color_definitions and color_definitions[registry.CAREER_NAME]
+    local donor_color = color_definitions and color_definitions[registry.DONOR_CAREER_NAME]
+    local has_career_color = type(career_color) == "table" and career_color ~= donor_color
+        and type(career_color[1]) == "number" and type(career_color[2]) == "number"
+        and type(career_color[3]) == "number" and type(career_color[4]) == "number"
+    add(checks, "career color", has_career_color and "PASS" or "FAIL",
+        has_career_color and string.format("RGBA=%d,%d,%d,%d", career_color[1], career_color[2],
+            career_color[3], career_color[4])
+            or "distinct four-channel Colors.color_definitions entry is missing")
+
     local has_states = career and type(career.character_state_list) == "table"
         and #career.character_state_list > 0 and type(career.camera_state_list) == "table"
         and #career.camera_state_list > 0
