@@ -52,6 +52,8 @@ The repository now provides `tools/export_blender_bsi.py` as an account-free fin
 
 The `.bones` resource only identifies nodes controlled by an animation controller; it does not evaluate skin deformation by itself. The native build therefore compiles Janfon's baked `pusfume_3p_walk.fbx` through a same-name `.animation` recipe, packages a minimal same-path `.state_machine`, and points the unit at that controller. This mirrors the source dependency chain used by the original public Pusfume mod and gives VT2 an active animation mixer that can turn linked joint poses into skin matrices.
 
+The mesh materials must also compile an embedded character-capable shader graph. In live testing, the generic `core/stingray_renderer/shader_import/standard` parent rendered all textures correctly while the 82 driven bones moved, but left the skin rigid. The native builder now generates each Pusfume material from the same embedded standard-base graph proven on Tweaker: Cosmetics' rigged Laurel plume, then substitutes only Pusfume's texture and response values. Keep this distinction covered by the source gate: a visually correct static material is not a valid character material.
+
 Use `tools/Test-BsiPipeline.ps1` to run export and SDK compilation together. Maya is no longer required for Pusfume's geometry or skin conversion. A Maya trial can still serve as a reference exporter if later animation or edge-case parity work needs an independent comparison.
 
 Compiler success does not prove that the slave-rat rest pose matches the playable Globadier animation base. Do not ship or commit the generated placeholder until idle, locomotion, attachment, and remote-husk deformation have passed in game.

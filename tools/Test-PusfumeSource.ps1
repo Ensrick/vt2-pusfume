@@ -35,6 +35,8 @@ $dataPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\pusfume_data.lua"
 $packagePath = Join-Path $repoRoot "pusfume\resource_packages\pusfume\pusfume.package"
 $nativeUnitPackagePath = Join-Path $repoRoot "pusfume\units\pusfume\pusfume_3p.package"
 $nativeBuildPath = Join-Path $repoRoot "tools\Build-NativePusfume.ps1"
+$nativeMaterialTemplatePath = Join-Path $repoRoot "tools\material_templates\character_skinned.material"
+$nativeCutoutTemplatePath = Join-Path $repoRoot "tools\material_templates\character_skinned_cutout.material"
 $nativeExporterPath = Join-Path $repoRoot "tools\export_blender_bsi.py"
 $previewPath = Join-Path $repoRoot "pusfume\textures\pusfume\pusfume_model_preview.png"
 $previewTexturePath = Join-Path $repoRoot "pusfume\textures\pusfume\pusfume_model_preview.texture"
@@ -52,6 +54,8 @@ $dataText = Get-Content -LiteralPath $dataPath -Raw
 $packageText = Get-Content -LiteralPath $packagePath -Raw
 $nativeUnitPackageText = Get-Content -LiteralPath $nativeUnitPackagePath -Raw
 $nativeBuildText = Get-Content -LiteralPath $nativeBuildPath -Raw
+$nativeMaterialTemplateText = Get-Content -LiteralPath $nativeMaterialTemplatePath -Raw
+$nativeCutoutTemplateText = Get-Content -LiteralPath $nativeCutoutTemplatePath -Raw
 $nativeExporterText = Get-Content -LiteralPath $nativeExporterPath -Raw
 $mainVersion = [regex]::Match($mainText, 'MOD_VERSION\s*=\s*"([^"]+)"').Groups[1].Value
 $configVersion = [regex]::Match($configText, 'Prototype v([^";]+)').Groups[1].Value
@@ -99,6 +103,13 @@ Test-Condition ($nativeBuildText -match 'Write-NativeTexture' -and `
     $nativeBuildText -match 'p_main\s*=\s*"materials/pusfume/pusfume_body"' -and `
     $nativeBuildText -notmatch 'p_main\s*=\s*"materials/pusfume/pusfume_debug_3p"') `
     "native materials" "staged build uses handoff textures instead of the green diagnostic material"
+Test-Condition ($nativeMaterialTemplateText -match 'shader\s*=\s*\{' -and `
+    $nativeMaterialTemplateText -match 'core/stingray_renderer/output_nodes/standard_base' -and `
+    $nativeMaterialTemplateText -notmatch 'parent_material\s*=\s*"core/stingray_renderer/shader_import/standard"' -and `
+    $nativeCutoutTemplateText -match 'shader\s*=\s*\{' -and `
+    $nativeCutoutTemplateText -match 'core/stingray_renderer/output_nodes/standard_base' -and `
+    $nativeBuildText -match 'character_skinned_cutout\.material') `
+    "native material skinning" "staged materials embed character-capable opaque and cutout shader graphs"
 Test-Condition ($uiText -match 'native\.preview_enabled\(\)' -and `
     $nativeBuildText -match '\[switch\]\$HeroPreview' -and `
     $nativeBuildText -match 'hero_preview_enabled\s*=\s*\$heroPreviewEnabled') `

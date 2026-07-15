@@ -166,63 +166,74 @@ function Write-NativeMaterial {
         [string]$Name,
         [string]$ColorMap,
         [string]$NormalMap,
+        [string]$DetailMap,
         [double]$Roughness,
         [double]$Metallic = 0,
         [switch]$Emissive,
         [switch]$Opacity
     )
 
-    $textureLines = @("    color_map = `"textures/pusfume/$ColorMap`"")
-    if ($NormalMap) {
-        $textureLines += "    normal_map = `"textures/pusfume/$NormalMap`""
-    }
-    if ($Emissive) {
-        $textureLines += "    emissive_map = `"textures/pusfume/$ColorMap`""
-    }
-
     $normalEnabled = if ($NormalMap) { 1 } else { 0 }
-    $emissiveEnabled = if ($Emissive) { 1 } else { 0 }
     $emissiveIntensity = if ($Emissive) { 2.5 } else { 0 }
-    $opacityEnabled = if ($Opacity) { 1 } else { 0 }
-    $textureBlock = $textureLines -join "`n"
+    $normalTexture = if ($NormalMap) { $NormalMap } else { $ColorMap }
+    $detailTexture = if ($DetailMap) { $DetailMap } else { $ColorMap }
+    $templateName = if ($Opacity) {
+        "character_skinned_cutout.material"
+    } else {
+        "character_skinned.material"
+    }
+    $templatePath = Join-Path $repoRoot "tools\material_templates\$templateName"
+    $materialText = Get-Content -LiteralPath $templatePath -Raw
+    if ($materialText -match 'parent_material\s*=\s*"core/stingray_renderer/shader_import/standard"') {
+        throw "The Pusfume character material template regressed to the static standard parent"
+    }
+    foreach ($token in @("__COLOR_MAP__", "__NORMAL_MAP__", "__DETAIL_MAP__")) {
+        if (-not $materialText.Contains($token)) {
+            throw "The Pusfume character material template is missing $token"
+        }
+    }
 
-    @"
-parent_material = "core/stingray_renderer/shader_import/standard"
-material_contexts = {
-    surface_material = ""
-}
-textures = {
-$textureBlock
-}
-variables = {
-    base_color = { type = "vector3" value = [ 1 1 1 ] }
-    roughness = { type = "scalar" value = $Roughness }
-    metallic = { type = "scalar" value = $Metallic }
-    use_color_map = { type = "scalar" value = 1 }
-    use_normal_map = { type = "scalar" value = $normalEnabled }
-    use_roughness_map = { type = "scalar" value = 0 }
-    use_metallic_map = { type = "scalar" value = 0 }
-    use_ao_map = { type = "scalar" value = 0 }
-    use_emissive_map = { type = "scalar" value = $emissiveEnabled }
-    emissive = { type = "vector3" value = [ 1 1 1 ] }
-    emissive_intensity = { type = "scalar" value = $emissiveIntensity }
-    use_opacity_map = { type = "scalar" value = $opacityEnabled }
-    opacity = { type = "scalar" value = 1 }
-}
-"@ | Set-Content -LiteralPath (Join-Path $materialRoot "$Name.material") -Encoding utf8
+    $materialText = $materialText.Replace("__COLOR_MAP__", "textures/pusfume/$ColorMap")
+    $materialText = $materialText.Replace("__NORMAL_MAP__", "textures/pusfume/$normalTexture")
+    $materialText = $materialText.Replace("__DETAIL_MAP__", "textures/pusfume/$detailTexture")
+    $materialText = $materialText.Replace(
+        'use_normal_map = { type = "scalar" value = 1 }',
+        "use_normal_map = { type = `"scalar`" value = $normalEnabled }"
+    )
+    $materialText = $materialText.Replace(
+        'use_roughness_map = { type = "scalar" value = 1 }',
+        'use_roughness_map = { type = "scalar" value = 0 }'
+    )
+    $materialText = $materialText.Replace(
+        'use_metallic_map = { type = "scalar" value = 1 }',
+        'use_metallic_map = { type = "scalar" value = 0 }'
+    )
+    $materialText = $materialText.Replace(
+        'use_ao_map = { type = "scalar" value = 1 }',
+        'use_ao_map = { type = "scalar" value = 0 }'
+    )
+    $materialText = $materialText.Replace(
+        'emissive_intensity = { type = "scalar" value = 0 }',
+        "emissive_intensity = { type = `"scalar`" value = $emissiveIntensity }`n" +
+        "`troughness = { type = `"scalar`" value = $Roughness }`n" +
+        "`tmetallic = { type = `"scalar`" value = $Metallic }"
+    )
+
+    Set-Content -LiteralPath (Join-Path $materialRoot "$Name.material") `
+        -Value $materialText -Encoding utf8
 }
 
 foreach ($textureName in $textureNames) {
     Write-NativeTexture $textureName
 }
 
-Write-NativeMaterial "pusfume_body" "pusfume_body_new_df" "skaven_body_nm" 0.72
-Write-NativeMaterial "pusfume_eye" "pusfume_eyenormal" "" 0.35 -Emissive
-Write-NativeMaterial "pusfume_metal" "wpn_skaven_set_df" "wpn_skaven_set_nm" 0.38 0.7
-Write-NativeMaterial "pusfume_globadier" "globadier_outfit_df" "globadier_outfit_nm" 0.58
-Write-NativeMaterial "pusfume_armor" "stormvermin_outfit_df" "stormvermin_outfit_nm" 0.48 0.35
-Write-NativeMaterial "pusfume_ammo_box" "pup_ammo_box_limited_df" "pup_ammo_box_limited_nm" 0.62
-Write-NativeMaterial "pusfume_whiskers" "pusfume_whiskers_df" "pusfume_whiskers_nm" 0.74 -Opacity
+Write-NativeMaterial "pusfume_body" "pusfume_body_new_df" "skaven_body_nm" "skaven_body_s" 0.72
+Write-NativeMaterial "pusfume_eye" "pusfume_eyenormal" "" "pusfume_eyenormal" 0.35 -Emissive
+Write-NativeMaterial "pusfume_metal" "wpn_skaven_set_df" "wpn_skaven_set_nm" "wpn_skaven_set_s" 0.38 0.7
+Write-NativeMaterial "pusfume_globadier" "globadier_outfit_df" "globadier_outfit_nm" "globadier_outfit_s" 0.58
+Write-NativeMaterial "pusfume_armor" "stormvermin_outfit_df" "stormvermin_outfit_nm" "stormvermin_outfit_s" 0.48 0.35
+Write-NativeMaterial "pusfume_ammo_box" "pup_ammo_box_limited_df" "pup_ammo_box_limited_nm" "pup_ammo_box_limited_s" 0.62
+Write-NativeMaterial "pusfume_whiskers" "pusfume_whiskers_df" "pusfume_whiskers_nm" "pusfume_whiskers_s" 0.74 -Opacity
 
 @'
 animation_state_machine = "units/pusfume/pusfume_3p"
