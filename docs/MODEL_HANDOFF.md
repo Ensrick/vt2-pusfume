@@ -44,6 +44,18 @@ The FBX preserves all nine material slots but only the eye image links. Use this
 
 The eye slots need a deliberate VT2 eye/emissive material rather than the imported Blender graph. Normal and specular maps should use their matching `_nm` and `_s` files. Whiskers need alpha clipping or the engine-equivalent cutout shader.
 
+## Compiler gate
+
+VT2's SDK does not compile the skinned FBX directly. A mesh unit needs both a text `.unit` descriptor and a skinned `.bsi` scene payload before the Stingray compiler can produce bundle resources. The current community Bitsquid Blender Tools can import BSI/compiled units and export the `.unit` descriptor, but it has no BSI exporter.
+
+The installed VT2 SDK includes current BSI exporter plugins for Maya through 2026, older 3ds Max versions, and MotionBuilder. This machine does not currently have one of those host applications installed. The cleaned FBX is therefore ready for one of these final hops:
+
+1. Import it into Maya 2026 and export BSI with the SDK plugin.
+2. Send the cleaned FBX to a collaborator who already has a supported Maya, 3ds Max, or MotionBuilder setup and request the `.bsi` plus `.unit` source files.
+3. Implement a Blender BSI exporter against the SJSON format parsed by Bitsquid Blender Tools. This is feasible but is a separate tooling project, especially for skinned joint indices, bind poses, split normals, UV seams, and per-material geometry streams.
+
+Do not ask Janfon to remodel or reweight solely because of this compiler boundary. His FBX contains the geometry, hierarchy, UVs, materials, and skin weights needed by any of the three routes.
+
 ## Publication boundary
 
 Keep this handoff outside Git. Janfon confirmed that the placeholder is assembled from exported VT2 Skaven assets; only Pusfume's skin base color and eyes are original. The public repository may eventually contain the original work through Git LFS, but it must not redistribute extracted game textures or models. Prefer compiled materials that reference resources already installed with VT2, while packaging only the genuinely original maps needed by Pusfume.

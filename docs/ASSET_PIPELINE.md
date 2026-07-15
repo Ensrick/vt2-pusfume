@@ -50,4 +50,6 @@ The repository includes a non-destructive cleanup pass for third-person FBX file
 
 Pusfume's current mesh uses slave-rat bone names rather than the playable Globadier names. Do not rename or retarget it merely to satisfy the stock cosmetic table: `_pusfume_assets.lua` provides the explicit parent-to-child node bridge needed for the first in-game deformation test. A true Globadier-skeleton rebind remains an optimization if the bridge exposes rest-pose differences.
 
+The cleaned FBX is an interchange asset, not the final Stingray scene. VT2's SDK requires a `.bsi` payload beside the `.unit` descriptor. Fatshark supplies BSI exporters for supported Maya, 3ds Max, and MotionBuilder versions; the community Blender add-on currently imports BSI but does not export it. See `MODEL_HANDOFF.md` for the available final-hop options.
+
 The third-person body, first-person arms, hats, and equipment should be separate exports. Preserve compatible VT2 bone names, hierarchy, and rest pose exactly. Send raw albedo, normal, emissive, roughness, metallic, and mask maps instead of relying on embedded FBX materials.
