@@ -1,0 +1,52 @@
+name: Bug report
+description: Report reproducible incorrect behavior or a crash.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: Do not attach complete logs or dumps. Redact Steam IDs, machine IDs, local paths, and network information.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened, and what should have happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Start Modded Realm...
+        2. Enter the Adventure Keep...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Pusfume version or commit
+    validations:
+      required: true
+  - type: textarea
+    id: mods
+    attributes:
+      label: Enabled mods and load order
+      description: Include overlapping career, loadout, cosmetics, and UI mods.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted evidence
+      description: Paste only the relevant error and Pusfume lines.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: List the observable conditions that would resolve the issue.
+    validations:
+      required: true

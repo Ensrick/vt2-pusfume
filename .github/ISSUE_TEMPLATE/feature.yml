@@ -1,0 +1,43 @@
+name: Feature request
+description: Propose a scoped career, UI, gameplay, tooling, or asset improvement.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user or development need does this address?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed outcome
+      description: Describe behavior, not only implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: VT2 source references
+      description: List relevant classes, methods, data tables, or verified repositories.
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks and compatibility
+      description: Cover network, backend, UI, asset, and mod-hook interactions.
+    validations:
+      required: true
+  - type: textarea
+    id: assets
+    attributes:
+      label: Asset provenance
+      description: Identify creator, permission, source formats, and extracted VT2 content, if any.
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+    validations:
+      required: true
