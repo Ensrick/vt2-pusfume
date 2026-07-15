@@ -38,4 +38,16 @@ Do not upload a ZIP archive when the original `.blend`, `.fbx`, and source textu
 
 For Blender, export binary FBX 7.4/2014 with Selected Objects, Forward `-Y`, Up `Z`, no embedded media, no leaf bones, deform bones only, and animation baking disabled. Triangulate meshes, preserve custom normals, normalize weights, use no more than four influences per vertex, and keep the root at the origin.
 
+The repository includes a non-destructive cleanup pass for third-person FBX files. It preserves the source file, removes unrelated scene objects, prunes each vertex to four influences, normalizes the remaining weights, and exports geometry plus the armature without baked animation:
+
+```powershell
+& "C:\Program Files\Blender Foundation\Blender 3.6\blender.exe" `
+  --background --factory-startup --disable-autoexec `
+  --python tools\prepare_pusfume_fbx.py -- `
+  "C:\path\to\pusfume_3p.fbx" `
+  "C:\path\to\pusfume_3p_clean.fbx"
+```
+
+Pusfume's current mesh uses slave-rat bone names rather than the playable Globadier names. Do not rename or retarget it merely to satisfy the stock cosmetic table: `_pusfume_assets.lua` provides the explicit parent-to-child node bridge needed for the first in-game deformation test. A true Globadier-skeleton rebind remains an optimization if the bridge exposes rest-pose differences.
+
 The third-person body, first-person arms, hats, and equipment should be separate exports. Preserve compatible VT2 bone names, hierarchy, and rest pose exactly. Send raw albedo, normal, emissive, roughness, metallic, and mask maps instead of relying on embedded FBX materials.

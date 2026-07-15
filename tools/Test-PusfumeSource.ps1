@@ -25,9 +25,11 @@ function Test-Condition {
 $mainPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\pusfume.lua"
 $configPath = Join-Path $repoRoot "pusfume\itemV2.cfg"
 $backendPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_backend.lua"
+$assetsPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_assets.lua"
 $mainText = Get-Content -LiteralPath $mainPath -Raw
 $configText = Get-Content -LiteralPath $configPath -Raw
 $backendText = Get-Content -LiteralPath $backendPath -Raw
+$assetsText = Get-Content -LiteralPath $assetsPath -Raw
 $mainVersion = [regex]::Match($mainText, 'MOD_VERSION\s*=\s*"([^"]+)"').Groups[1].Value
 $configVersion = [regex]::Match($configText, 'Prototype v([^";]+)').Groups[1].Value
 
@@ -36,6 +38,31 @@ Test-Condition ($configText -match 'visibility\s*=\s*"friends"') "Workshop visib
 Test-Condition ($configText -match 'published_id\s*=\s*3764954245L') "Workshop identity" "3764954245"
 Test-Condition (Test-Path (Join-Path $repoRoot "pusfume\resource_packages\pusfume\pusfume.package")) `
     "resource package" "package manifest exists"
+Test-Condition ($mainText -match 'assets\.install\(\)') "asset bridge" "installed at runtime"
+
+$bridgeSources = @([regex]::Matches($assetsText, 'source\s*=\s*"([^"]+)"') | ForEach-Object {
+    $_.Groups[1].Value
+})
+$bridgeTargets = @([regex]::Matches($assetsText, 'target\s*=\s*"([^"]+)"') | ForEach-Object {
+    $_.Groups[1].Value
+})
+$duplicateBridgeTargets = @($bridgeTargets | Group-Object | Where-Object Count -gt 1)
+$officialLinkPath = Join-Path $SourceRoot "scripts\settings\dlcs\carousel\attachment_node_linking_vs.lua"
+$officialLinkText = Get-Content -LiteralPath $officialLinkPath -Raw
+$globadierMarker = 'AttachmentNodeLinking.skaven_wind_globadier_third_person_attachment = {'
+$globadierStart = $officialLinkText.IndexOf($globadierMarker)
+$globadierTail = $officialLinkText.Substring($globadierStart)
+$nextLink = $globadierTail.IndexOf('AttachmentNodeLinking.', $globadierMarker.Length)
+$globadierSection = if ($nextLink -gt 0) { $globadierTail.Substring(0, $nextLink) } else { $globadierTail }
+$globadierNodes = @([regex]::Matches($globadierSection, 'source\s*=\s*"([^"]+)"') | ForEach-Object {
+    $_.Groups[1].Value
+})
+$missingParentNodes = @($bridgeSources | Where-Object { $_ -notin $globadierNodes })
+
+Test-Condition ($bridgeSources.Count -eq 63 -and $bridgeTargets.Count -eq 63) `
+    "asset bridge" "$($bridgeSources.Count) parent-to-child links"
+Test-Condition ($duplicateBridgeTargets.Count -eq 0) "asset bridge" "child targets are unique"
+Test-Condition ($missingParentNodes.Count -eq 0) "asset bridge" "all parent nodes exist on Globadier"
 
 $hookSets = @{
     BackendInterfaceItemPlayfab = @(
