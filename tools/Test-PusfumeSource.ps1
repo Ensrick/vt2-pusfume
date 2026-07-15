@@ -33,6 +33,7 @@ $nativeConfigPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_n
 $uiPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_ui.lua"
 $dataPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\pusfume_data.lua"
 $packagePath = Join-Path $repoRoot "pusfume\resource_packages\pusfume\pusfume.package"
+$nativeUnitPackagePath = Join-Path $repoRoot "pusfume\units\pusfume\pusfume_3p.package"
 $nativeBuildPath = Join-Path $repoRoot "tools\Build-NativePusfume.ps1"
 $previewPath = Join-Path $repoRoot "pusfume\textures\pusfume\pusfume_model_preview.png"
 $previewTexturePath = Join-Path $repoRoot "pusfume\textures\pusfume\pusfume_model_preview.texture"
@@ -48,6 +49,7 @@ $nativeConfigText = Get-Content -LiteralPath $nativeConfigPath -Raw
 $uiText = Get-Content -LiteralPath $uiPath -Raw
 $dataText = Get-Content -LiteralPath $dataPath -Raw
 $packageText = Get-Content -LiteralPath $packagePath -Raw
+$nativeUnitPackageText = Get-Content -LiteralPath $nativeUnitPackagePath -Raw
 $nativeBuildText = Get-Content -LiteralPath $nativeBuildPath -Raw
 $mainVersion = [regex]::Match($mainText, 'MOD_VERSION\s*=\s*"([^"]+)"').Groups[1].Value
 $configVersion = [regex]::Match($configText, 'Prototype v([^";]+)').Groups[1].Value
@@ -57,6 +59,9 @@ Test-Condition ($configText -match 'visibility\s*=\s*"friends"') "Workshop visib
 Test-Condition ($configText -match 'published_id\s*=\s*3764954245L') "Workshop identity" "3764954245"
 Test-Condition (Test-Path (Join-Path $repoRoot "pusfume\resource_packages\pusfume\pusfume.package")) `
     "resource package" "package manifest exists"
+Test-Condition ($nativeUnitPackageText -match 'unit\s*=\s*\[' -and `
+    $nativeUnitPackageText -match '"units/pusfume/pusfume_3p"') `
+    "native preview package" "same-path package resolves the custom unit"
 Test-Condition ($mainText -match 'assets\.install\(\)') "asset bridge" "installed at runtime"
 Test-Condition ($mainText -match 'native\.install\(registry, native_config\)') `
     "native cosmetic" "optional runtime integration is installed"
