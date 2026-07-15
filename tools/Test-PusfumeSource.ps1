@@ -72,6 +72,9 @@ Test-Condition ($nativeConfigText -match 'enabled\s*=\s*false') `
 Test-Condition ($nativeText -match 'PlayerUnitCosmeticExtension' -and `
     $nativeText -match '_init_mesh_attachment') `
     "native cosmetic" "player mesh attachment is career-scoped"
+Test-Condition ($nativeText -match 'Unit\.has_animation_state_machine\(mesh\)' -and `
+    $nativeText -match 'Unit\.has_animation_event\(mesh, "enable"\)') `
+    "native animation diagnostics" "runtime log verifies controller and enable event availability"
 Test-Condition ($nativeBuildText -match '\[switch\]\$NoDeploy' -and `
     $nativeBuildText -match 'if \(-not \$NoDeploy\)') `
     "local deployment" "native builds deploy to the active Workshop item by default"
@@ -79,10 +82,19 @@ Test-Condition ($nativeExporterText -match 'build_skin_activation_animations' -a
     $nativeExporterText -match 'for bone in armature\.data\.bones' -and `
     $nativeExporterText -match 'document\["animations"\]\s*=\s*activation_animations' -and `
     $nativeExporterText -match 'write_animation_bones') `
-    "native animation" "skinned BSI activates the complete scene graph"
+    "native animation" "skinned BSI preserves a rest-pose channel for the complete scene graph"
 Test-Condition ($nativeBuildText -match 'ChangeExtension\(\$inputPath, "\.bones"\)' -and `
     $nativeBuildText -match 'pusfume_3p\.bones') `
     "native animation" "same-name animation skeleton is required by the native build"
+Test-Condition ($nativeBuildText -match '\[string\]\$AnimationFbx' -and `
+    $nativeBuildText -match 'pusfume_3p_walk\.animation' -and `
+    $nativeBuildText -match 'animation_state_machine\s*=\s*"units/pusfume/pusfume_3p"' -and `
+    $nativeBuildText -match 'default_state\s*=\s*"base/walk"') `
+    "native animation" "Janfon's baked walk FBX drives a packaged default controller state"
+Test-Condition ($nativeBuildText -match 'state_machine\s*=\s*\[' -and `
+    $nativeBuildText -match 'animation\s*=\s*\[' -and `
+    $nativeBuildText -match 'bones\s*=\s*\[') `
+    "native animation package" "controller, clip, and skeleton are explicit package resources"
 Test-Condition ($nativeBuildText -match 'Write-NativeTexture' -and `
     $nativeBuildText -match 'p_main\s*=\s*"materials/pusfume/pusfume_body"' -and `
     $nativeBuildText -notmatch 'p_main\s*=\s*"materials/pusfume/pusfume_debug_3p"') `

@@ -1,5 +1,6 @@
 param(
     [string]$InputBsi = ".build\compiler-fixture\pusfume_bsi_probe\units\pusfume_probe\pusfume_3p.bsi",
+    [string]$AnimationFbx = ".build\pusfume_handoff\pusfume_3p_walk.fbx",
     [string]$TextureSource = ".build\pusfume_handoff\textures conv",
     [string]$WorkshopPath = "C:\Program Files (x86)\Steam\steamapps\workshop\content\552500\3764954245",
     [switch]$HeroPreview,
@@ -22,6 +23,14 @@ $textureSourcePath = if ([IO.Path]::IsPathRooted($TextureSource)) {
 $inputBonesPath = [IO.Path]::ChangeExtension($inputPath, ".bones")
 if (-not (Test-Path -LiteralPath $inputBonesPath -PathType Leaf)) {
     throw "The native BSI is missing its same-name animation skeleton: $inputBonesPath"
+}
+$animationFbxPath = if ([IO.Path]::IsPathRooted($AnimationFbx)) {
+    (Resolve-Path $AnimationFbx).Path
+} else {
+    (Resolve-Path (Join-Path $repoRoot $AnimationFbx)).Path
+}
+if ((Get-Item -LiteralPath $animationFbxPath).Length -lt 1024) {
+    throw "The native animation FBX is unexpectedly small: $animationFbxPath"
 }
 $stageRoot = Join-Path $repoRoot ".build\native-workshop"
 $stageMod = Join-Path $stageRoot "pusfume"
@@ -51,9 +60,56 @@ if (Test-Path -LiteralPath $staleBundlePath) {
 }
 
 $unitRoot = Join-Path $stageMod "units\pusfume"
+$animationRoot = Join-Path $unitRoot "anims"
 New-Item -ItemType Directory -Path $unitRoot -Force | Out-Null
+New-Item -ItemType Directory -Path $animationRoot -Force | Out-Null
 Copy-Item -LiteralPath $inputPath -Destination (Join-Path $unitRoot "pusfume_3p.bsi") -Force
 Copy-Item -LiteralPath $inputBonesPath -Destination (Join-Path $unitRoot "pusfume_3p.bones") -Force
+Copy-Item -LiteralPath $animationFbxPath `
+    -Destination (Join-Path $animationRoot "pusfume_3p_walk.fbx") -Force
+
+@'
+bones = "units/pusfume/pusfume_3p"
+tolerance = {
+    "" = [
+        0.01
+        0.01
+        0
+        false
+    ]
+}
+'@ | Set-Content -LiteralPath (Join-Path $animationRoot "pusfume_3p_walk.animation") -Encoding utf8
+
+@'
+events = {
+    enable = {}
+}
+layers = [
+    {
+        default_state = "base/walk"
+        states = [
+            {
+                animations = [
+                    "units/pusfume/anims/pusfume_3p_walk"
+                ]
+                loop_animation = true
+                name = "base/walk"
+                randomization_type = "every_loop"
+                root_driving = "ignore"
+                speed = "1"
+                state_type = "regular"
+                transitions = []
+                weights = [
+                    "1.0"
+                ]
+            }
+        ]
+    }
+]
+ragdolls = {}
+variables = {}
+bones = "units/pusfume/pusfume_3p"
+'@ | Set-Content -LiteralPath (Join-Path $unitRoot "pusfume_3p.state_machine") -Encoding utf8
 
 $textureRoot = Join-Path $stageMod "textures\pusfume"
 $materialRoot = Join-Path $stageMod "materials\pusfume"
@@ -169,6 +225,7 @@ Write-NativeMaterial "pusfume_ammo_box" "pup_ammo_box_limited_df" "pup_ammo_box_
 Write-NativeMaterial "pusfume_whiskers" "pusfume_whiskers_df" "pusfume_whiskers_nm" 0.74 -Opacity
 
 @'
+animation_state_machine = "units/pusfume/pusfume_3p"
 materials = {
     p_main = "materials/pusfume/pusfume_body"
     p_eye = "materials/pusfume/pusfume_eye"
@@ -209,6 +266,22 @@ return {
 
 unit = [
     "units/pusfume/pusfume_3p"
+]
+'@ | Add-Content -LiteralPath (Join-Path $stageMod `
+    "resource_packages\pusfume\pusfume.package") -Encoding utf8
+
+@'
+
+state_machine = [
+    "units/pusfume/pusfume_3p"
+]
+
+bones = [
+    "units/pusfume/pusfume_3p"
+]
+
+animation = [
+    "units/pusfume/anims/pusfume_3p_walk"
 ]
 '@ | Add-Content -LiteralPath (Join-Path $stageMod `
     "resource_packages\pusfume\pusfume.package") -Encoding utf8
@@ -262,4 +335,5 @@ $bsiSize = (Get-Item -LiteralPath $inputPath).Length
 $bundles = @(Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)
 Write-Host "Native Pusfume build passed: BSI=$bsiSize bytes bundles=$($bundles.Count)"
 Write-Host "Native Pusfume materials passed: textures=$($textureNames.Count) materials=7"
+Write-Host "Native Pusfume animation passed: controller=pusfume_3p clip=pusfume_3p_walk"
 Write-Host "Native Pusfume hero preview enabled: $($HeroPreview.IsPresent)"

@@ -2,7 +2,7 @@
 
 This is the account-free Pusfume exporter. Static and skinned output are SDK
 compiler-verified. Skinned output includes rest-pose animation channels for the
-full scene graph so the engine creates animation-blender bones for linked skin.
+full scene graph and writes the skeleton list consumed by an animation controller.
 
 Run through Blender:
     blender --background --factory-startup --disable-autoexec \

@@ -60,6 +60,14 @@ local function initialize_link_probe(extension, unit)
         return
     end
 
+    local has_state_machine = Unit.has_animation_state_machine(mesh)
+    local has_enable_event = has_state_machine and Unit.has_animation_event(mesh, "enable")
+
+    mod:info(
+        "[pusfume] Native animation controller state_machine=%s enable_event=%s",
+        tostring(has_state_machine),
+        tostring(has_enable_event))
+
     local initial = {}
 
     for _, link in ipairs(PROBE_LINKS) do
