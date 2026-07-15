@@ -35,6 +35,7 @@ $dataPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\pusfume_data.lua"
 $packagePath = Join-Path $repoRoot "pusfume\resource_packages\pusfume\pusfume.package"
 $nativeUnitPackagePath = Join-Path $repoRoot "pusfume\units\pusfume\pusfume_3p.package"
 $nativeBuildPath = Join-Path $repoRoot "tools\Build-NativePusfume.ps1"
+$nativeExporterPath = Join-Path $repoRoot "tools\export_blender_bsi.py"
 $previewPath = Join-Path $repoRoot "pusfume\textures\pusfume\pusfume_model_preview.png"
 $previewTexturePath = Join-Path $repoRoot "pusfume\textures\pusfume\pusfume_model_preview.texture"
 $previewMaterialPath = Join-Path $repoRoot "pusfume\materials\pusfume\pusfume_model_preview.material"
@@ -51,6 +52,7 @@ $dataText = Get-Content -LiteralPath $dataPath -Raw
 $packageText = Get-Content -LiteralPath $packagePath -Raw
 $nativeUnitPackageText = Get-Content -LiteralPath $nativeUnitPackagePath -Raw
 $nativeBuildText = Get-Content -LiteralPath $nativeBuildPath -Raw
+$nativeExporterText = Get-Content -LiteralPath $nativeExporterPath -Raw
 $mainVersion = [regex]::Match($mainText, 'MOD_VERSION\s*=\s*"([^"]+)"').Groups[1].Value
 $configVersion = [regex]::Match($configText, 'Prototype v([^";]+)').Groups[1].Value
 
@@ -73,9 +75,20 @@ Test-Condition ($nativeText -match 'PlayerUnitCosmeticExtension' -and `
 Test-Condition ($nativeBuildText -match '\[switch\]\$NoDeploy' -and `
     $nativeBuildText -match 'if \(-not \$NoDeploy\)') `
     "local deployment" "native builds deploy to the active Workshop item by default"
+Test-Condition ($nativeExporterText -match 'ACTIVATION_BONE_CANDIDATES' -and `
+    $nativeExporterText -match 'document\["animations"\]\s*=\s*\[activation_animation\]') `
+    "native animation" "skinned BSI includes a rest-pose activation channel"
+Test-Condition ($nativeBuildText -match 'Write-NativeTexture' -and `
+    $nativeBuildText -match 'p_main\s*=\s*"materials/pusfume/pusfume_body"' -and `
+    $nativeBuildText -notmatch 'p_main\s*=\s*"materials/pusfume/pusfume_debug_3p"') `
+    "native materials" "staged build uses handoff textures instead of the green diagnostic material"
 Test-Condition ($uiText -match 'native\.preview_enabled\(\)' -and `
-    $nativeBuildText -match 'hero_preview_enabled\s*=\s*false') `
-    "selector preview" "native 3D preview fails closed to the stable image path"
+    $nativeBuildText -match '\[switch\]\$HeroPreview' -and `
+    $nativeBuildText -match 'hero_preview_enabled\s*=\s*\$heroPreviewEnabled') `
+    "selector preview" "native 3D preview is enabled only by an explicit test-build switch"
+Test-Condition ($nativeText -match 'retrieve_skin_packages_for_preview' -and `
+    $nativeText -match 'package_name ~= config\.third_person_unit') `
+    "selector preview" "startup-resident custom unit bypasses redundant package loading"
 Test-Condition ($uiText -match 'CharacterSelectionStateCharacter') `
     "five-row career grid" "character selection state is hooked"
 Test-Condition ($uiText -match 'UIWidgets\.create_hero_widget') `

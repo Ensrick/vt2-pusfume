@@ -66,9 +66,10 @@ The exporter intentionally duplicates mesh corners in source BSI to keep UV seam
 After the compiler probe succeeds, stage and deploy the generated BSI without copying it into the public source tree:
 
 ```powershell
-.\tools\Build-NativePusfume.ps1
+.\tools\Build-NativePusfume.ps1 `
+  -TextureSource ".build\pusfume_handoff\textures conv"
 ```
 
-The command writes only beneath ignored `.build/native-workshop`, enables the native cosmetic in that staged copy, compiles it with VMB, and copies the resulting bundles into Workshop item `3764954245` by default. Use `-NoDeploy` only for CI or an intentional compiler-only check. The tracked config intentionally leaves native mode disabled so a normal public build cannot reference an absent or unreviewed model.
+The command writes only beneath ignored `.build/native-workshop`, generates VT2 texture recipes and materials from the untracked handoff, enables the native cosmetic in that staged copy, compiles it with VMB, and copies the resulting bundles into Workshop item `3764954245` by default. Use `-HeroPreview` only for an intentional 3D selector test and `-NoDeploy` only for CI or a compiler-only check. The tracked config intentionally leaves native mode and native preview disabled so a normal public build cannot reference an absent or unreviewed model.
 
 The third-person body, first-person arms, hats, and equipment should be separate exports. Preserve compatible VT2 bone names, hierarchy, and rest pose exactly. Send raw albedo, normal, emissive, roughness, metallic, and mask maps instead of relying on embedded FBX materials.

@@ -5,6 +5,8 @@ local state = {
     cosmetic_registered = false,
     hook_installed = false,
     probe_hook_installed = false,
+    preview_package_filter_installed = false,
+    preview_package_filtered = false,
     resource_available = false,
     hero_preview_enabled = false,
 }
@@ -177,6 +179,43 @@ local function install_probe_hook()
     return true
 end
 
+local function install_preview_package_filter(config)
+    if state.preview_package_filter_installed then
+        return true
+    end
+
+    if not CosmeticsUtils then
+        return false
+    end
+
+    mod:hook(CosmeticsUtils, "retrieve_skin_packages_for_preview", function(func, skin_name)
+        local packages = func(skin_name)
+
+        if skin_name ~= config.skin_name then
+            return packages
+        end
+
+        local filtered = {}
+
+        for _, package_name in ipairs(packages) do
+            if package_name ~= config.third_person_unit then
+                filtered[#filtered + 1] = package_name
+            end
+        end
+
+        if not state.preview_package_filtered then
+            state.preview_package_filtered = true
+            mod:info("[pusfume] Native preview will use the startup-resident Pusfume unit")
+        end
+
+        return filtered
+    end)
+
+    state.preview_package_filter_installed = true
+
+    return true
+end
+
 function M.install(registry, config)
     state.hero_preview_enabled = config.hero_preview_enabled == true
 
@@ -186,6 +225,11 @@ function M.install(registry, config)
 
     install_cosmetic_hook(registry, config)
     install_probe_hook()
+
+    if state.hero_preview_enabled and not install_preview_package_filter(config) then
+        state.hero_preview_enabled = false
+        mod:warning("[pusfume] Native hero preview disabled because CosmeticsUtils is unavailable")
+    end
 
     return state.cosmetic_registered and state.hook_installed and state.probe_hook_installed
 end

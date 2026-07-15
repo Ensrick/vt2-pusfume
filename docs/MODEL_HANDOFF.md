@@ -2,7 +2,7 @@
 
 ## Validated payload
 
-The July 2026 handoff is an intentional placeholder built on a slave-rat `.unit`. It contains a complete third-person mesh, a walk-cycle FBX, 22 texture maps, and a Blender 5.2 source project. The armature will be overhauled for the final character, but its material slots and texture assignment are intended to carry forward. The source project was Zstandard-compressed before upload and retained a `.blend` extension; decompress it once before opening it in Blender 5.2 or newer. The FBX exports are immediately readable by Blender 3.6.
+The July 2026 handoff is an intentional placeholder built on a slave-rat `.unit`. It contains a complete third-person mesh, a walk-cycle FBX, 23 texture maps, and a Blender 5.2 source project. The armature will be overhauled for the final character, but its material slots and texture assignment are intended to carry forward. The source project was Zstandard-compressed before upload and retained a `.blend` extension; decompress it once before opening it in Blender 5.2 or newer. The FBX exports are immediately readable by Blender 3.6.
 
 The third-person FBX contains:
 
@@ -26,7 +26,7 @@ The closest Fatshark donor is the playable Versus Globadier:
 
 Fatshark keeps the animated base and visible skin as separate units. The skin mesh is driven by `World.link_unit` calls for individual skeleton nodes. Pusfume therefore needs to compile as a third-person skin attachment, not as a self-animating replacement player unit.
 
-Pusfume deliberately retains the VT2 slave-rat hierarchy and uses Janfon's symmetrized names such as `j_arm_L`, while the playable Globadier base uses names such as `j_leftarm`. The custom bridge in `_pusfume_assets.lua` maps 63 locomotion, limb, finger, tail, and weapon nodes from the Globadier parent to the Pusfume child. Extra Pusfume facial and accessory bones remain under their linked ancestors. The first live test must check rest-pose distortion; this bridge is for the placeholder and does not constrain the final armature overhaul.
+Pusfume deliberately retains the VT2 slave-rat hierarchy and uses Janfon's symmetrized names such as `j_arm_L`, while the playable Globadier base uses names such as `j_leftarm`. The custom bridge in `_pusfume_assets.lua` maps 52 locomotion, limb, finger, tail, and weapon nodes from the Bardin donor parent to the Pusfume child. Extra Pusfume facial and accessory bones remain under their linked ancestors. The first live test must check rest-pose distortion; this bridge is for the placeholder and does not constrain the final armature overhaul.
 
 ## Material reconstruction
 
@@ -48,7 +48,7 @@ The eye slots need a deliberate VT2 eye/emissive material rather than the import
 
 VT2's SDK does not compile the skinned FBX directly. A mesh unit needs both a text `.unit` descriptor and a skinned `.bsi` scene payload before the Stingray compiler can produce bundle resources.
 
-The repository now provides `tools/export_blender_bsi.py` as an account-free final hop. On the validated handoff, Blender 5.2 exports 24,318 triangles, nine material slots, 82 skeleton nodes, inverse bind matrices, and normalized four-influence streams. Fatshark's SDK compiler accepts the result and produces one native skin with 82 joint nodes, nine material bone sets, `HALF4` weights, and packed `UINT1` blend indices.
+The repository now provides `tools/export_blender_bsi.py` as an account-free final hop. On the validated handoff, Blender 5.2 exports 24,318 triangles, nine material slots, 82 skeleton nodes, inverse bind matrices, and normalized four-influence streams. Fatshark's SDK compiler accepts the result and produces one native skin with 82 joint nodes, nine material bone sets, `HALF4` weights, and packed `UINT1` blend indices. The exporter also writes a one-frame rest-pose channel on an unweighted helper bone; this makes the compiler emit the simple-animation payload needed to initialize linked skin deformation.
 
 Use `tools/Test-BsiPipeline.ps1` to run export and SDK compilation together. Maya is no longer required for Pusfume's geometry or skin conversion. A Maya trial can still serve as a reference exporter if later animation or edge-case parity work needs an independent comparison.
 
