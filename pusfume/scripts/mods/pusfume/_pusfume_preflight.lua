@@ -25,14 +25,17 @@ local function backend_runtime_check(checks, registry)
         return
     end
 
-    local loadout_ok, loadouts = pcall(item_interface.get_loadout, item_interface)
-    local donor_loadout = loadout_ok and loadouts and loadouts[registry.DONOR_CAREER_NAME]
-    local pusfume_loadout = loadout_ok and loadouts and loadouts[registry.CAREER_NAME]
+    local donor_ok, donor_loadout = pcall(item_interface.get_loadout_by_career_name,
+        item_interface, registry.DONOR_CAREER_NAME, false)
+    local pusfume_ok, pusfume_loadout = pcall(item_interface.get_loadout_by_career_name,
+        item_interface, registry.CAREER_NAME, false)
 
     if donor_loadout and pusfume_loadout then
         add(checks, "backend data", "PASS", "donor loadout is exposed as pusfume")
+    elseif donor_ok and pusfume_ok then
+        add(checks, "backend data", "WARN", "loadouts are not materialized yet; rerun in the Keep")
     else
-        add(checks, "backend data", "FAIL", "donor or pusfume loadout is missing")
+        add(checks, "backend data", "FAIL", "donor loadout adapter raised an error")
     end
 end
 
@@ -80,11 +83,15 @@ function M.collect(registry, career_index, backend, compat, ui)
         bot_aliases and "Ranger Veteran ability behavior aliased" or "bot tables not loaded yet")
 
     local ui_status = ui.status()
-    add(checks, "Hero selector hook", ui_status.hook_installed and "PASS" or "FAIL",
-        ui_status.hook_installed and "hook installed" or "class unavailable")
-    add(checks, "Hero selector card", ui_status.card_seen and "PASS" or "WARN",
-        ui_status.card_seen and string.format("seen in column %d", ui_status.target_column)
-            or "not rendered yet; open Heroes and rerun")
+    add(checks, "five-row grid hook", ui_status.legacy_hook_installed and "PASS" or "FAIL",
+        ui_status.legacy_hook_installed and "CharacterSelectionStateCharacter hooked" or "class unavailable")
+    add(checks, "five-row grid card", ui_status.legacy_card_seen and "PASS" or "WARN",
+        ui_status.legacy_card_seen and string.format("overflow row=%d column=%d",
+            ui_status.legacy_target_row, ui_status.target_column)
+            or "not rendered yet; reopen the selection grid and rerun")
+    add(checks, "Hero window hook", ui_status.modern_hook_installed and "PASS" or "WARN",
+        ui_status.modern_hook_installed and "HeroWindowCharacterSelectionConsole hooked"
+            or "class not loaded in this menu path")
 
     local supported, mechanism_name = registry.is_supported_mechanism()
     add(checks, "mechanism", supported and "PASS" or "FAIL",
@@ -115,6 +122,7 @@ end
 
 function M.install(registry, career_index, backend, compat, ui)
     mod:command("pusfume_preflight", "Run Pusfume registration and runtime checks.", function()
+        registry.refresh_item_permissions()
         compat.install(registry)
         ui.install(registry)
 

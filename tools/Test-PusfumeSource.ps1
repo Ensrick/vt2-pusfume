@@ -26,10 +26,12 @@ $mainPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\pusfume.lua"
 $configPath = Join-Path $repoRoot "pusfume\itemV2.cfg"
 $backendPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_backend.lua"
 $assetsPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_assets.lua"
+$uiPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_ui.lua"
 $mainText = Get-Content -LiteralPath $mainPath -Raw
 $configText = Get-Content -LiteralPath $configPath -Raw
 $backendText = Get-Content -LiteralPath $backendPath -Raw
 $assetsText = Get-Content -LiteralPath $assetsPath -Raw
+$uiText = Get-Content -LiteralPath $uiPath -Raw
 $mainVersion = [regex]::Match($mainText, 'MOD_VERSION\s*=\s*"([^"]+)"').Groups[1].Value
 $configVersion = [regex]::Match($configText, 'Prototype v([^";]+)').Groups[1].Value
 
@@ -39,6 +41,14 @@ Test-Condition ($configText -match 'published_id\s*=\s*3764954245L') "Workshop i
 Test-Condition (Test-Path (Join-Path $repoRoot "pusfume\resource_packages\pusfume\pusfume.package")) `
     "resource package" "package manifest exists"
 Test-Condition ($mainText -match 'assets\.install\(\)') "asset bridge" "installed at runtime"
+Test-Condition ($uiText -match 'CharacterSelectionStateCharacter') `
+    "five-row career grid" "character selection state is hooked"
+Test-Condition ($uiText -match 'UIWidgets\.create_hero_widget') `
+    "five-row career grid" "full-size overflow career widget is created"
+Test-Condition ($uiText -match 'LEGACY_OVERFLOW_Y\s*=\s*144') `
+    "five-row career grid" "Pusfume card occupies the row above Saltzpyre"
+Test-Condition ($mainText -match 'registry\.refresh_item_permissions\(\)') `
+    "item permissions" "late-loaded items are refreshed"
 
 $bridgeSources = @([regex]::Matches($assetsText, 'source\s*=\s*"([^"]+)"') | ForEach-Object {
     $_.Groups[1].Value

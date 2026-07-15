@@ -84,7 +84,7 @@ local function build_state_list(base_states, additional_states)
     return states
 end
 
-local function register_item_permissions()
+function M.refresh_item_permissions()
     local changed = 0
 
     for _, item in pairs(ItemMasterList or {}) do
@@ -184,7 +184,7 @@ function M.register()
 
     PROFILES_BY_CAREER_NAMES[M.CAREER_NAME] = profile
 
-    local changed_items = register_item_permissions()
+    local changed_items = M.refresh_item_permissions()
     local permission_status = M.item_permission_status()
 
     mod:info("[pusfume] registered profile=%s career_index=%d donor=%s item_permissions=%d/%d changed=%d",
