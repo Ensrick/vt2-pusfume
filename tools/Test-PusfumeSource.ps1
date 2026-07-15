@@ -49,6 +49,11 @@ Test-Condition ($uiText -match 'LEGACY_OVERFLOW_Y\s*=\s*144') `
     "five-row career grid" "Pusfume card occupies the row above Saltzpyre"
 Test-Condition ($mainText -match 'registry\.refresh_item_permissions\(\)') `
     "item permissions" "late-loaded items are refreshed"
+Test-Condition ($backendText -match 'mod:hook\(BackendUtils, "get_loadout_item"') `
+    "spawn guard" "BackendUtils item resolution is donor-aliased"
+Test-Condition ($backendText -match 'unresolved.*slot_melee.*slot_ranged' -or `
+    ($backendText -match 'slot_melee' -and $backendText -match 'slot_ranged')) `
+    "spawn guard" "both default weapon slots are validated"
 
 $bridgeSources = @([regex]::Matches($assetsText, 'source\s*=\s*"([^"]+)"') | ForEach-Object {
     $_.Groups[1].Value
@@ -104,6 +109,11 @@ foreach ($className in $hookSets.Keys) {
 $declaredHookCount = [int][regex]::Match($backendText, 'expected_hook_count\s*=\s*(\d+)').Groups[1].Value
 $actualHookCount = ($hookSets.Values | ForEach-Object { $_.Count } | Measure-Object -Sum).Sum
 Test-Condition ($declaredHookCount -eq $actualHookCount) "hook accounting" "$declaredHookCount methods"
+
+$declaredGuardCount = [int][regex]::Match($backendText, 'expected_runtime_guard_count\s*=\s*(\d+)').Groups[1].Value
+$actualGuardCount = [regex]::Matches($backendText, 'mod:hook\(BackendUtils,').Count
+Test-Condition ($declaredGuardCount -eq $actualGuardCount) `
+    "runtime guard accounting" "$declaredGuardCount BackendUtils methods"
 
 $trackedBundleFiles = @(git -C $repoRoot ls-files "pusfume/bundleV2/**")
 Test-Condition ($trackedBundleFiles.Count -eq 0) "generated output" "bundleV2 is not tracked"

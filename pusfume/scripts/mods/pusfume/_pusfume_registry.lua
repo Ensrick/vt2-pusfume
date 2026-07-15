@@ -1,6 +1,7 @@
 local mod = get_mod("pusfume")
 
 local M = {}
+local loadout_validator
 
 M.CAREER_NAME = "pusfume"
 M.DONOR_CAREER_NAME = "dr_ranger"
@@ -69,7 +70,19 @@ local function available_for_mechanism()
         return false, "disabled_for_mechanism"
     end
 
+    if loadout_validator then
+        local ok, ready, detail = pcall(loadout_validator)
+
+        if not ok or not ready then
+            return false, "Pusfume loadout unavailable: " .. tostring(ok and detail or ready), nil, true
+        end
+    end
+
     return true
+end
+
+function M.set_loadout_validator(validator)
+    loadout_validator = validator
 end
 
 local function build_state_list(base_states, additional_states)
