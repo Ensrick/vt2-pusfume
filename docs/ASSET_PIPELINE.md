@@ -50,6 +50,15 @@ The repository includes a non-destructive cleanup pass for third-person FBX file
 
 Pusfume's current mesh uses slave-rat bone names rather than the playable Globadier names. Do not rename or retarget it merely to satisfy the stock cosmetic table: `_pusfume_assets.lua` provides the explicit parent-to-child node bridge needed for the first in-game deformation test. A true Globadier-skeleton rebind remains an optimization if the bridge exposes rest-pose differences.
 
-The cleaned FBX is an interchange asset, not the final Stingray scene. VT2's SDK requires a `.bsi` payload beside the `.unit` descriptor. Fatshark supplies BSI exporters for supported Maya, 3ds Max, and MotionBuilder versions; the community Blender add-on currently imports BSI but does not export it. See `MODEL_HANDOFF.md` for the available final-hop options.
+The cleaned FBX is an interchange asset, not the final Stingray scene. VT2's SDK requires a `.bsi` payload beside the `.unit` descriptor. This repository includes an account-free Blender 5.2 exporter for geometry, skeleton nodes, inverse bind matrices, and four-influence skin streams. Run the complete export and compiler probe with:
+
+```powershell
+.\tools\Test-BsiPipeline.ps1 `
+  -InputFbx "C:\path\to\pusfume_3p_clean.fbx"
+```
+
+The probe writes only to ignored `.build` storage. It emits a compressed `bsiz` scene, creates a private throwaway unit/package, and requires Fatshark's VT2 SDK compiler to build it. A passing compile proves resource structure, not animation compatibility; complete the live deformation checklist before integrating generated assets into the Workshop package.
+
+The exporter intentionally duplicates mesh corners in source BSI to keep UV seams and per-channel indexing unambiguous. Fatshark's compiler deduplicates the current Pusfume mesh from 72,954 source corners to 30,477 native vertices.
 
 The third-person body, first-person arms, hats, and equipment should be separate exports. Preserve compatible VT2 bone names, hierarchy, and rest pose exactly. Send raw albedo, normal, emissive, roughness, metallic, and mask maps instead of relying on embedded FBX materials.

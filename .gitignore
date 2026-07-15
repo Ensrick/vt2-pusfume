@@ -2,3 +2,5 @@
 .release-stage/
 .temp/
 pusfume/bundleV2/
+__pycache__/
+*.py[cod]
