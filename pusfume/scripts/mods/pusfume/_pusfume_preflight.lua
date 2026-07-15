@@ -39,7 +39,7 @@ local function backend_runtime_check(checks, registry)
     end
 end
 
-function M.collect(registry, career_index, backend, compat, ui)
+function M.collect(registry, career_index, backend, compat, ui, native)
     local checks = {}
     local career = CareerSettings and CareerSettings[registry.CAREER_NAME]
     local donor = CareerSettings and CareerSettings[registry.DONOR_CAREER_NAME]
@@ -103,6 +103,14 @@ function M.collect(registry, career_index, backend, compat, ui)
         bot_aliases and "Ranger Veteran ability behavior aliased" or "bot tables not loaded yet")
 
     local ui_status = ui.status()
+    local native_status = native.status()
+    local native_enabled = native.enabled()
+    local native_ready = native_enabled and native_status.resource_available and native_status.hook_installed
+    add(checks, "native third-person unit",
+        native_ready and "PASS" or "WARN",
+        native_ready and "custom cosmetic resource and attachment hook are ready"
+            or native_enabled and "custom cosmetic registered; attachment hook is not ready"
+            or "source-only fallback active; use Build-NativePusfume.ps1 for a model test")
     add(checks, "five-row grid hook", ui_status.legacy_hook_installed and "PASS" or "FAIL",
         ui_status.legacy_hook_installed and "CharacterSelectionStateCharacter hooked" or "class unavailable")
     add(checks, "five-row grid card", ui_status.legacy_card_seen and "PASS" or "WARN",
@@ -111,12 +119,18 @@ function M.collect(registry, career_index, backend, compat, ui)
             or "not rendered yet; reopen the selection grid and rerun")
     add(checks, "Pusfume preview hook", ui_status.preview_hook_installed and "PASS" or "FAIL",
         ui_status.preview_hook_installed and "donor menu spawn is intercepted" or "preview hook unavailable")
-    add(checks, "Pusfume preview widget", ui_status.preview_widget_seen and "PASS" or "WARN",
-        ui_status.preview_widget_seen and "model-derived texture widget initialized"
-            or "not rendered yet; reopen the selection grid and rerun")
-    add(checks, "donor preview suppression", ui_status.donor_preview_suppressed and "PASS" or "WARN",
-        ui_status.donor_preview_suppressed and "Ranger Veteran menu unit cleared"
-            or "select Pusfume, then rerun preflight")
+    if native_enabled then
+        add(checks, "native hero preview", ui_status.native_preview_enabled and "PASS" or "WARN",
+            ui_status.native_preview_enabled and "stock 3D previewer requested the Pusfume cosmetic"
+                or "select Pusfume, then rerun preflight")
+    else
+        add(checks, "Pusfume preview widget", ui_status.preview_widget_seen and "PASS" or "WARN",
+            ui_status.preview_widget_seen and "model-derived texture widget initialized"
+                or "not rendered yet; reopen the selection grid and rerun")
+        add(checks, "donor preview suppression", ui_status.donor_preview_suppressed and "PASS" or "WARN",
+            ui_status.donor_preview_suppressed and "Ranger Veteran menu unit cleared"
+                or "select Pusfume, then rerun preflight")
+    end
     add(checks, "Hero window hook", ui_status.modern_hook_installed and "PASS" or "WARN",
         ui_status.modern_hook_installed and "HeroWindowCharacterSelectionConsole hooked"
             or "class not loaded in this menu path")
@@ -148,14 +162,14 @@ function M.summarize(checks)
     return totals
 end
 
-function M.install(registry, career_index, backend, compat, ui)
+function M.install(registry, career_index, backend, compat, ui, native)
     mod:command("pusfume_preflight", "Run Pusfume registration and runtime checks.", function()
         registry.refresh_item_permissions()
         backend.install_runtime_guards(registry)
         compat.install(registry)
-        ui.install(registry)
+        ui.install(registry, native)
 
-        local checks = M.collect(registry, career_index, backend, compat, ui)
+        local checks = M.collect(registry, career_index, backend, compat, ui, native)
 
         for _, check in ipairs(checks) do
             mod:echo(string.format("[%s] %s: %s", check.status, check.name, check.detail))
@@ -168,8 +182,8 @@ function M.install(registry, career_index, backend, compat, ui)
     end)
 end
 
-function M.log_summary(registry, career_index, backend, compat, ui)
-    local totals = M.summarize(M.collect(registry, career_index, backend, compat, ui))
+function M.log_summary(registry, career_index, backend, compat, ui, native)
+    local totals = M.summarize(M.collect(registry, career_index, backend, compat, ui, native))
 
     mod:info("[pusfume] preflight summary pass=%d warn=%d fail=%d", totals.PASS, totals.WARN, totals.FAIL)
 end

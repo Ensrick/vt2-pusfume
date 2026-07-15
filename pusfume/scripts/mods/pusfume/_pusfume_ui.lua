@@ -20,6 +20,7 @@ local state = {
     preview_hook_installed = false,
     preview_widget_seen = false,
     donor_preview_suppressed = false,
+    native_preview_enabled = false,
     selection_seen = false,
     target_column = nil,
 }
@@ -306,7 +307,7 @@ local function install_legacy_hooks(registry)
     state.legacy_hook_installed = true
 end
 
-local function install_preview_hooks(registry)
+local function install_preview_hooks(registry, native)
     if state.preview_hook_installed or not CharacterSelectionStateCharacter then
         return
     end
@@ -317,6 +318,14 @@ local function install_preview_hooks(registry)
 
     mod:hook(CharacterSelectionStateCharacter, "_spawn_hero_unit", function(func, window, hero_name)
         if is_pusfume_selection(window, registry) then
+            if native.enabled() then
+                sync_preview_visibility(window, false)
+                state.native_preview_enabled = true
+                mod:info("[pusfume] Requesting native Pusfume hero preview")
+
+                return func(window, hero_name)
+            end
+
             local world_previewer = window.world_previewer
 
             suppress_donor_preview(world_previewer)
@@ -336,10 +345,10 @@ local function install_preview_hooks(registry)
     state.preview_hook_installed = true
 end
 
-function M.install(registry)
+function M.install(registry, native)
     install_modern_hooks(registry)
     install_legacy_hooks(registry)
-    install_preview_hooks(registry)
+    install_preview_hooks(registry, native)
 
     state.hook_installed = state.modern_hook_installed or state.legacy_hook_installed
 

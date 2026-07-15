@@ -28,6 +28,8 @@ $backendPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_backen
 $registryPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_registry.lua"
 $preflightPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_preflight.lua"
 $assetsPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_assets.lua"
+$nativePath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_native.lua"
+$nativeConfigPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_native_config.lua"
 $uiPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_ui.lua"
 $dataPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\pusfume_data.lua"
 $packagePath = Join-Path $repoRoot "pusfume\resource_packages\pusfume\pusfume.package"
@@ -40,6 +42,8 @@ $backendText = Get-Content -LiteralPath $backendPath -Raw
 $registryText = Get-Content -LiteralPath $registryPath -Raw
 $preflightText = Get-Content -LiteralPath $preflightPath -Raw
 $assetsText = Get-Content -LiteralPath $assetsPath -Raw
+$nativeText = Get-Content -LiteralPath $nativePath -Raw
+$nativeConfigText = Get-Content -LiteralPath $nativeConfigPath -Raw
 $uiText = Get-Content -LiteralPath $uiPath -Raw
 $dataText = Get-Content -LiteralPath $dataPath -Raw
 $packageText = Get-Content -LiteralPath $packagePath -Raw
@@ -52,6 +56,15 @@ Test-Condition ($configText -match 'published_id\s*=\s*3764954245L') "Workshop i
 Test-Condition (Test-Path (Join-Path $repoRoot "pusfume\resource_packages\pusfume\pusfume.package")) `
     "resource package" "package manifest exists"
 Test-Condition ($mainText -match 'assets\.install\(\)') "asset bridge" "installed at runtime"
+Test-Condition ($mainText -match 'native\.install\(registry, native_config\)') `
+    "native cosmetic" "optional runtime integration is installed"
+Test-Condition ($nativeConfigText -match 'enabled\s*=\s*false') `
+    "native cosmetic" "public source defaults to the provenance-safe fallback"
+Test-Condition ($nativeText -match 'PlayerUnitCosmeticExtension' -and `
+    $nativeText -match '_init_mesh_attachment') `
+    "native cosmetic" "player mesh attachment is career-scoped"
+Test-Condition ($uiText -match 'native\.enabled\(\)') `
+    "selector preview" "native builds retain VT2's stock 3D preview flow"
 Test-Condition ($uiText -match 'CharacterSelectionStateCharacter') `
     "five-row career grid" "character selection state is hooked"
 Test-Condition ($uiText -match 'UIWidgets\.create_hero_widget') `
@@ -97,22 +110,22 @@ $bridgeTargets = @([regex]::Matches($assetsText, 'target\s*=\s*"([^"]+)"') | For
     $_.Groups[1].Value
 })
 $duplicateBridgeTargets = @($bridgeTargets | Group-Object | Where-Object Count -gt 1)
-$officialLinkPath = Join-Path $SourceRoot "scripts\settings\dlcs\carousel\attachment_node_linking_vs.lua"
+$officialLinkPath = Join-Path $SourceRoot "scripts\settings\attachment_node_linking.lua"
 $officialLinkText = Get-Content -LiteralPath $officialLinkPath -Raw
-$globadierMarker = 'AttachmentNodeLinking.skaven_wind_globadier_third_person_attachment = {'
-$globadierStart = $officialLinkText.IndexOf($globadierMarker)
-$globadierTail = $officialLinkText.Substring($globadierStart)
-$nextLink = $globadierTail.IndexOf('AttachmentNodeLinking.', $globadierMarker.Length)
-$globadierSection = if ($nextLink -gt 0) { $globadierTail.Substring(0, $nextLink) } else { $globadierTail }
-$globadierNodes = @([regex]::Matches($globadierSection, 'source\s*=\s*"([^"]+)"') | ForEach-Object {
+$bardinMarker = 'third_person_attachment = {'
+$bardinStart = $officialLinkText.IndexOf($bardinMarker)
+$bardinTail = $officialLinkText.Substring($bardinStart)
+$bardinEnd = $bardinTail.IndexOf('kerillian = {')
+$bardinSection = $bardinTail.Substring(0, $bardinEnd)
+$bardinNodes = @([regex]::Matches($bardinSection, 'source\s*=\s*"([^"]+)"') | ForEach-Object {
     $_.Groups[1].Value
 })
-$missingParentNodes = @($bridgeSources | Where-Object { $_ -notin $globadierNodes })
+$missingParentNodes = @($bridgeSources | Where-Object { $_ -notin $bardinNodes })
 
-Test-Condition ($bridgeSources.Count -eq 63 -and $bridgeTargets.Count -eq 63) `
+Test-Condition ($bridgeSources.Count -eq 52 -and $bridgeTargets.Count -eq 52) `
     "asset bridge" "$($bridgeSources.Count) parent-to-child links"
 Test-Condition ($duplicateBridgeTargets.Count -eq 0) "asset bridge" "child targets are unique"
-Test-Condition ($missingParentNodes.Count -eq 0) "asset bridge" "all parent nodes exist on Globadier"
+Test-Condition ($missingParentNodes.Count -eq 0) "asset bridge" "all parent nodes exist on Bardin"
 
 $playerListPath = Join-Path $SourceRoot "scripts\ui\views\ingame_player_list_ui_v2.lua"
 $playerListText = Get-Content -LiteralPath $playerListPath -Raw
