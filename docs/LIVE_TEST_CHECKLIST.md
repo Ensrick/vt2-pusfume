@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.4.1-dev` intentionally locks itself in Chaos Wastes, Weaves, Versus, and other mechanisms that snapshot or constrain the vanilla career list.
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.4.2-dev` intentionally locks itself in Chaos Wastes, Weaves, Versus, and other mechanisms that snapshot or constrain the vanilla career list.
 
 ## Before opening Heroes
 
@@ -15,10 +15,11 @@ Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.4.1-dev` inte
 1. Open **Heroes**.
 2. Confirm a full-size gold-trimmed card appears one row above Saltzpyre, to the right of the career heading.
 3. Confirm the five existing hero rows and their career cards retain their original size and positions.
-4. Click the card. The preview should use Bardin/Ranger Veteran visuals while the career heading says **Pusfume**.
-5. Run `/pusfume_status`; `UI(card=true selected=true)` confirms both UI hooks executed.
-6. Run `/pusfume_preflight` again. `five-row grid card` should pass and report Bardin's row and column 5.
-7. Confirm the selection through the normal Hero-menu button.
+4. Click the card. The center preview should show Janfon's model-derived Pusfume render while the career heading says **Pusfume**.
+5. Confirm no Ranger Veteran/Bardin 3D unit remains visible behind the Pusfume render.
+6. Run `/pusfume_status`; `UI(card=true selected=true)` confirms both UI hooks executed.
+7. Run `/pusfume_preflight` again. The five-row card, preview hook, preview widget, donor suppression, and spawn weapon checks should pass.
+8. Confirm the selection through the normal Hero-menu button.
 
 ## Spawn smoke test
 

@@ -98,6 +98,14 @@ function M.collect(registry, career_index, backend, compat, ui)
         ui_status.legacy_card_seen and string.format("overflow row=%d column=%d",
             ui_status.legacy_target_row, ui_status.target_column)
             or "not rendered yet; reopen the selection grid and rerun")
+    add(checks, "Pusfume preview hook", ui_status.preview_hook_installed and "PASS" or "FAIL",
+        ui_status.preview_hook_installed and "donor menu spawn is intercepted" or "preview hook unavailable")
+    add(checks, "Pusfume preview widget", ui_status.preview_widget_seen and "PASS" or "WARN",
+        ui_status.preview_widget_seen and "model-derived texture widget initialized"
+            or "not rendered yet; reopen the selection grid and rerun")
+    add(checks, "donor preview suppression", ui_status.donor_preview_suppressed and "PASS" or "WARN",
+        ui_status.donor_preview_suppressed and "Ranger Veteran menu unit cleared"
+            or "select Pusfume, then rerun preflight")
     add(checks, "Hero window hook", ui_status.modern_hook_installed and "PASS" or "WARN",
         ui_status.modern_hook_installed and "HeroWindowCharacterSelectionConsole hooked"
             or "class not loaded in this menu path")

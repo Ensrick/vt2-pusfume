@@ -1,0 +1,14 @@
+pusfume_model_preview = {
+	material_contexts = {
+		surface_material = ""
+	}
+
+	shader = "gui:DIFFUSE_MAP"
+
+	textures = {
+		diffuse_map = "textures/pusfume/pusfume_model_preview"
+	}
+
+	variables = {
+	}
+}

@@ -10,3 +10,6 @@ lua = [
 	"scripts/mods/pusfume/*"
 ]
 
+material = [
+	"materials/pusfume/*"
+]
