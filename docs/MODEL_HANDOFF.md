@@ -46,15 +46,13 @@ The eye slots need a deliberate VT2 eye/emissive material rather than the import
 
 ## Compiler gate
 
-VT2's SDK does not compile the skinned FBX directly. A mesh unit needs both a text `.unit` descriptor and a skinned `.bsi` scene payload before the Stingray compiler can produce bundle resources. The current community Bitsquid Blender Tools can import BSI/compiled units and export the `.unit` descriptor, but it has no BSI exporter.
+VT2's SDK does not compile the skinned FBX directly. A mesh unit needs both a text `.unit` descriptor and a skinned `.bsi` scene payload before the Stingray compiler can produce bundle resources.
 
-The installed VT2 SDK includes current BSI exporter plugins for Maya through 2026, older 3ds Max versions, and MotionBuilder. This machine does not currently have one of those host applications installed. The cleaned FBX is therefore ready for one of these final hops:
+The repository now provides `tools/export_blender_bsi.py` as an account-free final hop. On the validated handoff, Blender 5.2 exports 24,318 triangles, nine material slots, 82 skeleton nodes, inverse bind matrices, and normalized four-influence streams. Fatshark's SDK compiler accepts the result and produces one native skin with 82 joint nodes, nine material bone sets, `HALF4` weights, and packed `UINT1` blend indices.
 
-1. Import it into Maya 2026 and export BSI with the SDK plugin.
-2. Send the cleaned FBX to a collaborator who already has a supported Maya, 3ds Max, or MotionBuilder setup and request the `.bsi` plus `.unit` source files.
-3. Implement a Blender BSI exporter against the SJSON format parsed by Bitsquid Blender Tools. This is feasible but is a separate tooling project, especially for skinned joint indices, bind poses, split normals, UV seams, and per-material geometry streams.
+Use `tools/Test-BsiPipeline.ps1` to run export and SDK compilation together. Maya is no longer required for Pusfume's geometry or skin conversion. A Maya trial can still serve as a reference exporter if later animation or edge-case parity work needs an independent comparison.
 
-Do not ask Janfon to remodel or reweight solely because of this compiler boundary. His FBX contains the geometry, hierarchy, UVs, materials, and skin weights needed by any of the three routes.
+Compiler success does not prove that the slave-rat rest pose matches the playable Globadier animation base. Do not ship or commit the generated placeholder until idle, locomotion, attachment, and remote-husk deformation have passed in game.
 
 ## Publication boundary
 
