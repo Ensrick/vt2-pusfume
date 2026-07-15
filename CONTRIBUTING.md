@@ -9,8 +9,9 @@ Pusfume changes synchronized VT2 career data and can crash every connected peer 
 3. Create a focused branch named `fix/<issue>-<topic>`, `feat/<issue>-<topic>`, `docs/<issue>-<topic>`, or `chore/<issue>-<topic>`.
 4. Keep commits reviewable and imperative. Do not mix unrelated refactors, assets, and behavior changes.
 5. Run `tools/Test-PusfumeSource.ps1` and an SDK build before requesting review when runtime files change.
-6. Open a pull request that links the issue, explains risks, and records exact verification results.
-7. Resolve review conversations and pass CI before merging. Do not push directly to `main`.
+6. Deploy every local runtime update to Workshop item `3764954245` and verify the deployed hashes before reporting it ready for testing.
+7. Open a pull request that links the issue, explains risks, and records exact verification results.
+8. Resolve review conversations and pass CI before merging. Do not push directly to `main`.
 
 ## Engineering standards
 

@@ -33,6 +33,7 @@ $nativeConfigPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_n
 $uiPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_ui.lua"
 $dataPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\pusfume_data.lua"
 $packagePath = Join-Path $repoRoot "pusfume\resource_packages\pusfume\pusfume.package"
+$nativeBuildPath = Join-Path $repoRoot "tools\Build-NativePusfume.ps1"
 $previewPath = Join-Path $repoRoot "pusfume\textures\pusfume\pusfume_model_preview.png"
 $previewTexturePath = Join-Path $repoRoot "pusfume\textures\pusfume\pusfume_model_preview.texture"
 $previewMaterialPath = Join-Path $repoRoot "pusfume\materials\pusfume\pusfume_model_preview.material"
@@ -47,6 +48,7 @@ $nativeConfigText = Get-Content -LiteralPath $nativeConfigPath -Raw
 $uiText = Get-Content -LiteralPath $uiPath -Raw
 $dataText = Get-Content -LiteralPath $dataPath -Raw
 $packageText = Get-Content -LiteralPath $packagePath -Raw
+$nativeBuildText = Get-Content -LiteralPath $nativeBuildPath -Raw
 $mainVersion = [regex]::Match($mainText, 'MOD_VERSION\s*=\s*"([^"]+)"').Groups[1].Value
 $configVersion = [regex]::Match($configText, 'Prototype v([^";]+)').Groups[1].Value
 
@@ -63,6 +65,9 @@ Test-Condition ($nativeConfigText -match 'enabled\s*=\s*false') `
 Test-Condition ($nativeText -match 'PlayerUnitCosmeticExtension' -and `
     $nativeText -match '_init_mesh_attachment') `
     "native cosmetic" "player mesh attachment is career-scoped"
+Test-Condition ($nativeBuildText -match '\[switch\]\$NoDeploy' -and `
+    $nativeBuildText -match 'if \(-not \$NoDeploy\)') `
+    "local deployment" "native builds deploy to the active Workshop item by default"
 Test-Condition ($uiText -match 'native\.enabled\(\)') `
     "selector preview" "native builds retain VT2's stock 3D preview flow"
 Test-Condition ($uiText -match 'CharacterSelectionStateCharacter') `

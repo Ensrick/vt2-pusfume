@@ -1,7 +1,7 @@
 param(
     [string]$InputBsi = ".build\compiler-fixture\pusfume_bsi_probe\units\pusfume_probe\pusfume_3p.bsi",
     [string]$WorkshopPath = "C:\Program Files (x86)\Steam\steamapps\workshop\content\552500\3764954245",
-    [switch]$Deploy
+    [switch]$NoDeploy
 )
 
 $ErrorActionPreference = "Stop"
@@ -96,18 +96,30 @@ if (-not (Test-Path -LiteralPath $modFile -PathType Leaf)) {
     throw "SDK reported success but did not produce $modFile"
 }
 
-if ($Deploy) {
+if (-not $NoDeploy) {
     $resolvedWorkshop = [IO.Path]::GetFullPath($WorkshopPath)
     if (-not $resolvedWorkshop.EndsWith("552500\3764954245", [StringComparison]::OrdinalIgnoreCase)) {
         throw "Refusing to deploy outside the Pusfume Workshop item: $resolvedWorkshop"
     }
 
     New-Item -ItemType Directory -Path $resolvedWorkshop -Force | Out-Null
+    $verifiedFiles = 0
+
     Get-ChildItem -LiteralPath $bundleRoot -File | ForEach-Object {
-        Copy-Item -LiteralPath $_.FullName -Destination $resolvedWorkshop -Force
+        $deployedPath = Join-Path $resolvedWorkshop $_.Name
+
+        Copy-Item -LiteralPath $_.FullName -Destination $deployedPath -Force
+
+        $sourceHash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
+        $deployedHash = (Get-FileHash -LiteralPath $deployedPath -Algorithm SHA256).Hash
+        if ($sourceHash -ne $deployedHash) {
+            throw "Deployment hash mismatch: $deployedPath"
+        }
+
+        $verifiedFiles++
     }
 
-    Write-Host "Deployed native Pusfume build to $resolvedWorkshop"
+    Write-Host "Deployed and hash-verified $verifiedFiles native Pusfume files to $resolvedWorkshop"
 }
 
 $bsiSize = (Get-Item -LiteralPath $inputPath).Length
