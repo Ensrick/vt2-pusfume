@@ -9,7 +9,7 @@ This map targets Vermintide 2 source version 6.11.3. Paths refer to Fatshark's L
 3. The same profile file derives each career's character and camera state lists after all official careers are present.
 4. DLC careers call `add_career_to_profile(profile_name, career)` from their profile file.
 
-A runtime mod loads after those boot-time passes. It must therefore update the career table, original snapshot, profile career array, reverse lookup, and derived state lists itself. Pusfume's registry does all five idempotently.
+A runtime mod loads after those boot-time passes. It must therefore update the career table, original snapshot, profile career array, reverse lookup, and derived state lists itself. Pusfume's registry does all five idempotently and reapplies its custom fields safely after a VMF reload.
 
 ## Network identity and spawning
 
@@ -32,7 +32,13 @@ The next persistence milestone should keep a Pusfume loadout in VMF settings and
 
 ## UI boundary
 
-The modern Hero career selector iterates `profile.careers` and can display a fifth entry. The older character-selection screen contains a literal `for j = 1, 4`, so it does not expose Pusfume. The `/pusfume` command calls the same host-mediated `ProfileRequester` used by vanilla UI and is the supported fallback.
+The modern Hero career selector iterates `profile.careers` and creates a functional fifth entry. A UI hook moves that real Pusfume widget into the first row's unused top-right column, retaining vanilla input, lock, preview, and selection behavior. The position is derived from the widest official career row to avoid future overlap. The older character-selection screen contains a literal `for j = 1, 4`, so it does not expose Pusfume. The `/pusfume` command calls the same host-mediated `ProfileRequester` used by vanilla UI and reports the host result.
+
+## Mechanism and bot boundaries
+
+Chaos Wastes builds a local `DEUS_CAREERS` list when `deus_mechanism.lua` loads, before a runtime mod adds Pusfume. Weaves and Versus have additional fixed career/loadout paths. The prototype reports itself unlocked only in Adventure so unsupported modes fail closed rather than reaching an incomplete spawn path.
+
+If a Pusfume player becomes a bot, vanilla behavior tables look up actions and conditions by career name. Runtime aliases map Pusfume to Ranger Veteran's ability action, activation condition, and category. They are refreshed after all mods load and on game-state changes because those tables may be created after initial mod registration.
 
 ## Talent and ability boundary
 
@@ -46,4 +52,3 @@ A career points at `TalentTrees[profile_name][talent_tree_index]`, `ActivatedAbi
 4. Import original third-person and first-person units and replace the donor skin/unit resources.
 5. Add portraits, icons, audio policy, bot conditions, and Chaos Wastes/Weaves compatibility.
 6. Add peer-version enforcement before allowing career selection.
-

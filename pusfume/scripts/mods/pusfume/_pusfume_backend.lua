@@ -1,6 +1,11 @@
 local mod = get_mod("pusfume")
 
 local M = {}
+local status = {
+    expected_hook_count = 23,
+    hook_count = 0,
+    installed = false,
+}
 
 local function alias_career(career_name, registry)
     if career_name == registry.CAREER_NAME then
@@ -14,9 +19,15 @@ local function hook_career_first(class_name, method_name, registry)
     mod:hook(class_name, method_name, function(func, self, career_name, ...)
         return func(self, alias_career(career_name, registry), ...)
     end)
+
+    status.hook_count = status.hook_count + 1
 end
 
 function M.install(registry)
+    if status.installed then
+        return status
+    end
+
     mod:hook("BackendInterfaceItemPlayfab", "get_loadout", function(func, self, ...)
         local loadouts = func(self, ...)
 
@@ -26,6 +37,7 @@ function M.install(registry)
 
         return loadouts
     end)
+    status.hook_count = status.hook_count + 1
 
     mod:hook("BackendInterfaceItemPlayfab", "get_bot_loadout", function(func, self, ...)
         local loadouts = func(self, ...)
@@ -36,6 +48,7 @@ function M.install(registry)
 
         return loadouts
     end)
+    status.hook_count = status.hook_count + 1
 
     local item_methods = {
         "set_loadout_index",
@@ -58,6 +71,7 @@ function M.install(registry)
     mod:hook("BackendInterfaceItemPlayfab", "set_loadout_item", function(func, self, item_id, career_name, ...)
         return func(self, item_id, alias_career(career_name, registry), ...)
     end)
+    status.hook_count = status.hook_count + 1
 
     local talent_methods = {
         "set_default_override",
@@ -75,8 +89,16 @@ function M.install(registry)
         hook_career_first("BackendInterfaceTalentsPlayfab", method_name, registry)
     end
 
-    mod:info("[pusfume] installed PlayFab donor adapters")
+    status.installed = true
+
+    mod:info("[pusfume] installed PlayFab donor adapters hooks=%d/%d",
+        status.hook_count, status.expected_hook_count)
+
+    return status
+end
+
+function M.status()
+    return status
 end
 
 return M
-

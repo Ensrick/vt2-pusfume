@@ -1,6 +1,5 @@
 return {
     mod_description = {
-        en = "Experimental custom-career scaffold for Pusfume. All lobby members need the same version.",
+        en = "Adventure-only custom-career scaffold for Pusfume. All lobby members need the same version.",
     },
 }
-

@@ -4,6 +4,12 @@ local M = {}
 
 local CAREER_CARD_WIDTH = 124
 local TOP_ROW_OFFSET_Y = 0
+local state = {
+    card_seen = false,
+    hook_installed = false,
+    selection_seen = false,
+    target_column = nil,
+}
 
 local function rightmost_base_career_column(registry)
     local max_columns = 0
@@ -41,6 +47,8 @@ local function move_card_to_top_right(window, registry)
             -- Distinguish the donor portrait until original Pusfume UI art is available.
             content.is_premium = true
             window._pusfume_career_widget = widget
+            state.card_seen = true
+            state.target_column = target_column
 
             mod:info("[pusfume] Hero selector card placed at top-right column %d", target_column)
 
@@ -52,6 +60,10 @@ local function move_card_to_top_right(window, registry)
 end
 
 function M.install(registry)
+    if state.hook_installed then
+        return true
+    end
+
     if not HeroWindowCharacterSelectionConsole then
         mod:warning("[pusfume] Hero selector class is unavailable; /pusfume remains available")
         return false
@@ -61,7 +73,23 @@ function M.install(registry)
         move_card_to_top_right(window, registry)
     end)
 
+    mod:hook_safe(HeroWindowCharacterSelectionConsole, "_select_hero", function(window, profile_index, career_index)
+        local profile = SPProfiles[profile_index]
+        local career = profile and profile.careers[career_index]
+
+        if career and career.name == registry.CAREER_NAME then
+            state.selection_seen = true
+            mod:info("[pusfume] Hero selector previewed Pusfume")
+        end
+    end)
+
+    state.hook_installed = true
+
     return true
+end
+
+function M.status()
+    return state
 end
 
 return M
