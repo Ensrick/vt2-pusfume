@@ -1,0 +1,39 @@
+name: Source preflight
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  source-preflight:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out Pusfume
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check out VT2 source reference
+        uses: actions/checkout@v4
+        with:
+          repository: Aussiemon/Vermintide-2-Source-Code
+          path: Vermintide-2-Source-Code
+
+      - name: Run source preflight
+        shell: pwsh
+        run: ./tools/Test-PusfumeSource.ps1 -SourceRoot ./Vermintide-2-Source-Code
+
+      - name: Check patch hygiene
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "pull_request") {
+            git diff --check "${{ github.event.pull_request.base.sha }}" HEAD
+          } else {
+            git show --check --oneline HEAD
+          }
