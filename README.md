@@ -4,15 +4,15 @@ An experimental, friends-only Vermintide 2 custom-career project by Ensrick and 
 
 Steam Workshop development item: [Pusfume - Custom Career Prototype](https://steamcommunity.com/sharedfiles/filedetails/?id=3764954245)
 
-The current milestone registers **Pusfume** as Bardin's fifth career. It uses Ranger Veteran's game-owned unit, animation set, talent tree, ability, and backend loadout as temporary adapters. This proves the complete selection and spawn path without redistributing Fatshark assets. Every player in a lobby must install the same version.
+The current milestone registers **Pusfume** as Bardin's fifth career. It uses Ranger Veteran's game-owned unit, animation set, talent tree, ability, and backend loadout as temporary adapters. The generated Pusfume career card is moved into a dedicated top-right slot in the Hero selector and keeps the game's normal click, preview, and confirmation flow. Every player in a lobby must install the same version.
 
 ## Install and test
 
 1. Subscribe to Vermintide Mod Framework and place it first in the launcher mod order.
 2. Subscribe to Pusfume and place it below VMF.
 3. Start the Modded Realm.
-4. Open Heroes, select Bardin, and select the fifth career.
-5. If the UI does not expose the fifth column, enter `/pusfume` in chat while in the keep.
+4. Open Heroes and click the gold-trimmed Pusfume card at the top right of the career grid.
+5. If the UI hook is unavailable after a game update, enter `/pusfume` in chat while in the keep.
 6. Enter `/pusfume_status` to print registration and runtime diagnostics.
 
 Pusfume currently shares Ranger Veteran's equipped items and talents. Changing Pusfume's loadout therefore changes Ranger Veteran's donor loadout until custom persistence is implemented.
