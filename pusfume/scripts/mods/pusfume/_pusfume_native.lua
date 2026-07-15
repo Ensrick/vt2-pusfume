@@ -4,8 +4,76 @@ local M = {}
 local state = {
     cosmetic_registered = false,
     hook_installed = false,
+    probe_hook_installed = false,
     resource_available = false,
 }
+
+local PROBE_LINKS = {
+    { source = "j_hips", target = "j_hips" },
+    { source = "j_lefthand", target = "j_hand_L" },
+}
+
+local function sample_link_probe(extension, unit, t)
+    local probe = extension._pusfume_native_probe
+
+    if not probe or probe.complete or not ALIVE[unit] or not ALIVE[probe.mesh] then
+        return
+    end
+
+    probe.started_at = probe.started_at or t
+
+    local elapsed = t - probe.started_at
+
+    if elapsed < probe.next_sample_at then
+        return
+    end
+
+    local details = {}
+
+    for _, link in ipairs(PROBE_LINKS) do
+        local source_position = Unit.world_position(unit, Unit.node(unit, link.source))
+        local target_position = Unit.world_position(probe.mesh, Unit.node(probe.mesh, link.target))
+        local initial = probe.initial[link.source]
+
+        details[#details + 1] = string.format(
+            "%s source_motion=%.4f target_motion=%.4f link_error=%.4f",
+            link.source,
+            Vector3.distance(source_position, initial.source:unbox()),
+            Vector3.distance(target_position, initial.target:unbox()),
+            Vector3.distance(source_position, target_position))
+    end
+
+    probe.samples = probe.samples + 1
+    probe.next_sample_at = probe.samples == 1 and 2 or 5
+    probe.complete = probe.samples >= 3
+
+    mod:info("[pusfume] Native animation probe t=%.1f %s", elapsed, table.concat(details, "; "))
+end
+
+local function initialize_link_probe(extension, unit)
+    local mesh = extension._tp_unit_mesh
+
+    if not mesh then
+        return
+    end
+
+    local initial = {}
+
+    for _, link in ipairs(PROBE_LINKS) do
+        initial[link.source] = {
+            source = Vector3Box(Unit.world_position(unit, Unit.node(unit, link.source))),
+            target = Vector3Box(Unit.world_position(mesh, Unit.node(mesh, link.target))),
+        }
+    end
+
+    extension._pusfume_native_probe = {
+        complete = false,
+        initial = initial,
+        mesh = mesh,
+        next_sample_at = 0.5,
+        samples = 0,
+    }
+end
 
 local function deep_clone(value, seen)
     if type(value) ~= "table" then
@@ -80,10 +148,30 @@ local function install_cosmetic_hook(registry, config)
             mod:info("[pusfume] Attaching native third-person mesh to Pusfume player unit")
         end
 
-        return func(extension, world, unit, skin_name, profile, career)
+        local result = func(extension, world, unit, skin_name, profile, career)
+
+        if career and career.name == registry.CAREER_NAME then
+            initialize_link_probe(extension, unit)
+        end
+
+        return result
     end)
 
     state.hook_installed = true
+
+    return true
+end
+
+local function install_probe_hook()
+    if state.probe_hook_installed or not PlayerUnitCosmeticExtension then
+        return state.probe_hook_installed
+    end
+
+    mod:hook_safe(PlayerUnitCosmeticExtension, "update", function(extension, unit, dummy_input, dt, context, t)
+        sample_link_probe(extension, unit, t)
+    end)
+
+    state.probe_hook_installed = true
 
     return true
 end
@@ -94,8 +182,9 @@ function M.install(registry, config)
     end
 
     install_cosmetic_hook(registry, config)
+    install_probe_hook()
 
-    return state.cosmetic_registered and state.hook_installed
+    return state.cosmetic_registered and state.hook_installed and state.probe_hook_installed
 end
 
 function M.enabled()

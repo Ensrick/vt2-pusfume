@@ -323,7 +323,12 @@ local function install_preview_hooks(registry, native)
                 state.native_preview_enabled = true
                 mod:info("[pusfume] Requesting native Pusfume hero preview")
 
-                return func(window, hero_name)
+                local spawn_callback = callback(window, "cb_hero_unit_spawned", hero_name)
+
+                -- Equipped skins resolve through the donor backend. Force the
+                -- base skin so Pusfume cannot preview as Ranger Veteran.
+                return window.world_previewer:request_spawn_hero_unit(hero_name,
+                    window._selected_career_index, true, spawn_callback, nil, 0.5)
             end
 
             local world_previewer = window.world_previewer

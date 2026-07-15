@@ -104,6 +104,18 @@ Test-Condition ($preflightText -match 'add\(checks, "career color"') `
     "career color" "runtime preflight validates the player-list contract"
 Test-Condition ($backendText -match 'mod:hook\(BackendUtils, "get_loadout_item"') `
     "spawn guard" "BackendUtils item resolution is donor-aliased"
+Test-Condition ($backendText -match 'function expose_donor_loadout' -and `
+    $backendText -match 'donor_loadout = \{\}') `
+    "loadout UI guard" "direct loadout table always exposes an iterable Pusfume entry"
+Test-Condition ($backendText -match 'function M\.refresh_runtime_aliases' -and `
+    $backendText -match 'store\[registry\.CAREER_NAME\] = store\[registry\.DONOR_CAREER_NAME\]') `
+    "loadout UI guard" "backend stores retain the alias across later instance hooks"
+Test-Condition ($preflightText -match 'direct_loadouts.*item_interface:get_loadout\(\)' -and `
+    $preflightText -match 'type\(direct_loadout\) == "table"') `
+    "loadout UI guard" "preflight exercises the exact vanilla tooltip table API"
+Test-Condition ($uiText -match 'request_spawn_hero_unit\(hero_name,' -and `
+    $uiText -match 'window\._selected_career_index, true, spawn_callback') `
+    "native selector preview" "Pusfume forces its base skin instead of the equipped Ranger skin"
 Test-Condition ($backendText -match 'unresolved.*slot_melee.*slot_ranged' -or `
     ($backendText -match 'slot_melee' -and $backendText -match 'slot_ranged')) `
     "spawn guard" "both default weapon slots are validated"

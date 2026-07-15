@@ -29,11 +29,13 @@ local function backend_runtime_check(checks, registry)
         item_interface, registry.DONOR_CAREER_NAME, false)
     local pusfume_ok, pusfume_loadout = pcall(item_interface.get_loadout_by_career_name,
         item_interface, registry.CAREER_NAME, false)
+    local direct_loadouts = item_interface:get_loadout()
+    local direct_loadout = direct_loadouts and direct_loadouts[registry.CAREER_NAME]
 
-    if donor_loadout and pusfume_loadout then
-        add(checks, "backend data", "PASS", "donor loadout is exposed as pusfume")
+    if donor_loadout and pusfume_loadout and type(direct_loadout) == "table" then
+        add(checks, "backend data", "PASS", "donor loadout is exposed through method and table APIs")
     elseif donor_ok and pusfume_ok then
-        add(checks, "backend data", "WARN", "loadouts are not materialized yet; rerun in the Keep")
+        add(checks, "backend data", "WARN", "loadout method or table alias is not materialized yet")
     else
         add(checks, "backend data", "FAIL", "donor loadout adapter raised an error")
     end
