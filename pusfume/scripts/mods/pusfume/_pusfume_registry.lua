@@ -141,6 +141,20 @@ function M.item_permission_status()
     return status
 end
 
+function M.refresh_career_color()
+    local color_definitions = Colors and Colors.color_definitions
+    local donor_color = color_definitions and color_definitions[M.DONOR_CAREER_NAME]
+
+    if type(donor_color) ~= "table" then
+        return false
+    end
+
+    -- The player-list HUD indexes custom career colors without a fallback.
+    color_definitions[M.CAREER_NAME] = deep_clone(donor_color)
+
+    return color_definitions[M.CAREER_NAME] ~= donor_color
+end
+
 function M.find_career_index()
     local profile = PROFILES_BY_NAME and PROFILES_BY_NAME[M.PROFILE_NAME]
 
@@ -155,6 +169,7 @@ function M.register()
     fassert(CareerSettings and CareerSettings[M.DONOR_CAREER_NAME], "Pusfume donor career is unavailable.")
     fassert(CareerSettingsOriginal, "CareerSettingsOriginal is unavailable.")
     fassert(PROFILES_BY_NAME and PROFILES_BY_NAME[M.PROFILE_NAME], "Pusfume donor profile is unavailable.")
+    fassert(M.refresh_career_color(), "Pusfume donor career color is unavailable.")
 
     local profile = PROFILES_BY_NAME[M.PROFILE_NAME]
     local career = CareerSettings[M.CAREER_NAME]
