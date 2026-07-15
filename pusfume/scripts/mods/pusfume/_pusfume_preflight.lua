@@ -71,10 +71,19 @@ function M.collect(registry, career_index, backend, compat, ui)
             permissions.eligible, permissions.missing))
 
     local backend_status = backend.status()
+    local backend_hooks_ready = backend_status.installed
+        and backend_status.hook_count == backend_status.expected_hook_count
+        and backend_status.runtime_guards_installed
+        and backend_status.runtime_guard_count == backend_status.expected_runtime_guard_count
     add(checks, "backend hooks",
-        backend_status.installed and backend_status.hook_count == backend_status.expected_hook_count and "PASS" or "FAIL",
-        string.format("installed=%s hooks=%d/%d", tostring(backend_status.installed),
-            backend_status.hook_count, backend_status.expected_hook_count))
+        backend_hooks_ready and "PASS" or "FAIL",
+        string.format("PlayFab=%d/%d BackendUtils=%d/%d", backend_status.hook_count,
+            backend_status.expected_hook_count, backend_status.runtime_guard_count,
+            backend_status.expected_runtime_guard_count))
+
+    local weapons_ready, weapons_detail = backend.loadout_status(registry)
+    add(checks, "spawn weapons", weapons_ready == nil and "WARN" or weapons_ready and "PASS" or "FAIL",
+        weapons_detail)
 
     local aliases = compat.status().aliases
     local bot_aliases = aliases["bot ability action"] and aliases["bot ability condition"]
@@ -123,6 +132,7 @@ end
 function M.install(registry, career_index, backend, compat, ui)
     mod:command("pusfume_preflight", "Run Pusfume registration and runtime checks.", function()
         registry.refresh_item_permissions()
+        backend.install_runtime_guards(registry)
         compat.install(registry)
         ui.install(registry)
 

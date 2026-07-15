@@ -1,6 +1,6 @@
 local mod = get_mod("pusfume")
 
-local MOD_VERSION = "0.4.0-dev"
+local MOD_VERSION = "0.4.1-dev"
 
 mod:info("[pusfume] loading v%s", MOD_VERSION)
 
@@ -23,6 +23,8 @@ preflight.install(registry, career_index, backend, compat, ui)
 local function refresh_runtime_integrations()
     registry.refresh_item_permissions()
     assets.install()
+    backend.install(registry)
+    backend.install_runtime_guards(registry)
     compat.install(registry)
     ui.install(registry)
 end

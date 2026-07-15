@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.4.0-dev` intentionally locks itself in Chaos Wastes, Weaves, Versus, and other mechanisms that snapshot or constrain the vanilla career list.
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.4.1-dev` intentionally locks itself in Chaos Wastes, Weaves, Versus, and other mechanisms that snapshot or constrain the vanilla career list.
 
 ## Before opening Heroes
 
@@ -8,6 +8,7 @@ Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.4.0-dev` inte
 2. Enter the Adventure Keep and run `/pusfume_preflight`.
 3. Expect zero failures. A warning that the five-row grid card has not rendered is normal at this stage.
 4. If backend data is still marked as not initialized, wait for the Keep to finish loading and rerun the command.
+5. Confirm `spawn weapons` passes and names resolved melee and ranged items before selecting Pusfume.
 
 ## Hero selector
 
