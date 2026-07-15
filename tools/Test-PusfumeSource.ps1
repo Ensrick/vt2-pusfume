@@ -75,9 +75,14 @@ Test-Condition ($nativeText -match 'PlayerUnitCosmeticExtension' -and `
 Test-Condition ($nativeBuildText -match '\[switch\]\$NoDeploy' -and `
     $nativeBuildText -match 'if \(-not \$NoDeploy\)') `
     "local deployment" "native builds deploy to the active Workshop item by default"
-Test-Condition ($nativeExporterText -match 'ACTIVATION_BONE_CANDIDATES' -and `
-    $nativeExporterText -match 'document\["animations"\]\s*=\s*\[activation_animation\]') `
-    "native animation" "skinned BSI includes a rest-pose activation channel"
+Test-Condition ($nativeExporterText -match 'build_skin_activation_animations' -and `
+    $nativeExporterText -match 'for bone in armature\.data\.bones' -and `
+    $nativeExporterText -match 'document\["animations"\]\s*=\s*activation_animations' -and `
+    $nativeExporterText -match 'write_animation_bones') `
+    "native animation" "skinned BSI activates the complete scene graph"
+Test-Condition ($nativeBuildText -match 'ChangeExtension\(\$inputPath, "\.bones"\)' -and `
+    $nativeBuildText -match 'pusfume_3p\.bones') `
+    "native animation" "same-name animation skeleton is required by the native build"
 Test-Condition ($nativeBuildText -match 'Write-NativeTexture' -and `
     $nativeBuildText -match 'p_main\s*=\s*"materials/pusfume/pusfume_body"' -and `
     $nativeBuildText -notmatch 'p_main\s*=\s*"materials/pusfume/pusfume_debug_3p"') `

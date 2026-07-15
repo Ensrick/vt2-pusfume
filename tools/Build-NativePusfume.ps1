@@ -19,6 +19,10 @@ $textureSourcePath = if ([IO.Path]::IsPathRooted($TextureSource)) {
 } else {
     (Resolve-Path (Join-Path $repoRoot $TextureSource)).Path
 }
+$inputBonesPath = [IO.Path]::ChangeExtension($inputPath, ".bones")
+if (-not (Test-Path -LiteralPath $inputBonesPath -PathType Leaf)) {
+    throw "The native BSI is missing its same-name animation skeleton: $inputBonesPath"
+}
 $stageRoot = Join-Path $repoRoot ".build\native-workshop"
 $stageMod = Join-Path $stageRoot "pusfume"
 $vmbPath = (Resolve-Path (Join-Path $repoRoot "..\vmb\vmb.js")).Path
@@ -49,6 +53,7 @@ if (Test-Path -LiteralPath $staleBundlePath) {
 $unitRoot = Join-Path $stageMod "units\pusfume"
 New-Item -ItemType Directory -Path $unitRoot -Force | Out-Null
 Copy-Item -LiteralPath $inputPath -Destination (Join-Path $unitRoot "pusfume_3p.bsi") -Force
+Copy-Item -LiteralPath $inputBonesPath -Destination (Join-Path $unitRoot "pusfume_3p.bones") -Force
 
 $textureRoot = Join-Path $stageMod "textures\pusfume"
 $materialRoot = Join-Path $stageMod "materials\pusfume"
