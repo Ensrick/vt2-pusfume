@@ -1,0 +1,155 @@
+import importlib.util
+import pathlib
+import struct
+import sys
+import tempfile
+import unittest
+import zlib
+
+TOOLS = pathlib.Path(__file__).resolve().parent.parent / "tools"
+
+def load(name):
+    spec = importlib.util.spec_from_file_location(name, TOOLS / f"{name}.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+splice = load("splice_bundle_resource")
+make_child = load("make_spliced_child")
+
+
+def build_structured_bundle(path, resources):
+    """resources: list of (type_hash, name_hash, payload_bytes)."""
+    image = bytearray()
+    image += struct.pack("<I", len(resources))
+    image += bytes(256)
+    for type_hash, name_hash, payload in resources:
+        image += struct.pack("<QQ", type_hash, name_hash)
+        image += struct.pack("<II", 0, len(payload))
+    for type_hash, name_hash, payload in resources:
+        image += struct.pack("<QQ", type_hash, name_hash)
+        image += struct.pack("<II", 1, 0)
+        image += struct.pack("<III", 0, len(payload), 0)
+        image += payload
+
+    out = bytearray()
+    out += struct.pack("<II", splice.VT2X_FORMAT, len(image))
+    out += b"\x00\x00\x00\x00"
+    for start in range(0, len(image), 0x10000):
+        block = zlib.compress(bytes(image[start : start + 0x10000]), 9)
+        out += struct.pack("<I", len(block))
+        out += block
+    path.write_bytes(bytes(out))
+    return bytes(image)
+
+
+class SpliceBundleResourceTests(unittest.TestCase):
+    MAT = splice.murmur64a(b"material")
+    TEX = splice.murmur64a(b"texture")
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dir = pathlib.Path(self.tmp.name)
+        self.bundle = self.dir / "test.mod_bundle"
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def run_main(self, module, argv):
+        saved = sys.argv
+        sys.argv = argv
+        try:
+            return module.main()
+        finally:
+            sys.argv = saved
+
+    def test_walk_matches_layout(self):
+        resources = [
+            (self.MAT, 0x1111, b"A" * 400),
+            (self.TEX, 0x2222, b"B" * 70000),  # payload spans a block boundary
+            (self.MAT, 0x3333, b"C" * 768),
+        ]
+        build_structured_bundle(self.bundle, resources)
+        fmt, _, data = splice.read_bundle(self.bundle)
+        count, index, records = splice.walk(data, fmt)
+        self.assertEqual(count, 3)
+        self.assertEqual([r["name"] for r in records], [0x1111, 0x2222, 0x3333])
+        self.assertEqual(records[1]["total_payload"], 70000)
+        self.assertEqual(index[1]["data_size"], 70000)
+
+    def test_splice_grows_payload_and_updates_sizes(self):
+        resources = [
+            (self.MAT, 0x1111, b"A" * 400),
+            (self.MAT, 0x3333, b"C" * 500),
+        ]
+        build_structured_bundle(self.bundle, resources)
+        payload = self.dir / "payload.bin"
+        payload.write_bytes(b"Z" * 768)
+
+        rc = self.run_main(splice, [
+            "splice_bundle_resource.py", str(self.bundle),
+            "--type", "material", "--name", "hash:0000000000001111",
+            "--payload", str(payload),
+        ])
+        self.assertEqual(rc, 0)
+
+        fmt, _, data = splice.read_bundle(self.bundle)
+        _, index, records = splice.walk(data, fmt)
+        self.assertEqual(records[0]["versions"][0]["size"], 768)
+        self.assertEqual(index[0]["data_size"], 768)
+        start = records[0]["versions"][0]["payload_offset"]
+        self.assertEqual(data[start : start + 768], b"Z" * 768)
+        # sibling untouched
+        start2 = records[1]["versions"][0]["payload_offset"]
+        self.assertEqual(data[start2 : start2 + 500], b"C" * 500)
+
+    def test_splice_missing_resource_fails(self):
+        build_structured_bundle(self.bundle, [(self.MAT, 0x1111, b"A" * 16)])
+        payload = self.dir / "payload.bin"
+        payload.write_bytes(b"Z")
+        rc = self.run_main(splice, [
+            "splice_bundle_resource.py", str(self.bundle),
+            "--type", "material", "--name", "hash:00000000000000FF",
+            "--payload", str(payload),
+        ])
+        self.assertEqual(rc, 1)
+
+    def test_make_spliced_child_patches_each_id_once(self):
+        game_child = bytearray(200)
+        struct.pack_into("<Q", game_child, 28, 0x3D25339231384C80)
+        struct.pack_into("<Q", game_child, 92, 0xDD74D8319F514D96)
+        struct.pack_into("<Q", game_child, 104, 0x45FFAEEF53695A86)
+        extracted = self.dir / "child.material"
+        extracted.write_bytes(bytes(game_child))
+        out = self.dir / "payload.bin"
+
+        rc = self.run_main(make_child, [
+            "make_spliced_child.py", "--extracted", str(extracted),
+            "--resource", "hash:90BDF3BAC6F81BA8", "--expect-size", "200",
+            "--map", "DD74D8319F514D96=C263ECB79A8DCEC0",
+            "--map", "45FFAEEF53695A86=A4215592F6297E57",
+            "--out", str(out),
+        ])
+        self.assertEqual(rc, 0)
+        patched = out.read_bytes()
+        self.assertEqual(struct.unpack_from("<Q", patched, 28)[0], 0x3D25339231384C80)
+        self.assertEqual(struct.unpack_from("<Q", patched, 92)[0], 0xC263ECB79A8DCEC0)
+        self.assertEqual(struct.unpack_from("<Q", patched, 104)[0], 0xA4215592F6297E57)
+
+    def test_make_spliced_child_rejects_ambiguous_id(self):
+        game_child = bytearray(64)
+        struct.pack_into("<Q", game_child, 8, 0xDD74D8319F514D96)
+        struct.pack_into("<Q", game_child, 24, 0xDD74D8319F514D96)
+        extracted = self.dir / "child.material"
+        extracted.write_bytes(bytes(game_child))
+        rc = self.run_main(make_child, [
+            "make_spliced_child.py", "--extracted", str(extracted),
+            "--resource", "hash:90BDF3BAC6F81BA8",
+            "--map", "DD74D8319F514D96=C263ECB79A8DCEC0",
+            "--out", str(self.dir / "payload.bin"),
+        ])
+        self.assertEqual(rc, 1)
+
+
+if __name__ == "__main__":
+    unittest.main()

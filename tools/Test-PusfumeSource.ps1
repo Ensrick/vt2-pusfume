@@ -252,6 +252,21 @@ Test-Condition ($nativeConfigText -match 'donor_texture_shadow\s*=\s*false' -and
     $stripToolText -match 'preexisting_new' -and `
     $nativeText -match 'mode == "donor_atlas" and not config\.donor_texture_shadow') `
     "donor texture shadow" "an isolated atlas package loads after the donor, renames to mtr_outfit texture ids, and skips the dead runtime restore"
+Test-Condition ((Test-Path (Join-Path $repoRoot "tools\splice_bundle_resource.py")) -and `
+    (Test-Path (Join-Path $repoRoot "tools\make_spliced_child.py")) -and `
+    (Test-Path (Join-Path $repoRoot "tests\test_splice_bundle_resource.py")) -and `
+    $nativeBuildText -match '\[switch\]\$SplicedGameChild' -and `
+    $nativeBuildText -match '\$ParentChildMaterial = \$true' -and `
+    $nativeBuildText -match '\$NoDonorTextureShadow = \$true' -and `
+    $nativeBuildText -match 'make_spliced_child\.py' -and `
+    $nativeBuildText -match '--expect-size 768' -and `
+    $nativeBuildText -match 'hash:F72D636600F7F598' -and `
+    $nativeBuildText -match 'DD74D8319F514D96=C263ECB79A8DCEC0' -and `
+    $nativeBuildText -match '45FFAEEF53695A86=A4215592F6297E57' -and `
+    $nativeBuildText -match 'E334A8CB6BCB5E6D=F1A8995B7D45D618' -and `
+    $nativeBuildText -match '\$splicedInto\.Count -ne 1' -and `
+    $nativeBuildText -notmatch 'spliced_child_payload\.bin"? *-Destination') `
+    "spliced game child" "-SplicedGameChild replaces the compiled child payload with the game's own binding table carrying atlas texture ids, and the game-derived payload stays in .build"
 Test-Condition ($nativeConfigText -match 'hide_donor_weapons\s*=\s*false' -and `
     $nativeBuildText -match 'hide_donor_weapons\s*=\s*true' -and `
     $nativeText -match 'function hide_donor_weapons' -and `

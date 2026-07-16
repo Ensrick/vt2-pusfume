@@ -91,6 +91,14 @@ request rather than in release notes.
 - Isolated the shadowed atlas in a standalone VMF package loaded synchronously
   after the donor package. The first shadow test proved that the later-loaded
   donor reclaimed its texture IDs; this reverses that measured load order.
+- Added the `-SplicedGameChild` build (Track D): the compiled child material's
+  payload is replaced inside the built bundle with the game's own `mtr_outfit`
+  binding table, its three texture ids patched to the Pusfume atlas. The live
+  child test showed our child's compile-time shader binding is what breaks
+  deformation; the game payload carries the real skinning binding. New
+  size-aware splice tooling (`splice_bundle_resource.py`,
+  `make_spliced_child.py`) validates the bundle walk, index sizes, and
+  payload round-trip; the game-derived 768-byte payload never leaves `.build`.
 - Applied the donor character shader to the menu preview mesh; the preview
   spawned with skinning-incapable compiled materials, which is why the menu
   model never animated even with its controller running.

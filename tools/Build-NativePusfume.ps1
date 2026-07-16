@@ -5,14 +5,25 @@ param(
     [string]$BlenderExe = "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe",
     [string]$TextureSource = ".build\pusfume_handoff\textures conv",
     [string]$WorkshopPath = "C:\Program Files (x86)\Steam\steamapps\workshop\content\552500\3764954245",
+    [string]$GameBundleDir = "C:\Program Files (x86)\Steam\steamapps\common\Warhammer Vermintide 2\bundle",
+    [string]$UnpackerExe = "C:\Tools\vt2_bundle_unpacker\target\release\unpacker.exe",
     [switch]$HeroPreview,
     [switch]$ParentChildMaterial,
     [switch]$NoDonorTextureShadow,
+    [switch]$SplicedGameChild,
     [switch]$UseBsiSkinFallback,
     [switch]$NoDeploy
 )
 
 $ErrorActionPreference = "Stop"
+# Track D: ship the -ParentChildMaterial staging, then replace the compiled
+# child's payload with the GAME's own mtr_outfit child (texture ids patched to
+# the atlas). Uses the parent-child runtime path; the ordered texture shadow
+# must stay off (one variable at a time).
+if ($SplicedGameChild) {
+    $ParentChildMaterial = $true
+    $NoDonorTextureShadow = $true
+}
 if ($ParentChildMaterial -and -not $NoDonorTextureShadow) {
     throw "Parent-child and ordered texture-shadow experiments are mutually exclusive; add -NoDonorTextureShadow"
 }
@@ -700,6 +711,66 @@ if ($ParentChildMaterial) {
     }
 
     Write-Host "Stub parent identity stripped: $totalStripped pair(s) renamed to units/pusfume/retired_stub_parent"
+}
+
+if ($SplicedGameChild) {
+    # Track D: replace our SDK-compiled child's payload with the game's own
+    # compiled mtr_outfit child, texture ids patched to the atlas. Our child
+    # renders rigid because its shader binding was baked against the stub at
+    # compile time (live 2026-07-16 11:24); the game payload carries the real
+    # skinning binding, its parent hash (3D25339231384C80, the shader library
+    # entry), and after patching, Pusfume's texture ids. The payload derives
+    # from installed game data and never leaves .build.
+    $donorGameBundle = Join-Path $GameBundleDir "7a8e617a32277fc4"
+    if (-not (Test-Path -LiteralPath $donorGameBundle -PathType Leaf)) {
+        throw "Installed donor game bundle not found: $donorGameBundle"
+    }
+    if (-not (Test-Path -LiteralPath $UnpackerExe -PathType Leaf)) {
+        throw "vt2_bundle_unpacker not found: $UnpackerExe"
+    }
+
+    $spliceExtractDir = Join-Path $generatedRoot "donor-bundle-extract"
+    New-Item -ItemType Directory -Path $spliceExtractDir -Force | Out-Null
+    & $UnpackerExe extract $donorGameBundle $spliceExtractDir --flatten 2>$null | Out-Null
+    $gameChildPath = Join-Path $spliceExtractDir "90BDF3BAC6F81BA8.material"
+    if (-not (Test-Path -LiteralPath $gameChildPath -PathType Leaf)) {
+        throw "Donor bundle extraction did not produce 90BDF3BAC6F81BA8.material"
+    }
+
+    $splicePayload = Join-Path $generatedRoot "spliced_child_payload.bin"
+    & py (Join-Path $repoRoot "tools\make_spliced_child.py") `
+        --extracted $gameChildPath `
+        --resource hash:90BDF3BAC6F81BA8 --expect-size 768 `
+        --map DD74D8319F514D96=C263ECB79A8DCEC0 `
+        --map 45FFAEEF53695A86=A4215592F6297E57 `
+        --map E334A8CB6BCB5E6D=F1A8995B7D45D618 `
+        --out $splicePayload
+    if ($LASTEXITCODE -ne 0) {
+        throw "Spliced child payload generation failed"
+    }
+
+    $spliceTool = Join-Path $repoRoot "tools\splice_bundle_resource.py"
+    $childId = "hash:F72D636600F7F598"
+    $splicedInto = @()
+
+    foreach ($bundleFile in (Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)) {
+        & py $spliceTool $bundleFile.FullName --type material `
+            --name $childId --payload $splicePayload --dry-run 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            & py $spliceTool $bundleFile.FullName --type material `
+                --name $childId --payload $splicePayload
+            if ($LASTEXITCODE -ne 0) {
+                throw "Splice failed on $($bundleFile.Name)"
+            }
+            $splicedInto += $bundleFile.Name
+        }
+    }
+
+    if ($splicedInto.Count -ne 1) {
+        throw "Expected the compiled child in exactly 1 bundle, spliced $($splicedInto.Count)"
+    }
+
+    Write-Host "Spliced game child payload (768 bytes, atlas texture ids) into $($splicedInto[0])"
 }
 
 if (-not $NoDonorTextureShadow) {
