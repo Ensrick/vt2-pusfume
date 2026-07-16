@@ -103,6 +103,12 @@ request rather than in release notes.
   to red/orange with under one percent green), and these are the exact scalars
   the engine's own `CosmeticUtils.color_tint_unit` sets on live character
   materials.
+- Corrected the spliced child's slot semantics after the first live test
+  glowed: channel statistics of the donor's own maps prove
+  `texture_map_27b67fd2` is the EMISSIVE slot (the donor ships a pure black
+  map there) and `texture_map_8bf37d8e` is the normal-plus-gloss slot. The
+  splice now patches diffuse and normal only and keeps the donor's black
+  emissive, so a normal map can never feed the emissive channel again.
 - Added the `-SplicedGameChild` build (Track D): the compiled child material's
   payload is replaced inside the built bundle with the game's own `mtr_outfit`
   binding table, its three texture ids patched to the Pusfume atlas. The live

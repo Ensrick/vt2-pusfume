@@ -190,6 +190,20 @@ that itself loads mod-side.
 
 ## Status log (append entries, newest first)
 
+- 13:2x Claude: GLOW ROOT-CAUSED and corrected candidate building. Track D
+  verdict was deforming + all-glowy; channel statistics of the donor's own
+  decoded maps (Pillow BC3/BC7) prove the slot semantics we inherited were
+  WRONG: 02af90f8 = diffuse (donor: red/orange, A~250); 27b67fd2 = EMISSIVE
+  (donor ships a PURE BLACK map: means 0/1/1/0); 8bf37d8e = NORMAL + gloss
+  in alpha (donor: XY-in-RG around 128, B=0, A~196). Our splice had put the
+  lavender normal atlas into the emissive slot = whole-model glow, and the
+  green s-map into the normal slot. Corrected splice: diffuse -> atlas df,
+  emissive -> donor's own black (left unpatched, resident via donor
+  package), normal -> atlas nm (whose RG layout matches donor convention;
+  alpha 201 vs donor gloss 196, close). The s atlas drops out of the child
+  entirely. DEFORMATION IS PROVEN on this lane - the game child payload
+  kept its skinning binding through the splice.
+
 - 13:0x Claude: TRACK D SESSION CONFIRMED ON THE RIGHT BUILD (18:05 UTC,
   last_updated 5:59:03 PM = ManifestID 4894317916539282552). Spliced child
   applied to all 8 slots at 18:06:30, mode=child, textures=baked, zero

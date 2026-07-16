@@ -763,13 +763,20 @@ if ($SplicedGameChild) {
         throw "Donor bundle extraction did not produce 90BDF3BAC6F81BA8.material"
     }
 
+    # Slot semantics decoded from the donor's own texture CONTENT (channel
+    # statistics, 2026-07-16): texture_map_02af90f8 = diffuse (red/orange,
+    # alpha ~250); texture_map_27b67fd2 = EMISSIVE - the donor ships a pure
+    # black map (means 0/1/1/0), and putting a normal map here is what made
+    # the whole model glow; texture_map_8bf37d8e = NORMAL + gloss-in-alpha
+    # (donor: XY in RG around 128, B=0, alpha ~196). So: patch diffuse and
+    # normal to the atlas, and leave the donor's own black emissive untouched
+    # (it is resident via the donor package, which always loads first).
     $splicePayload = Join-Path $generatedRoot "spliced_child_payload.bin"
     & py (Join-Path $repoRoot "tools\make_spliced_child.py") `
         --extracted $gameChildPath `
         --resource hash:90BDF3BAC6F81BA8 --expect-size 768 `
         --map DD74D8319F514D96=C263ECB79A8DCEC0 `
-        --map 45FFAEEF53695A86=A4215592F6297E57 `
-        --map E334A8CB6BCB5E6D=F1A8995B7D45D618 `
+        --map E334A8CB6BCB5E6D=A4215592F6297E57 `
         --out $splicePayload
     if ($LASTEXITCODE -ne 0) {
         throw "Spliced child payload generation failed"

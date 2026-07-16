@@ -262,8 +262,8 @@ Test-Condition ((Test-Path (Join-Path $repoRoot "tools\splice_bundle_resource.py
     $nativeBuildText -match '--expect-size 768' -and `
     $nativeBuildText -match 'hash:F72D636600F7F598' -and `
     $nativeBuildText -match 'DD74D8319F514D96=C263ECB79A8DCEC0' -and `
-    $nativeBuildText -match '45FFAEEF53695A86=A4215592F6297E57' -and `
-    $nativeBuildText -match 'E334A8CB6BCB5E6D=F1A8995B7D45D618' -and `
+    $nativeBuildText -match 'E334A8CB6BCB5E6D=A4215592F6297E57' -and `
+    $nativeBuildText -notmatch '45FFAEEF53695A86=' -and `
     $nativeBuildText -match '\$splicedInto\.Count -ne 1' -and `
     $nativeBuildText -notmatch 'spliced_child_payload\.bin"? *-Destination') `
     "spliced game child" "-SplicedGameChild replaces the compiled child payload with the game's own binding table carrying atlas texture ids, and the game-derived payload stays in .build"
