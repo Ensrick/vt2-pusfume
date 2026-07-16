@@ -207,9 +207,10 @@ Test-Condition ($nativeConfigText -match 'parent_child_material\s*=\s*false' -an
     $nativeBuildText -match 'native_child\.package' -and `
     $nativeBuildText -match 'parent_material = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/mtr_outfit"' -and `
     $nativeText -match 'function ensure_child_package' -and `
-    $nativeText -match 'not state\.donor_package_loaded or not can_get\("package", config\.parent_child_package\)' -and `
+    $nativeText -match 'not state\.donor_package_loaded or not Managers\.package' -and `
+    $nativeText -notmatch 'can_get\("package", config\.parent_child_package\)' -and `
     $nativeText -match 'Unit\.set_material\(unit, slot_name, config\.parent_child_material\)') `
-    "parent-child material" "the donor-shader child loads through its own package strictly after the donor parent"
+    "parent-child material" "the standalone donor-shader child bundle loads directly after the donor parent"
 Test-Condition ((Test-Path (Join-Path $repoRoot "tools\strip_bundle_resource.py")) -and `
     (Test-Path (Join-Path $repoRoot "tests\test_strip_bundle_resource.py")) -and `
     $nativeBuildText -match 'strip_bundle_resource\.py' -and `

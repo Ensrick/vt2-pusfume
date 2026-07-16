@@ -99,7 +99,7 @@ local function ensure_child_package(config)
         return true
     end
 
-    if not state.donor_package_loaded or not can_get("package", config.parent_child_package) then
+    if not state.donor_package_loaded or not Managers.package then
         return false
     end
 
