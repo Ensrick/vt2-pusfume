@@ -59,6 +59,7 @@ $dataText = Get-Content -LiteralPath $dataPath -Raw
 $packageText = Get-Content -LiteralPath $packagePath -Raw
 $nativeUnitPackageText = Get-Content -LiteralPath $nativeUnitPackagePath -Raw
 $nativeBuildText = Get-Content -LiteralPath $nativeBuildPath -Raw
+$stripToolText = Get-Content -LiteralPath (Join-Path $repoRoot "tools\strip_bundle_resource.py") -Raw
 $nativeMaterialTemplateText = Get-Content -LiteralPath $nativeMaterialTemplatePath -Raw
 $nativeCutoutTemplateText = Get-Content -LiteralPath $nativeCutoutTemplatePath -Raw
 $nativeExporterText = Get-Content -LiteralPath $nativeExporterPath -Raw
@@ -232,6 +233,18 @@ Test-Condition ((Test-Path (Join-Path $repoRoot "tools\strip_bundle_resource.py"
 Test-Condition ($nativeText -match 'function M\.apply_donor_to_unit' -and `
     $uiText -match 'native\.apply_donor_to_unit\(mesh_unit\)') `
     "menu preview shader" "the preview mesh receives the donor character shader so the menu idle can deform"
+Test-Condition ($nativeConfigText -match 'donor_texture_shadow\s*=\s*false' -and `
+    $nativeBuildText -match '\[switch\]\$NoDonorTextureShadow' -and `
+    $nativeBuildText -match 'donor_texture_shadow = \$donorTextureShadowValue' -and `
+    $nativeBuildText -match 'DD74D8319F514D96' -and `
+    $nativeBuildText -match '45FFAEEF53695A86' -and `
+    $nativeBuildText -match 'E334A8CB6BCB5E6D' -and `
+    $nativeBuildText -match '--type texture --bare' -and `
+    $nativeBuildText -match '\$totalRenamed -lt 4' -and `
+    $stripToolText -match '--new-hash' -and `
+    $stripToolText -match 'preexisting_new' -and `
+    $nativeText -match 'mode == "donor_atlas" and not config\.donor_texture_shadow') `
+    "donor texture shadow" "default builds rename the atlas identities to the game's mtr_outfit texture ids and skip the dead runtime restore"
 Test-Condition ($nativeConfigText -match 'hide_donor_weapons\s*=\s*false' -and `
     $nativeBuildText -match 'hide_donor_weapons\s*=\s*true' -and `
     $nativeText -match 'function hide_donor_weapons' -and `

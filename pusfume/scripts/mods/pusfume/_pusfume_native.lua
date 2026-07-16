@@ -226,7 +226,12 @@ local function apply_donor_material_to_unit(unit, config)
         material_slots = material_slots + 1
     end
 
-    if mode == "donor_atlas" then
+    -- With donor texture shadowing the build renamed the atlas identities to
+    -- the donor texture ids: the donor material already binds Janfon's maps,
+    -- and the atlas resources no longer exist under their original paths, so
+    -- the runtime restore must not run (it would only log resource errors -
+    -- live testing proved these calls never rebind character materials anyway).
+    if mode == "donor_atlas" and not config.donor_texture_shadow then
         for mesh_index = 0, Unit.num_meshes(unit) - 1 do
             local mesh = Unit.mesh(unit, mesh_index)
 
@@ -247,10 +252,11 @@ local function apply_donor_material_to_unit(unit, config)
     end
 
     mod:info(
-        "[pusfume] Material probe applied slots=%d textures=%d mode=%s material=%s",
+        "[pusfume] Material probe applied slots=%d textures=%d mode=%s shadow=%s material=%s",
         material_slots,
         texture_assignments,
         mode,
+        tostring(config.donor_texture_shadow or false),
         config.donor_material)
 
     return material_slots > 0

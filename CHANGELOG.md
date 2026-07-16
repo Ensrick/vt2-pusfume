@@ -84,6 +84,10 @@ request rather than in release notes.
 - Added `/pusfume_material_probe` live A/B modes (`donor_raw`, `donor_atlas`,
   `child`, and alternating-slot `split`) so shader deformation and texture
   behavior can be compared without changing the mesh, controller, or session.
+- Added a guarded donor-texture-shadow build experiment that registers the
+  Pusfume atlas under the three texture IDs already bound by the game-owned
+  Globadier material, preserving its exact shader rather than compiling a
+  mod material. `-NoDonorTextureShadow` keeps the previous path available.
 - Applied the donor character shader to the menu preview mesh; the preview
   spawned with skinning-incapable compiled materials, which is why the menu
   model never animated even with its controller running.

@@ -7,6 +7,7 @@ param(
     [string]$WorkshopPath = "C:\Program Files (x86)\Steam\steamapps\workshop\content\552500\3764954245",
     [switch]$HeroPreview,
     [switch]$ParentChildMaterial,
+    [switch]$NoDonorTextureShadow,
     [switch]$UseBsiSkinFallback,
     [switch]$NoDeploy
 )
@@ -539,11 +540,21 @@ $parentChildPackageValue = if ($ParentChildMaterial) {
     "false"
 }
 
+# Donor texture shadowing: after the SDK build, the atlas textures' bundled
+# identities are renamed to the ids the game's mtr_outfit child binds (parsed
+# from the game's compiled 90BDF3BAC6F81BA8.material: slot keys are
+# IdString32("texture_map_<suffix>")). Our package registers those ids first,
+# so the donor material samples Janfon's maps. When the shadow is active the
+# Lua runtime texture restore must not run: the atlas resources no longer
+# exist under their original paths.
+$donorTextureShadowValue = if ($NoDonorTextureShadow) { "false" } else { "true" }
+
 @"
 return {
     donor_material_enabled = true,
     donor_material = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/mtr_outfit",
     donor_package = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/chr_third_person_mesh",
+    donor_texture_shadow = $donorTextureShadowValue,
     enabled = true,
     hero_preview_enabled = $heroPreviewEnabled,
     hide_donor_weapons = true,
@@ -650,6 +661,64 @@ if ($ParentChildMaterial) {
     }
 
     Write-Host "Stub parent identity stripped: $totalStripped pair(s) renamed to units/pusfume/retired_stub_parent"
+}
+
+if (-not $NoDonorTextureShadow) {
+    # Rename the compiled atlas textures' bundled identities to the exact ids
+    # the game's mtr_outfit child references, so the donor swap binds Janfon's
+    # maps instead of the Globadier's. The ids were parsed from the game's own
+    # compiled child (bundle 7a8e617a32277fc4, resource 90BDF3BAC6F81BA8):
+    #   texture_map_02af90f8 (diffuse) -> DD74D8319F514D96
+    #   texture_map_27b67fd2 (normal)  -> 45FFAEEF53695A86
+    #   texture_map_8bf37d8e (packed)  -> E334A8CB6BCB5E6D
+    # Bare mode rewrites every 8-byte name-hash occurrence: bundle index, file
+    # header, package listing, AND texture references inside our own compiled
+    # materials, so every internal reference stays consistent under the new id.
+    $stripTool = Join-Path $repoRoot "tools\strip_bundle_resource.py"
+    $donorTextureIds = [ordered]@{
+        "textures/pusfume/pusfume_atlas_df" = "DD74D8319F514D96"
+        "textures/pusfume/pusfume_atlas_nm" = "45FFAEEF53695A86"
+        "textures/pusfume/pusfume_atlas_s"  = "E334A8CB6BCB5E6D"
+    }
+
+    foreach ($atlasPath in $donorTextureIds.Keys) {
+        $donorId = $donorTextureIds[$atlasPath]
+        $totalRenamed = 0
+
+        foreach ($bundleFile in (Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)) {
+            $dryOutput = & py $stripTool $bundleFile.FullName --type texture --bare `
+                --old $atlasPath --new-hash $donorId --dry-run 2>&1
+            $found = 0
+            if ($dryOutput -join "`n" -match '(\d+) occurrence') {
+                $found = [int]$Matches[1]
+            }
+
+            if ($found -gt 0) {
+                & py $stripTool $bundleFile.FullName --type texture --bare `
+                    --old $atlasPath --new-hash $donorId --expect $found
+                if ($LASTEXITCODE -ne 0) {
+                    throw "Donor texture shadow rename failed on $($bundleFile.Name) for $atlasPath"
+                }
+                $totalRenamed += $found
+            }
+        }
+
+        # Minimum: bundle index + file header + package listing + at least one
+        # compiled material reference. Fewer means the atlas never compiled in.
+        if ($totalRenamed -lt 4) {
+            throw "Expected at least 4 identity occurrences for $atlasPath, renamed $totalRenamed"
+        }
+
+        foreach ($bundleFile in (Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)) {
+            & py $stripTool $bundleFile.FullName --type texture --bare `
+                --old $atlasPath --new-hash $donorId --expect 0 --dry-run
+            if ($LASTEXITCODE -ne 0) {
+                throw "Atlas identity still present in $($bundleFile.Name) after shadow rename"
+            }
+        }
+
+        Write-Host "Donor texture shadow: $atlasPath -> $donorId ($totalRenamed occurrence(s))"
+    }
 }
 
 if (-not $NoDeploy) {

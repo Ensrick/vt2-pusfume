@@ -79,6 +79,61 @@ class StripBundleResourceTests(unittest.TestCase):
         self.assertEqual(data.count(new_pair), 2)
         self.assertEqual(len(data), len(payload))
 
+    def test_bare_hash_rename_with_literal_new_hash(self):
+        old_hash = strip.murmur64a(b"textures/pusfume/pusfume_atlas_df")
+        old_needle = struct.pack("<Q", old_hash)
+        donor_id = 0xDD74D8319F514D96
+        new_needle = struct.pack("<Q", donor_id)
+        # bare occurrences: one inside a (type, name) pair, one standalone
+        # material reference, one straddling the block boundary, plus a
+        # PREEXISTING donor id that must be counted, not clobbered
+        type_pair = struct.pack("<QQ", strip.murmur64a(b"texture"), old_hash)
+        payload = bytearray(b"\x44" * (strip.BLOCK_RAW_SIZE - 4))
+        payload += old_needle
+        payload += type_pair
+        payload += b"\x55" * 512
+        payload += old_needle
+        payload += b"\x66" * 128
+        payload += new_needle
+        build_fake_bundle(self.bundle, bytes(payload))
+
+        argv = sys.argv
+        sys.argv = [
+            "strip_bundle_resource.py", str(self.bundle),
+            "--type", "texture", "--bare",
+            "--old", "textures/pusfume/pusfume_atlas_df",
+            "--new-hash", "DD74D8319F514D96",
+            "--expect", "3",
+        ]
+        try:
+            self.assertEqual(strip.main(), 0)
+        finally:
+            sys.argv = argv
+
+        _, _, data = strip.read_bundle(self.bundle)
+        self.assertEqual(data.count(old_needle), 0)
+        self.assertEqual(data.count(new_needle), 4)
+        self.assertEqual(len(data), len(payload))
+
+    def test_bare_and_pair_modes_count_independently(self):
+        old_hash = strip.murmur64a(b"some/texture")
+        pair = struct.pack("<QQ", strip.murmur64a(b"texture"), old_hash)
+        payload = self.make_payload(pair, 2)
+        build_fake_bundle(self.bundle, payload)
+
+        argv = sys.argv
+        # pair mode sees 2; bare mode also sees 2 (the name halves of the pairs)
+        sys.argv = [
+            "strip_bundle_resource.py", str(self.bundle),
+            "--type", "texture", "--bare",
+            "--old", "some/texture", "--new-hash", "0123456789ABCDEF",
+            "--expect", "2", "--dry-run",
+        ]
+        try:
+            self.assertEqual(strip.main(), 0)
+        finally:
+            sys.argv = argv
+
     def test_expect_mismatch_fails(self):
         payload = self.make_payload(b"\x33" * 16, 0)
         build_fake_bundle(self.bundle, payload)

@@ -10,9 +10,21 @@ recompresses. The compiled child material's parent REFERENCE is a bare name
 hash without the preceding type hash, so it is untouched and resolves against
 the game's copy once the stub identity is gone.
 
+The same mechanism runs in reverse for donor texture shadowing: renaming our
+compiled atlas textures' identities TO the game's texture ids makes the game's
+own mtr_outfit child bind Janfon's maps once our package registers them first.
+Texture references inside compiled materials are bare 8-byte name hashes, so
+that direction uses --bare, which rewrites every occurrence of the name hash
+(bundle index, file header, package listings, and material references alike).
+--new-hash takes a literal hash for targets whose path string is unknown
+(the donor texture paths are not in any dictionary; their ids came from
+parsing the game's compiled mtr_outfit).
+
 Usage:
   py strip_bundle_resource.py <bundle> --type material \
       --old <resource path> --new <resource path> [--expect N] [--dry-run]
+  py strip_bundle_resource.py <bundle> --type texture --bare \
+      --old <resource path> --new-hash <16-hex-digit id> [--expect N]
 
 Exits non-zero if the occurrence count does not match --expect (when given)
 or if nothing was replaced.
@@ -103,7 +115,13 @@ def main():
     parser.add_argument("bundle")
     parser.add_argument("--type", required=True, help="resource type, e.g. material")
     parser.add_argument("--old", required=True, help="resource path to rename")
-    parser.add_argument("--new", required=True, help="replacement resource path")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--new", help="replacement resource path")
+    group.add_argument("--new-hash",
+                       help="literal 16-hex-digit replacement name hash")
+    parser.add_argument("--bare", action="store_true",
+                        help="rewrite every bare 8-byte name hash occurrence "
+                             "instead of (type, name) pairs")
     parser.add_argument("--expect", type=int, default=None,
                         help="require exactly N occurrences")
     parser.add_argument("--dry-run", action="store_true")
@@ -111,15 +129,27 @@ def main():
 
     type_hash = murmur64a(args.type.encode())
     old_hash = murmur64a(args.old.encode())
-    new_hash = murmur64a(args.new.encode())
+    if args.new_hash is not None:
+        new_hash = int(args.new_hash, 16)
+        new_label = args.new_hash.upper()
+    else:
+        new_hash = murmur64a(args.new.encode())
+        new_label = args.new
 
-    old_pair = struct.pack("<QQ", type_hash, old_hash)
-    new_pair = struct.pack("<QQ", type_hash, new_hash)
+    if args.bare:
+        old_needle = struct.pack("<Q", old_hash)
+        new_needle = struct.pack("<Q", new_hash)
+        what = f"bare name hash of {args.old}"
+    else:
+        old_needle = struct.pack("<QQ", type_hash, old_hash)
+        new_needle = struct.pack("<QQ", type_hash, new_hash)
+        what = f"({args.type}, {args.old})"
 
     fmt, padding, data = read_bundle(args.bundle)
-    count = data.count(old_pair)
+    count = data.count(old_needle)
+    preexisting_new = data.count(new_needle)
 
-    print(f"{args.bundle}: {count} occurrence(s) of ({args.type}, {args.old})")
+    print(f"{args.bundle}: {count} occurrence(s) of {what}")
 
     if args.expect is not None and count != args.expect:
         print(f"expected {args.expect} occurrence(s), found {count}", file=sys.stderr)
@@ -134,16 +164,17 @@ def main():
         print("dry run; bundle unchanged")
         return 0
 
-    patched = data.replace(old_pair, new_pair)
+    patched = data.replace(old_needle, new_needle)
     assert len(patched) == len(data)
     write_bundle(args.bundle, fmt, padding, patched)
 
     _, _, verify = read_bundle(args.bundle)
-    if verify.count(old_pair) != 0 or verify.count(new_pair) != count:
+    if (verify.count(old_needle) != 0
+            or verify.count(new_needle) != preexisting_new + count):
         print("post-write verification failed", file=sys.stderr)
         return 1
 
-    print(f"renamed to ({args.type}, {args.new}); {count} pair(s) rewritten; "
+    print(f"renamed to {new_label}; {count} occurrence(s) rewritten; "
           f"round-trip verified")
     return 0
 
