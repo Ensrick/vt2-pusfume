@@ -267,6 +267,10 @@ Test-Condition ((Test-Path (Join-Path $repoRoot "tools\splice_bundle_resource.py
     $nativeBuildText -match '\$splicedInto\.Count -ne 1' -and `
     $nativeBuildText -notmatch 'spliced_child_payload\.bin"? *-Destination') `
     "spliced game child" "-SplicedGameChild replaces the compiled child payload with the game's own binding table carrying atlas texture ids, and the game-derived payload stays in .build"
+Test-Condition ($nativeText -match 'pusfume_tint' -and `
+    $nativeText -match 'Material\.set_scalar\(material, "gradient_variation", variation\)' -and `
+    $nativeText -match 'Material\.set_scalar\(material, "tint_columns_pair", columns_pair\)') `
+    "gradient tint probe" "live tint sweep rides the engine's own character-tint scalars to neutralize the shader-applied Globadier green"
 Test-Condition ($nativeConfigText -match 'hide_donor_weapons\s*=\s*false' -and `
     $nativeBuildText -match 'hide_donor_weapons\s*=\s*true' -and `
     $nativeText -match 'function hide_donor_weapons' -and `

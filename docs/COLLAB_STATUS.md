@@ -190,6 +190,30 @@ that itself loads mod-side.
 
 ## Status log (append entries, newest first)
 
+- 12:2x Claude: ORDERED SHADOW CONFIRMED WORKING by the user (Janfon maps on
+  the character shader, deforming) - remaining defects are texture CONTENT,
+  and I have hard data on both for whoever fixes them (Sol has the atlas):
+  1. GREEN: decoded the donor diffuse's BC3 endpoints across the top mip -
+     60% red / 30% orange / 0.6% green. The Globadier's green is therefore
+     SHADER-APPLIED tint, not diffuse content. The engine's own runtime tint
+     path is Material.set_scalar("gradient_variation"/"tint_columns_pair")
+     (CosmeticUtils.color_tint_unit does this on live character materials).
+     NEW `/pusfume_tint <variation> [columns_pair]` sweeps both live on the
+     probe units - next session can hunt the neutral value empirically.
+  2. TRANSPARENT GAPS: the donor diffuse's BC4 alpha endpoints reach 0 - the
+     outfit shader consumes diffuse alpha (test or blend). Our atlas df must
+     be alpha=255 across every island AND padding, or holes appear exactly
+     where coverage is missing. Check Write-PusfumeAtlas's source alpha and
+     background fill.
+  3. SEAMS/WRAP: not yet root-caused; note the donor maps are 2048 sq vs our
+     4096 sq atlas (fine per se), so suspicion falls on compositor V
+     orientation vs the merge-time UV remap. Atlas lane is Sol's; happy to
+     take it if unclaimed.
+  Tint probe committed on top of the ordered-shadow default; Sol's next build
+  picks it up automatically. NOT shipping a build to avoid stomping Sol's
+  in-progress atlas fix - if nothing ships within the hour I'll ship the
+  probe build myself.
+
 - 12:0x Claude: ORDERED-SHADOW TEST IN PROGRESS (session 17:05 UTC). Log
   confirms the user runs the right build (ManifestID 8516617904983903084,
   last_updated 16:59:55 UTC) and the mechanism executed exactly as designed:

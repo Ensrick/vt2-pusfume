@@ -91,6 +91,11 @@ request rather than in release notes.
 - Isolated the shadowed atlas in a standalone VMF package loaded synchronously
   after the donor package. The first shadow test proved that the later-loaded
   donor reclaimed its texture IDs; this reverses that measured load order.
+- Added `/pusfume_tint <gradient_variation> [tint_columns_pair]` for live tint
+  sweeps: the Globadier's rendered green is shader-applied (its diffuse decodes
+  to red/orange with under one percent green), and these are the exact scalars
+  the engine's own `CosmeticUtils.color_tint_unit` sets on live character
+  materials.
 - Added the `-SplicedGameChild` build (Track D): the compiled child material's
   payload is replaced inside the built bundle with the game's own `mtr_outfit`
   binding table, its three texture ids patched to the Pusfume atlas. The live

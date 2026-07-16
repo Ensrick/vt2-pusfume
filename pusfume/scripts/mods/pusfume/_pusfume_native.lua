@@ -342,6 +342,51 @@ local function install_material_probe_command(config)
             mod:info("[pusfume] Material probe switched mode=%s live_units=%d", mode, applied)
         end)
 
+    -- The Globadier's rendered green is NOT in its diffuse (decoded: 60% red /
+    -- 30% orange, 0.6% green) - the character shader applies a gradient tint.
+    -- This is the engine's OWN runtime tint path (CosmeticUtils.color_tint_unit
+    -- sets these exact scalars on live character materials), so unlike
+    -- Material.set_texture it is expected to take effect. Sweep values live to
+    -- find the variation that neutralizes the green over Janfon's maps.
+    mod:command("pusfume_tint",
+        "Set gradient tint on live Pusfume materials: <gradient_variation> [tint_columns_pair]",
+        function(variation, columns_pair)
+            variation = tonumber(variation)
+            columns_pair = tonumber(columns_pair)
+
+            if not variation then
+                mod:echo("Usage: /pusfume_tint <gradient_variation> [tint_columns_pair]")
+                return
+            end
+
+            local touched = 0
+
+            for unit in pairs(state.material_probe_units) do
+                if ALIVE[unit] then
+                    for mesh_index = 0, Unit.num_meshes(unit) - 1 do
+                        local mesh = Unit.mesh(unit, mesh_index)
+
+                        for material_index = 0, Mesh.num_materials(mesh) - 1 do
+                            local material = Mesh.material(mesh, material_index)
+
+                            Material.set_scalar(material, "gradient_variation", variation)
+
+                            if columns_pair then
+                                Material.set_scalar(material, "tint_columns_pair", columns_pair)
+                            end
+
+                            touched = touched + 1
+                        end
+                    end
+                end
+            end
+
+            mod:echo("Pusfume tint variation=%s columns_pair=%s materials=%d",
+                tostring(variation), tostring(columns_pair), touched)
+            mod:info("[pusfume] Tint probe variation=%s columns_pair=%s materials=%d",
+                tostring(variation), tostring(columns_pair), touched)
+        end)
+
     state.material_probe_command_installed = true
 end
 
