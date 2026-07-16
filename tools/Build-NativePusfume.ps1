@@ -317,14 +317,28 @@ function Write-PusfumeAtlas {
     )
 
     Add-Type -AssemblyName System.Drawing
-    $atlasSize = 4096
+    $layoutPath = Join-Path $repoRoot "tools\pusfume_atlas_layout.json"
+    $layout = Get-Content -LiteralPath $layoutPath -Raw | ConvertFrom-Json
+    $atlasSize = [int]$layout.atlas_size
     $atlas = New-Object Drawing.Bitmap($atlasSize, $atlasSize, [Drawing.Imaging.PixelFormat]::Format32bppArgb)
     $graphics = [Drawing.Graphics]::FromImage($atlas)
     $graphics.Clear($ClearColor)
-    $graphics.CompositingMode = [Drawing.Drawing2D.CompositingMode]::SourceCopy
     $graphics.InterpolationMode = [Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
     $graphics.PixelOffsetMode = [Drawing.Drawing2D.PixelOffsetMode]::HighQuality
-    $bodyTexture = if ($Suffix -eq "df") { "pusfume_body_new_df" } else { "skaven_body_$Suffix" }
+    $forceOpaque = @($layout.force_opaque_suffixes) -contains $Suffix
+    $graphics.CompositingMode = if ($forceOpaque) {
+        [Drawing.Drawing2D.CompositingMode]::SourceOver
+    } else {
+        [Drawing.Drawing2D.CompositingMode]::SourceCopy
+    }
+    $opaqueAttributes = $null
+    if ($forceOpaque) {
+        $opaqueAttributes = New-Object Drawing.Imaging.ImageAttributes
+        $opaqueMatrix = New-Object Drawing.Imaging.ColorMatrix
+        $opaqueMatrix.Matrix33 = 0
+        $opaqueMatrix.Matrix43 = 1
+        $opaqueAttributes.SetColorMatrix($opaqueMatrix)
+    }
 
     function Draw-AtlasTile {
         param(
@@ -343,38 +357,50 @@ function Write-PusfumeAtlas {
         $source = [Drawing.Image]::FromFile($sourcePath)
         try {
             $top = $atlasSize - $Y - $Height
-            $graphics.DrawImage($source, $X, $top, $Width, $Height)
+            if ($forceOpaque) {
+                $destination = New-Object Drawing.Rectangle($X, $top, $Width, $Height)
+                $graphics.DrawImage(
+                    $source, $destination, 0, 0, $source.Width, $source.Height,
+                    [Drawing.GraphicsUnit]::Pixel, $opaqueAttributes)
+            } else {
+                $graphics.DrawImage($source, $X, $top, $Width, $Height)
+            }
         } finally {
             $source.Dispose()
         }
     }
 
-    function Draw-RepeatedAtlasTile {
-        param(
-            [string]$Texture,
-            [int]$X,
-            [int]$Y,
-            [int]$Size
-        )
-
-        foreach ($row in 0..2) {
-            foreach ($column in 0..2) {
-                Draw-AtlasTile $Texture ($X + $column * $Size) ($Y + $row * $Size) $Size $Size
+    try {
+        foreach ($tileProperty in $layout.tiles.PSObject.Properties) {
+            $tile = $tileProperty.Value
+            $textureProperty = $tile.sources.PSObject.Properties[$Suffix]
+            $texture = if ($null -eq $textureProperty.Value) {
+                $null
+            } else {
+                [string]$textureProperty.Value
+            }
+            if ([string]::IsNullOrWhiteSpace($texture)) {
+                continue
+            }
+            $originX = [int]$tile.origin[0]
+            $originY = [int]$tile.origin[1]
+            $width = [int]$tile.size[0]
+            $height = [int]$tile.size[1]
+            foreach ($row in 0..([int]$tile.grid[1] - 1)) {
+                foreach ($column in 0..([int]$tile.grid[0] - 1)) {
+                    Draw-AtlasTile $texture `
+                        ($originX + $column * $width) ($originY + $row * $height) `
+                        $width $height
+                }
             }
         }
-    }
-
-    try {
-        Draw-AtlasTile $bodyTexture 0 0 2048 4096
-        Draw-RepeatedAtlasTile "pusfume_eyenormal" 2048 0 512
-        Draw-RepeatedAtlasTile "pup_ammo_box_limited_$Suffix" 2048 1536 512
-        Draw-RepeatedAtlasTile "globadier_outfit_$Suffix" 2048 3072 256
-        Draw-AtlasTile "wpn_skaven_set_$Suffix" 2816 3072 512 512
-        Draw-AtlasTile "stormvermin_outfit_$Suffix" 3328 3072 512 512
 
         $output = Join-Path $textureRoot "$Name.png"
         $atlas.Save($output, [Drawing.Imaging.ImageFormat]::Png)
     } finally {
+        if ($null -ne $opaqueAttributes) {
+            $opaqueAttributes.Dispose()
+        }
         $graphics.Dispose()
         $atlas.Dispose()
     }

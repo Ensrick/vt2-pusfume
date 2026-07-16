@@ -38,11 +38,11 @@ The FBX preserves all nine material slots but only the eye image links. Use this
 | `p_metal` | `wpn_skaven_set_df.png` |
 | `p_glob` | `globadier_outfit_df.png` |
 | `p_armor` | `stormvermin_outfit_df.png` |
-| `p_ammo_box_limited_a` | `pup_ammo_box_limited_df.png` |
+| `p_ammo_box_limited_a` | `generic_cloth_dirty_df.png` |
 | `p_ammo_box_limited_b` | `pup_ammo_box_limited_df.png` |
 | `p_whiskers` | `pusfume_whiskers_df.png` |
 
-The eye slots need a deliberate VT2 eye/emissive material rather than the imported Blender graph. Normal and specular maps should use their matching `_nm` and `_s` files. Whiskers need alpha clipping or the engine-equivalent cutout shader.
+The eye slots need a deliberate VT2 eye/emissive material rather than the imported Blender graph. Janfon's graph supplies eye color and an emissive mask but no eye normal or response maps, so the native atlas leaves those channels neutral. Normal and specular maps for the other opaque slots use their matching `_nm` and `_s` files. Whiskers need alpha clipping or the engine-equivalent cutout shader.
 
 ## Compiler gate
 

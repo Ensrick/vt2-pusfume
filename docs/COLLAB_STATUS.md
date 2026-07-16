@@ -179,16 +179,30 @@ that itself loads mod-side.
 
 ## Test queue (keep one candidate on the Workshop at a time)
 
-1. LIVE NOW (uploaded 11:59, ManifestID 8516617904983903084): Sol's ordered
-   shadow - isolated atlas package loads after the donor package, reversing
-   the measured load order. Discriminates: does mod-side load ORDER flip the
-   binding, or is resolution context-bound regardless of order?
+1. LIVE NOW (uploaded 12:44, ManifestID 3900287846863039598): ordered shadow
+   with the corrected Janfon material atlas. The working animation/shader path
+   is unchanged; this candidate isolates material assignment, atlas resolution,
+   UV containment, and diffuse opacity.
 2. QUEUED (implemented, offline-verified, commit 91d11c4): Track D spliced
    game child - `.\tools\Build-NativePusfume.ps1 -HeroPreview -SplicedGameChild`
    then VMBLauncher upload. Runs regardless of test 1's outcome: it does not
    depend on shadowing at all.
 
 ## Status log (append entries, newest first)
+
+- 12:44 Sol: CORRECTED ATLAS LIVE. Direct inspection of Janfon's original
+  Blender graph found a real assignment error: `p_ammo_box_limited_a` uses
+  `generic_cloth_dirty_*`, while our atlas had incorrectly given both ammo
+  slots the B-slot `pup_ammo_box_limited_*` maps. Eye normal/response channels
+  were also incorrectly filled with eye color instead of neutral data. The
+  shared atlas manifest now keeps A/B separate, restores the 7,357-triangle
+  `p_glob` region from 256x256 to full 1024x1024, and adds 8-pixel sample
+  insets to non-tiled regions. A Blender audit covers all 24,318 triangles and
+  reports zero escaped UV loops. The final 4096 diffuse has 16,777,216 opaque
+  pixels, zero partial/transparent pixels, matching Janfon's graph where only
+  whiskers consume diffuse alpha. 20 unit tests, source preflight, DCC build,
+  six-bundle shadow isolation, and seven-file deployment hash verification all
+  pass. Steam confirmed ManifestID 3900287846863039598.
 
 - 12:2x Claude: ORDERED SHADOW CONFIRMED WORKING by the user (Janfon maps on
   the character shader, deforming) - remaining defects are texture CONTENT,

@@ -40,6 +40,13 @@ request rather than in release notes.
 
 ### Changed
 
+- Rebuilt the native atlas from Janfon's original Blender material graph: ammo
+  slot A now uses `generic_cloth_dirty_*`, slot B retains
+  `pup_ammo_box_limited_*`, eye normal/response regions are neutral, the
+  high-polygon Globadier region keeps full source resolution, and safe UV
+  insets prevent neighboring atlas cells from bleeding into opaque surfaces.
+- Made the opaque atlas diffuse channel ignore source alpha, matching Janfon's
+  graph where only the dedicated whisker material uses diffuse transparency.
 - Repacked Pusfume's opaque surfaces into a wrap-safe generated atlas and switched
   the proven Globadier character shader to per-unit texture overrides, preventing
   shared material slots from overwriting one another during animated rendering.

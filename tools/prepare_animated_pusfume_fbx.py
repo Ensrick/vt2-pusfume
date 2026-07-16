@@ -10,26 +10,11 @@ import sys
 
 import bpy
 
+TOOLS_DIR = os.path.dirname(os.path.abspath(__file__))
+if TOOLS_DIR not in sys.path:
+    sys.path.insert(0, TOOLS_DIR)
 
-ATLAS_SIZE = 4096
-ATLAS_REGIONS = {
-    "p_main": {"origin": (0, 0), "size": (2048, 4096)},
-    "p_eye": {"center": (2560, 512), "size": (512, 512), "repeat": True},
-    "p_eye_g": {"center": (2560, 512), "size": (512, 512), "repeat": True},
-    "p_ammo_box_limited_a": {
-        "center": (2560, 2048),
-        "size": (512, 512),
-        "repeat": True,
-    },
-    "p_ammo_box_limited_b": {
-        "center": (2560, 2048),
-        "size": (512, 512),
-        "repeat": True,
-    },
-    "p_glob": {"center": (2304, 3328), "size": (256, 256), "repeat": True},
-    "p_metal": {"origin": (2816, 3072), "size": (512, 512)},
-    "p_armor": {"origin": (3328, 3072), "size": (512, 512)},
-}
+from pusfume_atlas_layout import ATLAS_REGIONS, ATLAS_SIZE
 
 
 def scene_objects(object_type):
@@ -90,6 +75,11 @@ def remap_material_uvs_to_atlas(mesh_object):
         for loop in loops:
             loop.uv.x = (origin_x + (loop.uv.x - shift_u) * width) / ATLAS_SIZE
             loop.uv.y = (origin_y + (loop.uv.y - shift_v) * height) / ATLAS_SIZE
+            if not (0 <= loop.uv.x <= 1 and 0 <= loop.uv.y <= 1):
+                raise RuntimeError(
+                    f"Atlas UV escaped for {material_name}: "
+                    f"({loop.uv.x:.6f}, {loop.uv.y:.6f})"
+                )
 
         remapped[material_name] = remapped.get(material_name, 0) + len(loops)
 
