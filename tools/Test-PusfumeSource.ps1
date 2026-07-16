@@ -75,7 +75,7 @@ Test-Condition ($changelogText -match '## \[Unreleased\]' -and `
     $changelogText -match '### Known Limitations' -and `
     $contributingText -match 'Update `CHANGELOG\.md`') `
     "release discipline" "changelog and contribution policy are present"
-Test-Condition ($workflowText -match 'actions/setup-python@v7' -and `
+Test-Condition ($workflowText -match 'actions/setup-python@v6' -and `
     $workflowText -match 'python -m unittest discover -s tests -v') `
     "unit-test CI" "Python regression suite runs on every pull request"
 Test-Condition (Test-Path (Join-Path $repoRoot "pusfume\resource_packages\pusfume\pusfume.package")) `
