@@ -190,6 +190,16 @@ that itself loads mod-side.
 
 ## Status log (append entries, newest first)
 
+- 12:0x Claude: ORDERED-SHADOW TEST IN PROGRESS (session 17:05 UTC). Log
+  confirms the user runs the right build (ManifestID 8516617904983903084,
+  last_updated 16:59:55 UTC) and the mechanism executed exactly as designed:
+  donor package sync-load 17:06:28.588 -> late shadow package request .769 ->
+  probe applied slots=8 shadow=true, zero errors, no "did not load". Whatever
+  the user reports visually is therefore a clean verdict on the hypothesis
+  itself (late mod-side registration reclaiming game texture ids), not on the
+  plumbing. If maps are still Globadier: order does not flip the binding,
+  fact-6 context boundary holds unconditionally, and Track D ships next.
+
 - 12:1x Claude: TRACK D COMPLETE (offline). New `splice_bundle_resource.py`
   walks the built bundle (u32 count, 256-byte header, index of
   (type,name,0,data_size), records with per-version size defs - sizes only,
