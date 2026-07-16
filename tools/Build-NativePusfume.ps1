@@ -267,6 +267,7 @@ $heroPreviewEnabled = if ($HeroPreview) { "true" } else { "false" }
 return {
     enabled = true,
     hero_preview_enabled = $heroPreviewEnabled,
+    manual_skin_probe = true,
     root_animation_isolation = true,
     skin_name = "pusfume_skin",
     third_person_unit = "units/pusfume/pusfume_3p",
@@ -324,9 +325,27 @@ if (-not $NoDeploy) {
     }
 
     New-Item -ItemType Directory -Path $resolvedWorkshop -Force | Out-Null
+    $bundleFiles = @(Get-ChildItem -LiteralPath $bundleRoot -File)
+    $expectedNames = @{}
+
+    foreach ($bundleFile in $bundleFiles) {
+        $expectedNames[$bundleFile.Name] = $true
+    }
+
+    $staleBundles = @(Get-ChildItem -LiteralPath $resolvedWorkshop -Filter *.mod_bundle -File |
+        Where-Object { -not $expectedNames.ContainsKey($_.Name) })
+
+    foreach ($staleBundle in $staleBundles) {
+        if ([IO.Path]::GetDirectoryName($staleBundle.FullName) -ne $resolvedWorkshop) {
+            throw "Refusing to remove a stale bundle outside the Workshop item: $($staleBundle.FullName)"
+        }
+
+        Remove-Item -LiteralPath $staleBundle.FullName -Force
+    }
+
     $verifiedFiles = 0
 
-    Get-ChildItem -LiteralPath $bundleRoot -File | ForEach-Object {
+    $bundleFiles | ForEach-Object {
         $deployedPath = Join-Path $resolvedWorkshop $_.Name
 
         Copy-Item -LiteralPath $_.FullName -Destination $deployedPath -Force
@@ -341,11 +360,12 @@ if (-not $NoDeploy) {
     }
 
     Write-Host "Deployed and hash-verified $verifiedFiles native Pusfume files to $resolvedWorkshop"
+    Write-Host "Removed $($staleBundles.Count) obsolete native Pusfume bundles"
 }
 
 $bsiSize = (Get-Item -LiteralPath $inputPath).Length
 $bundles = @(Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)
 Write-Host "Native Pusfume build passed: BSI=$bsiSize bytes bundles=$($bundles.Count)"
 Write-Host "Native Pusfume materials passed: textures=$($textureNames.Count) materials=7"
-Write-Host "Native Pusfume animation passed: controller=pusfume_3p clip=pusfume_3p_walk"
+Write-Host "Native Pusfume animation package passed: controller=pusfume_3p clip=pusfume_3p_walk"
 Write-Host "Native Pusfume hero preview enabled: $($HeroPreview.IsPresent)"

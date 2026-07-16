@@ -85,9 +85,17 @@ Test-Condition ($nativeText -match 'articulation source_delta=' -and `
 Test-Condition ($nativeConfigText -match 'root_animation_isolation\s*=\s*false' -and `
     $nativeBuildText -match 'root_animation_isolation\s*=\s*true') `
     "native animation isolation" "local native builds use a reversible root-only attachment test"
+Test-Condition ($nativeConfigText -match 'manual_skin_probe\s*=\s*false' -and `
+    $nativeBuildText -match 'manual_skin_probe\s*=\s*true' -and `
+    $nativeText -match 'Unit\.set_local_rotation\(probe\.mesh, probe\.manual_node, rotation\)' -and `
+    $nativeText -match 'Unit\.disable_animation_state_machine\(mesh\)') `
+    "native skin diagnostics" "local build directly rotates a joint with controller playback disabled"
 Test-Condition ($nativeBuildText -match '\[switch\]\$NoDeploy' -and `
     $nativeBuildText -match 'if \(-not \$NoDeploy\)') `
     "local deployment" "native builds deploy to the active Workshop item by default"
+Test-Condition ($nativeBuildText -match '\$staleBundles' -and `
+    $nativeBuildText -match 'Remove-Item -LiteralPath \$staleBundle\.FullName') `
+    "local deployment" "obsolete Workshop bundles are removed inside the verified item directory"
 Test-Condition ($nativeExporterText -match 'build_skin_activation_animations' -and `
     $nativeExporterText -match 'for bone in armature\.data\.bones' -and `
     $nativeExporterText -match 'document\["animations"\]\s*=\s*activation_animations' -and `
@@ -100,7 +108,7 @@ Test-Condition ($nativeBuildText -match '\[string\]\$AnimationFbx' -and `
     $nativeBuildText -match 'pusfume_3p_walk\.animation' -and `
     $nativeBuildText -match 'animation_state_machine\s*=\s*"units/pusfume/pusfume_3p"' -and `
     $nativeBuildText -match 'default_state\s*=\s*"base/walk"') `
-    "native animation" "Janfon's baked walk FBX drives a packaged default controller state"
+    "native animation" "Janfon's baked walk FBX is packaged as the default controller state"
 Test-Condition ($nativeBuildText -match 'state_machine\s*=\s*\[' -and `
     $nativeBuildText -match 'animation\s*=\s*\[' -and `
     $nativeBuildText -match 'bones\s*=\s*\[') `

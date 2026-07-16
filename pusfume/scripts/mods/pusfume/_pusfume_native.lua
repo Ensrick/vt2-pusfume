@@ -23,6 +23,25 @@ local function articulation_vector(unit, hips_node, hand_node)
     return hand_position - hips_position
 end
 
+local function apply_manual_skin_probe(extension, t)
+    local probe = extension._pusfume_native_probe
+
+    if not probe or not probe.manual_skin_probe or not ALIVE[probe.mesh] then
+        return
+    end
+
+    probe.manual_started_at = probe.manual_started_at or t
+
+    local elapsed = t - probe.manual_started_at
+    local angle = math.sin(elapsed * math.pi) * 0.65
+    local rotation_offset = Quaternion.axis_angle(Vector3.forward(), angle)
+    local rotation = Quaternion.multiply(probe.manual_base_rotation:unbox(), rotation_offset)
+
+    Unit.set_local_rotation(probe.mesh, probe.manual_node, rotation)
+
+    probe.manual_angle = angle
+end
+
 local function sample_link_probe(extension, unit, t)
     local probe = extension._pusfume_native_probe
 
@@ -57,9 +76,10 @@ local function sample_link_probe(extension, unit, t)
     local target_articulation = articulation_vector(probe.mesh, "j_hips", "j_hand_L")
 
     details[#details + 1] = string.format(
-        "articulation source_delta=%.4f target_delta=%.4f",
+        "articulation source_delta=%.4f target_delta=%.4f manual_angle=%.4f",
         Vector3.distance(source_articulation, probe.initial_source_articulation:unbox()),
-        Vector3.distance(target_articulation, probe.initial_target_articulation:unbox()))
+        Vector3.distance(target_articulation, probe.initial_target_articulation:unbox()),
+        probe.manual_angle or 0)
 
     probe.samples = probe.samples + 1
     probe.next_sample_at = probe.samples == 1 and 2 or 5
@@ -68,7 +88,7 @@ local function sample_link_probe(extension, unit, t)
     mod:info("[pusfume] Native animation probe t=%.1f %s", elapsed, table.concat(details, "; "))
 end
 
-local function initialize_link_probe(extension, unit)
+local function initialize_link_probe(extension, unit, config)
     local mesh = extension._tp_unit_mesh
 
     if not mesh then
@@ -92,7 +112,7 @@ local function initialize_link_probe(extension, unit)
         }
     end
 
-    extension._pusfume_native_probe = {
+    local probe = {
         complete = false,
         initial = initial,
         initial_source_articulation = Vector3Box(articulation_vector(unit, "j_hips", "j_lefthand")),
@@ -101,6 +121,16 @@ local function initialize_link_probe(extension, unit)
         next_sample_at = 0.5,
         samples = 0,
     }
+
+    if config.manual_skin_probe then
+        probe.manual_skin_probe = true
+        probe.manual_node = Unit.node(mesh, "j_spine1")
+        probe.manual_base_rotation = QuaternionBox(Unit.local_rotation(mesh, probe.manual_node))
+        Unit.disable_animation_state_machine(mesh)
+        mod:warning("[pusfume] Manual skin deformation probe is active on j_spine1")
+    end
+
+    extension._pusfume_native_probe = probe
 end
 
 local function deep_clone(value, seen)
@@ -187,7 +217,7 @@ local function install_cosmetic_hook(registry, config)
         local result = func(extension, world, unit, skin_name, profile, career)
 
         if career and career.name == registry.CAREER_NAME then
-            initialize_link_probe(extension, unit)
+            initialize_link_probe(extension, unit, config)
         end
 
         return result
@@ -204,6 +234,7 @@ local function install_probe_hook()
     end
 
     mod:hook_safe(PlayerUnitCosmeticExtension, "update", function(extension, unit, dummy_input, dt, context, t)
+        apply_manual_skin_probe(extension, t)
         sample_link_probe(extension, unit, t)
     end)
 
