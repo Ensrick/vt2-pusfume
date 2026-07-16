@@ -72,7 +72,15 @@ After the compiler probe succeeds, stage and deploy the native unit without copy
 
 The command first runs `tools/prepare_animated_pusfume_fbx.py` through Blender 5.2. That step merges Janfon's skinned model and baked walk into one character FBX and fails unless the transferred action moves both the armature and evaluated mesh vertices. The source FBXs remain unchanged; generated output stays under ignored `.build/generated-native`.
 
-The command then writes only beneath ignored `.build/native-workshop`, generates VT2 texture recipes and materials from the untracked handoff, enables the native cosmetic in that staged copy, compiles it with VMB, and copies the resulting bundles into Workshop item `3764954245` by default. Use `-HeroPreview` only for an intentional 3D selector test and `-NoDeploy` only for CI or a compiler-only check. Pass `-BlenderExe` if Blender 5.2 is installed outside the default location. The tracked config intentionally leaves native mode and native preview disabled so a normal public build cannot reference an absent or unreviewed model.
+The command then writes only beneath ignored `.build/native-workshop`, generates VT2 texture recipes and materials from the untracked handoff, enables the native cosmetic in that staged copy, compiles it with VMB, and copies the resulting bundles into Workshop item `3764954245` by default.
+
+A local deploy alone is not a release: Steam can re-sync a subscribed item back to the last uploaded manifest at any time, so testers only reliably run the last UPLOAD. The staging root carries a `.vmbrc` so the monorepo's `VMBLauncher.exe` resolves it directly; upload with a settings file whose `ProjectRoot` is the staging root:
+
+```powershell
+& "<vermintide-2-tweaker>\tools\vmb-launcher\...\VMBLauncher.exe" upload pusfume --config <settings.json> --no-banner
+```
+
+Then confirm `Steam\logs\workshop_log.txt` gained a fresh `Uploaded new content ... for item 3764954245` line; `ugc_tool` prints success even when nothing transferred. Use `-HeroPreview` only for an intentional 3D selector test and `-NoDeploy` only for CI or a compiler-only check. Pass `-BlenderExe` if Blender 5.2 is installed outside the default location. The tracked config intentionally leaves native mode and native preview disabled so a normal public build cannot reference an absent or unreviewed model.
 
 The third-person body, first-person arms, hats, and equipment should be separate exports. Preserve compatible VT2 bone names, hierarchy, and rest pose exactly. Send raw albedo, normal, emissive, roughness, metallic, and mask maps instead of relying on embedded FBX materials.
 

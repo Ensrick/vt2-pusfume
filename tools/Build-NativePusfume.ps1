@@ -99,6 +99,10 @@ if (Test-Path -LiteralPath $stageRoot) {
 
 New-Item -ItemType Directory -Path $stageRoot | Out-Null
 Copy-Item -LiteralPath $sourceMod -Destination $stageRoot -Recurse -Force
+# A .vmbrc in the staging root lets VMBLauncher.exe resolve the staged copy as
+# a mod project, so Workshop uploads ride the monorepo's canonical pipeline
+# (vmblauncher upload pusfume --config <settings with ProjectRoot=stage root>).
+Copy-Item -LiteralPath (Join-Path $repoRoot ".vmbrc") -Destination (Join-Path $stageRoot ".vmbrc") -Force
 
 $staleBundlePath = Join-Path $stageMod "bundleV2"
 if (Test-Path -LiteralPath $staleBundlePath) {
