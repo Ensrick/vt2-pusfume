@@ -46,6 +46,17 @@ request rather than in release notes.
 - Retired the manual clip sweep from staged builds now that deformation is
   confirmed; the packaged controller owns playback and the sweep remains a
   source-level diagnostic.
+- Bound the compiled opaque materials to the generated atlas and switched the
+  runtime donor texture restore to the live-verified per-mesh path after
+  `Unit.set_texture_for_materials` reported success without changing the
+  rendered maps.
+- Made the generated idle clearly visible: spine and neck breathing, a head
+  nod, and tail sway, with a rejection floor so an imperceptible idle can no
+  longer compile.
+- Hid Bardin's third-person weapon units while Pusfume is selected in staged
+  native builds.
+- Stopped `/pusfume_preflight` from failing before the first spawn when the
+  donor material is simply not loaded yet.
 
 - Made the supported Stingray FBX/DCC importer the default native skin path;
   retained the handwritten BSI path as an explicit diagnostic fallback.

@@ -15,6 +15,7 @@ local state = {
     donor_material_error_logged = false,
     donor_material_applied = false,
     donor_texture_errors = {},
+    donor_weapons_hidden = false,
     locomotion_events_available = false,
 }
 
@@ -86,7 +87,12 @@ local function ensure_donor_package(config)
 end
 
 
-local function set_unit_texture(unit, channel, texture_name)
+-- Unit.set_texture_for_materials had no visible effect on the swapped donor
+-- material in live testing (2026-07-16 05:31 log: textures=3 reported, donor
+-- maps still rendered). Per-mesh Material.set_texture is the path that visibly
+-- retextured the mesh in the 05:01 breakthrough session; with every opaque
+-- slot on one shared atlas, identical values make instance sharing harmless.
+local function set_material_texture(material, channel, texture_name)
     local texture_path = "textures/pusfume/" .. texture_name
 
     if not can_get("texture", texture_path) then
@@ -98,7 +104,7 @@ local function set_unit_texture(unit, channel, texture_name)
         return false
     end
 
-    Unit.set_texture_for_materials(unit, channel, texture_path)
+    Material.set_texture(material, channel, texture_path)
 
     return true
 end
@@ -129,27 +135,104 @@ local function apply_donor_material(extension, config)
 
     for _, slot_name in ipairs(DONOR_MATERIAL_SLOTS) do
         Unit.set_material(unit, slot_name, config.donor_material)
-        material_slots = material_slots + 1
     end
 
-    texture_assignments = texture_assignments +
-        (set_unit_texture(unit, DONOR_TEXTURE_CHANNELS.color, DONOR_ATLAS_TEXTURES.color) and 1 or 0)
-    texture_assignments = texture_assignments +
-        (set_unit_texture(unit, DONOR_TEXTURE_CHANNELS.normal, DONOR_ATLAS_TEXTURES.normal) and 1 or 0)
-    texture_assignments = texture_assignments +
-        (set_unit_texture(unit, DONOR_TEXTURE_CHANNELS.response, DONOR_ATLAS_TEXTURES.response) and 1 or 0)
+    for mesh_index = 0, Unit.num_meshes(unit) - 1 do
+        local mesh = Unit.mesh(unit, mesh_index)
+
+        for _, slot_name in ipairs(DONOR_MATERIAL_SLOTS) do
+            if Mesh.has_material(mesh, slot_name) then
+                local material = Mesh.material(mesh, slot_name)
+
+                material_slots = material_slots + 1
+                texture_assignments = texture_assignments +
+                    (set_material_texture(material, DONOR_TEXTURE_CHANNELS.color,
+                        DONOR_ATLAS_TEXTURES.color) and 1 or 0)
+                texture_assignments = texture_assignments +
+                    (set_material_texture(material, DONOR_TEXTURE_CHANNELS.normal,
+                        DONOR_ATLAS_TEXTURES.normal) and 1 or 0)
+                texture_assignments = texture_assignments +
+                    (set_material_texture(material, DONOR_TEXTURE_CHANNELS.response,
+                        DONOR_ATLAS_TEXTURES.response) and 1 or 0)
+            end
+        end
+    end
 
     extension._pusfume_donor_material_applied = material_slots > 0
     state.donor_material_applied = state.donor_material_applied
         or extension._pusfume_donor_material_applied
 
     mod:info(
-        "[pusfume] Globadier donor material applied slots=%d textures=%d mode=per_unit_atlas material=%s",
+        "[pusfume] Globadier donor material applied slots=%d textures=%d mode=per_mesh_atlas material=%s",
         material_slots,
         texture_assignments,
         config.donor_material)
 
     return extension._pusfume_donor_material_applied
+end
+
+-- Pusfume rides on Ranger Veteran's animated base, so Bardin's third-person
+-- weapon units still spawn and attach. Wield flow events re-show them, so the
+-- hide is re-asserted every update rather than set once.
+local function hide_donor_weapons(extension, unit, config)
+    if not config.hide_donor_weapons or not ALIVE[unit] then
+        return
+    end
+
+    local inventory = ScriptUnit.has_extension(unit, "inventory_system")
+
+    if not inventory or not inventory.equipment then
+        return
+    end
+
+    local equipment = inventory:equipment()
+
+    if not equipment then
+        return
+    end
+
+    local wielded_units = {
+        equipment.right_hand_wielded_unit_3p,
+        equipment.left_hand_wielded_unit_3p,
+        equipment.right_hand_ammo_unit_3p,
+        equipment.left_hand_ammo_unit_3p,
+    }
+
+    for i = 1, #wielded_units do
+        local weapon_unit = wielded_units[i]
+
+        if weapon_unit and ALIVE[weapon_unit] then
+            Unit.set_unit_visibility(weapon_unit, false)
+        end
+    end
+
+    local slots = equipment.slots
+
+    if slots then
+        for _, slot_data in pairs(slots) do
+            if type(slot_data) == "table" then
+                local slot_units = {
+                    slot_data.right_unit_3p,
+                    slot_data.left_unit_3p,
+                    slot_data.right_ammo_unit_3p,
+                    slot_data.left_ammo_unit_3p,
+                }
+
+                for i = 1, #slot_units do
+                    local slot_unit = slot_units[i]
+
+                    if slot_unit and ALIVE[slot_unit] then
+                        Unit.set_unit_visibility(slot_unit, false)
+                    end
+                end
+            end
+        end
+    end
+
+    if not state.donor_weapons_hidden then
+        state.donor_weapons_hidden = true
+        mod:info("[pusfume] Donor third-person weapon units hidden")
+    end
 end
 
 local function articulation_vector(unit, hips_node, hand_node)
@@ -476,6 +559,7 @@ local function install_probe_hook()
     mod:hook_safe(PlayerUnitCosmeticExtension, "update", function(extension, unit, dummy_input, dt, context, t)
         if extension._pusfume_native_config then
             apply_donor_material(extension, extension._pusfume_native_config)
+            hide_donor_weapons(extension, unit, extension._pusfume_native_config)
         end
 
         apply_manual_clip_probe(extension, t)

@@ -116,20 +116,29 @@ function M.collect(registry, career_index, backend, compat, ui, native)
     local donor_status = native.donor_status()
 
     if donor_status.enabled then
-        local donor_content_ok = donor_status.package_ok and donor_status.material_ok
-        local donor_detail
+        -- The donor material only becomes gettable once its package is loaded,
+        -- so a missing material before the first Pusfume spawn is expected and
+        -- must not fail the whole preflight (2026-07-16 05:30 log false FAIL).
+        local donor_state, donor_detail
 
         if not donor_status.package_ok then
+            donor_state = "FAIL"
             donor_detail = "Globadier donor package is missing from installed game data"
-        elseif not donor_status.material_ok then
-            donor_detail = "Globadier donor material is missing from installed game data"
+        elseif donor_status.package_loaded and not donor_status.material_ok then
+            donor_state = "FAIL"
+            donor_detail = "donor package is loaded but its outfit material did not resolve"
         elseif donor_status.applied then
+            donor_state = "PASS"
             donor_detail = "donor material resolved and applied to the native mesh"
-        else
+        elseif donor_status.material_ok then
+            donor_state = "PASS"
             donor_detail = "donor content resolves; spawn Pusfume to apply it"
+        else
+            donor_state = "WARN"
+            donor_detail = "donor package resolves; material loads with it when Pusfume spawns"
         end
 
-        add(checks, "donor material content", donor_content_ok and "PASS" or "FAIL", donor_detail)
+        add(checks, "donor material content", donor_state, donor_detail)
     end
 
     local animation_status = native.animation_status()

@@ -432,12 +432,15 @@ Write-NativeTextureRecipe "pusfume_atlas_df" $true
 Write-NativeTextureRecipe "pusfume_atlas_nm" $false
 Write-NativeTextureRecipe "pusfume_atlas_s" $false
 
-Write-NativeMaterial "pusfume_body" "pusfume_body_new_df" "skaven_body_nm" "skaven_body_s" 0.72
-Write-NativeMaterial "pusfume_eye" "pusfume_eyenormal" "" "pusfume_eyenormal" 0.35 -Emissive
-Write-NativeMaterial "pusfume_metal" "wpn_skaven_set_df" "wpn_skaven_set_nm" "wpn_skaven_set_s" 0.38 0.7
-Write-NativeMaterial "pusfume_globadier" "globadier_outfit_df" "globadier_outfit_nm" "globadier_outfit_s" 0.58
-Write-NativeMaterial "pusfume_armor" "stormvermin_outfit_df" "stormvermin_outfit_nm" "stormvermin_outfit_s" 0.48 0.35
-Write-NativeMaterial "pusfume_ammo_box" "pup_ammo_box_limited_df" "pup_ammo_box_limited_nm" "pup_ammo_box_limited_s" 0.62
+# Opaque slots sample atlas UVs after the merge-time remap, so their compiled
+# materials must bind the atlas maps too or every non-donor render path (hero
+# preview, donor fallback) samples per-slot textures at atlas coordinates.
+Write-NativeMaterial "pusfume_body" "pusfume_atlas_df" "pusfume_atlas_nm" "pusfume_atlas_s" 0.72
+Write-NativeMaterial "pusfume_eye" "pusfume_atlas_df" "pusfume_atlas_nm" "pusfume_atlas_s" 0.35 -Emissive
+Write-NativeMaterial "pusfume_metal" "pusfume_atlas_df" "pusfume_atlas_nm" "pusfume_atlas_s" 0.38 0.7
+Write-NativeMaterial "pusfume_globadier" "pusfume_atlas_df" "pusfume_atlas_nm" "pusfume_atlas_s" 0.58
+Write-NativeMaterial "pusfume_armor" "pusfume_atlas_df" "pusfume_atlas_nm" "pusfume_atlas_s" 0.48 0.35
+Write-NativeMaterial "pusfume_ammo_box" "pusfume_atlas_df" "pusfume_atlas_nm" "pusfume_atlas_s" 0.62
 Write-NativeMaterial "pusfume_whiskers" "pusfume_whiskers_df" "pusfume_whiskers_nm" "pusfume_whiskers_s" 0.74 -Opacity
 
 @'
@@ -475,6 +478,7 @@ return {
     donor_package = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/chr_third_person_mesh",
     enabled = true,
     hero_preview_enabled = $heroPreviewEnabled,
+    hide_donor_weapons = true,
     locomotion_events_enabled = true,
     manual_clip_length = 0.8,
     manual_clip_name = "units/pusfume/anims/pusfume_3p_walk",

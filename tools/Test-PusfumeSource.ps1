@@ -39,6 +39,7 @@ $nativeMaterialTemplatePath = Join-Path $repoRoot "tools\material_templates\char
 $nativeCutoutTemplatePath = Join-Path $repoRoot "tools\material_templates\character_skinned_cutout.material"
 $nativeExporterPath = Join-Path $repoRoot "tools\export_blender_bsi.py"
 $animatedFbxToolPath = Join-Path $repoRoot "tools\prepare_animated_pusfume_fbx.py"
+$idleFbxToolPath = Join-Path $repoRoot "tools\generate_idle_pusfume_fbx.py"
 $changelogPath = Join-Path $repoRoot "CHANGELOG.md"
 $contributingPath = Join-Path $repoRoot "CONTRIBUTING.md"
 $workflowPath = Join-Path $repoRoot ".github\workflows\source-preflight.yml"
@@ -62,6 +63,7 @@ $nativeMaterialTemplateText = Get-Content -LiteralPath $nativeMaterialTemplatePa
 $nativeCutoutTemplateText = Get-Content -LiteralPath $nativeCutoutTemplatePath -Raw
 $nativeExporterText = Get-Content -LiteralPath $nativeExporterPath -Raw
 $animatedFbxToolText = Get-Content -LiteralPath $animatedFbxToolPath -Raw
+$idleFbxToolText = Get-Content -LiteralPath $idleFbxToolPath -Raw
 $changelogText = Get-Content -LiteralPath $changelogPath -Raw
 $contributingText = Get-Content -LiteralPath $contributingPath -Raw
 $workflowText = Get-Content -LiteralPath $workflowPath -Raw
@@ -175,18 +177,30 @@ Test-Condition ($nativeMaterialTemplateText -match 'shader\s*=\s*\{' -and `
     $nativeConfigText -match 'donor_material_enabled\s*=\s*false' -and `
     $nativeBuildText -match 'donor_material_enabled\s*=\s*true' -and `
     $nativeText -match 'Unit\.set_material\(unit, slot_name, config\.donor_material\)' -and `
-    $nativeText -match 'Unit\.set_texture_for_materials\(unit, channel, texture_path\)' -and `
+    $nativeText -match 'Material\.set_texture\(material, channel, texture_path\)' -and `
     $nativeText -match 'Application\.can_get\(resource_type, path\)' -and `
     $nativeText -match 'Managers\.package:unload\(config\.donor_package, DONOR_PACKAGE_REFERENCE\)' -and `
     $nativeBuildText -match 'character_skinned_cutout\.material') `
     "native material skinning" "local builds use a guarded, releasable Globadier donor while public source stays off"
-Test-Condition ($nativeText -match 'Unit\.set_texture_for_materials\(unit, channel, texture_path\)' -and `
-    $nativeText -notmatch 'Material\.set_texture' -and `
+Test-Condition ($nativeText -match 'Material\.set_texture\(material, channel, texture_path\)' -and `
+    $nativeText -match 'Mesh\.has_material\(mesh, slot_name\)' -and `
+    $nativeText -notmatch 'Unit\.set_texture_for_materials\(' -and `
     $nativeText -match 'pusfume_atlas_df' -and `
     $nativeBuildText -match 'Write-PusfumeAtlas "pusfume_atlas_df"' -and `
+    $nativeBuildText -match 'Write-NativeMaterial "pusfume_body" "pusfume_atlas_df" "pusfume_atlas_nm" "pusfume_atlas_s"' -and `
     $animatedFbxToolText -match 'remap_material_uvs_to_atlas' -and `
     $animatedFbxToolText -match 'shift_u = int\(anchor\.x // 1\)') `
-    "per-unit donor atlas" "opaque surfaces use guarded atlas UVs and do not mutate the shared donor material"
+    "per-mesh donor atlas" "compiled and donor material paths share one wrap-safe atlas; per-mesh texture set is the live-verified API"
+Test-Condition ($nativeConfigText -match 'hide_donor_weapons\s*=\s*false' -and `
+    $nativeBuildText -match 'hide_donor_weapons\s*=\s*true' -and `
+    $nativeText -match 'function hide_donor_weapons' -and `
+    $nativeText -match 'Unit\.set_unit_visibility\(weapon_unit, false\)' -and `
+    $nativeText -match 'right_hand_wielded_unit_3p') `
+    "donor weapon hiding" "staged builds hide Bardin's third-person weapon units every update"
+Test-Condition ($idleFbxToolText -match 'j_tail1' -and `
+    $idleFbxToolText -match 'BONE_MOTIONS' -and `
+    $idleFbxToolText -match 'max_pose_delta < 0\.02') `
+    "idle visibility" "generated idle animates spine, head, and tail with a rejected-if-imperceptible floor"
 Test-Condition ($nativeText -match 'function M\.donor_status' -and `
     $nativeText -match 'installed_config = config' -and `
     $preflightText -match 'native\.donor_status\(\)' -and `

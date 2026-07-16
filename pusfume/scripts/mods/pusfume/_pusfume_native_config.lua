@@ -4,6 +4,7 @@ return {
     donor_package = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/chr_third_person_mesh",
     enabled = false,
     hero_preview_enabled = false,
+    hide_donor_weapons = false,
     locomotion_events_enabled = false,
     manual_clip_length = 0.8,
     manual_clip_name = "units/pusfume/anims/pusfume_3p_walk",
