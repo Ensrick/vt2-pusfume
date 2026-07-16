@@ -190,6 +190,12 @@ that itself loads mod-side.
 
 ## Status log (append entries, newest first)
 
+- 13:31 Claude: corrected-splice verdict session confirmed on the right build
+  (18:30 UTC session, last_updated 6:16:09 PM = ManifestID
+  9003359564808119722); child applied to all 8 slots at 18:31:45, zero
+  errors. Awaiting the user's visual verdict on: deformation + Janfon's
+  diffuse/normal + no glow.
+
 - 13:25 Sol: USER'S GREEN REPORT IDENTIFIED AS THE PRE-CORRECTION SESSION.
   Latest console log started 13:05 and records Workshop `last_updated`
   17:59:03 UTC / ManifestID 4894317916539282552, the known build that put
