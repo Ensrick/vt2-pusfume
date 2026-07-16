@@ -2,6 +2,9 @@
 
 Commit only original or authorized assets. Keep extracted game assets outside this public repository.
 
+The confirmed private build and its publication boundary are documented in
+[NATIVE_CHARACTER_MILESTONE.md](NATIVE_CHARACTER_MILESTONE.md).
+
 Recommended handoff layout:
 
 ```text
@@ -48,9 +51,9 @@ The repository includes a non-destructive cleanup pass for third-person FBX file
   "C:\path\to\pusfume_3p_clean.fbx"
 ```
 
-Pusfume's current mesh uses slave-rat bone names rather than the playable Globadier names. Do not rename or retarget it merely to satisfy the stock cosmetic table: `_pusfume_assets.lua` provides the explicit parent-to-child node bridge needed for the first in-game deformation test. A true Globadier-skeleton rebind remains an optimization if the bridge exposes rest-pose differences.
+Pusfume's current mesh uses slave-rat bone names rather than the playable Globadier names. Do not rename or retarget it merely to satisfy the stock cosmetic table: `_pusfume_assets.lua` provides the explicit parent-to-child node bridge that now deforms successfully in live testing. A true Globadier-skeleton rebind remains an optimization for the final armature.
 
-The cleaned FBX is an interchange asset, not the final Stingray scene. VT2's SDK requires a `.bsi` payload beside the `.unit` descriptor. This repository includes an account-free Blender 5.2 exporter for geometry, skeleton nodes, inverse bind matrices, and four-influence skin streams. Run the complete export and compiler probe with:
+The cleaned FBX is an interchange asset, not the final Stingray scene. The successful path gives an animated FBX to Stingray's DCC importer through a same-name `.dcc_asset` and `.unit`; the repository's Blender BSI exporter remains an account-free format diagnostic for geometry, skeleton nodes, inverse bind matrices, and four-influence skin streams. Run that fallback compiler probe with:
 
 ```powershell
 .\tools\Test-BsiPipeline.ps1 `
@@ -61,4 +64,39 @@ The probe writes only to ignored `.build` storage. It emits a compressed `bsiz` 
 
 The exporter intentionally duplicates mesh corners in source BSI to keep UV seams and per-channel indexing unambiguous. Fatshark's compiler deduplicates the current Pusfume mesh from 72,954 source corners to 30,477 native vertices.
 
+## Local native Workshop build
+
+Stage and deploy the native unit without copying generated assets into the public source tree. The native build gives Janfon's FBX to Stingray's supported DCC importer by default; use `-UseBsiSkinFallback` only to reproduce the experimental handwritten BSI path:
+
+```powershell
+.\tools\Build-NativePusfume.ps1 `
+  -HeroPreview `
+  -SplicedGameChild `
+  -TextureSource ".build\pusfume_handoff\textures conv"
+```
+
+The command first runs `tools/prepare_animated_pusfume_fbx.py` through Blender 5.2. That step merges Janfon's skinned model and baked walk into one character FBX and fails unless the transferred action moves both the armature and evaluated mesh vertices. The source FBXs remain unchanged; generated output stays under ignored `.build/generated-native`.
+
+The command then writes only beneath ignored `.build/native-workshop`, generates VT2 texture recipes and materials from the untracked handoff, enables the native cosmetic in that staged copy, compiles it with VMB, and copies the resulting bundles into Workshop item `3764954245` by default.
+
+A local deploy alone is not a release: Steam can re-sync a subscribed item back to the last uploaded manifest at any time, so testers only reliably run the last UPLOAD. The staging root carries a `.vmbrc` so the monorepo's `VMBLauncher.exe` resolves it directly; upload with a settings file whose `ProjectRoot` is the staging root:
+
+```powershell
+& "<vermintide-2-tweaker>\tools\vmb-launcher\...\VMBLauncher.exe" upload pusfume --config <settings.json> --no-banner
+```
+
+Then confirm `Steam\logs\workshop_log.txt` gained a fresh `Uploaded new content ... for item 3764954245` line; `ugc_tool` prints success even when nothing transferred. Record the ManifestID and verify the next game log's `last_updated` timestamp after a full Steam restart. Use `-HeroPreview` for this intentional private selector build and `-NoDeploy` only for CI or a compiler-only check. Pass `-BlenderExe` if Blender 5.2 is installed outside the default location. The tracked config intentionally leaves native mode and native preview disabled so a normal public build cannot reference absent or unreviewed assets.
+
 The third-person body, first-person arms, hats, and equipment should be separate exports. Preserve compatible VT2 bone names, hierarchy, and rest pose exactly. Send raw albedo, normal, emissive, roughness, metallic, and mask maps instead of relying on embedded FBX materials.
+
+## Stingray animation contract
+
+Autodesk's [character setup workflow](https://help.autodesk.com/cloudhelp/ENU/Stingray-Help/stingray_help/animation/set_up_character.html) requires the character mesh import to enable animation while creating or updating its skeleton, requires later clips to target that same skeleton, and its [controller documentation](https://help.autodesk.com/cloudhelp/ENU/Stingray-Help/stingray_help/animation/animation_controllers.html) requires the controller to be associated with that skeleton. Compiling the static model FBX produced valid skin binds but no embedded animation group, and the runtime skin remained rigid even while the clip playhead advanced. The merged character FBX preserves all 82 DCC skin binds and compiles one animation group covering all 86 scene nodes. The separate unit skeleton, clip sync pose, and clip tracks also contain the same 82 bones; the walk clip is 0.8 seconds and contains 1,109 keyed samples.
+
+At runtime, a valid controller is not sufficient proof of deformation. Stingray's [Unit animation API](https://help.autodesk.com/cloudhelp/ENU/Stingray-Help/lua_ref/obj_stingray_Unit.html) allows evaluated animation to be withheld from bone nodes when the unit's animation bone mode is `ignore`, and bone LOD can freeze unevaluated bones. The native integration therefore sets bone mode to `transform`, selects bone LOD 0, enables the state machine, and logs its current state alongside skeletal articulation. Do not probe an assumed animation layer index: Stingray treats `animation_layer_info` as experimental and asserts inside the engine when the requested layer is absent.
+
+The confirmed `-SplicedGameChild` build loads the installed playable Globadier package and applies a child material carrying the game character-skinning binding. The build replaces the SDK child's payload with the locally extracted game child, patches and verifies Pusfume diffuse and normal resource IDs, retains the donor black emissive texture, and sets the reflected Globadier `emissive_color` to zero. The selector and in-game body share this path, so one live test covers both render contexts. The raw extracted material is never committed, but the generated friends-only bundle embeds its patched 768-byte binding payload; this requires provenance review before wider publication.
+
+When a compiled controller remains in a fixed state, the local native build can isolate the animation blender from the state graph. It disables the controller, starts `pusfume_3p_walk` directly on layer 1, freezes automatic playback, and explicitly sweeps the returned clip ID over its verified 0.8-second range. This diagnostic is enabled only in the staged Workshop build; tracked public configuration keeps it disabled.
+
+With deformation confirmed, the staged controller is now state-driven rather than a single looping clip. `tools/generate_idle_pusfume_fbx.py` bakes a placeholder idle on the exact model skeleton: a two-second sinusoidal loop that breathes through the spine and neck, nods the head, and sways both tail bones, exported armature-only with the same axes and baking settings as the walk merge. Live testing proved a single 0.02-radian channel is imperceptible in game, so the generator rejects any idle whose maximum pose delta falls below 0.02 or above 0.5. The generated state machine defaults to `base/idle` and transitions to `base/walk` and back through `walk` and `idle` events with 0.25-second blends. At runtime, the mod measures the player unit's horizontal speed from frame-to-frame position deltas and fires the matching event with hysteresis: `walk` above 0.5 m/s, `idle` below 0.2 m/s. The manual clip sweep is retired from staged builds so the packaged controller owns playback; `/pusfume_preflight` reports whether the compiled controller exposes both events. Replace the generated idle with an authored clip from Janfon on the same rig when one is available - the `.animation` recipe contract does not change.

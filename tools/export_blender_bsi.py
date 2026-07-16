@@ -1,7 +1,8 @@
 """Export a Blender FBX as a compiler-readable static Bitsquid scene.
 
 This is the account-free Pusfume exporter. Static and skinned output are SDK
-compiler-verified. Skinned output must still pass a live deformation test.
+compiler-verified. Skinned output includes rest-pose animation channels for the
+full scene graph and writes the skeleton list consumed by an animation controller.
 
 Run through Blender:
     blender --background --factory-startup --disable-autoexec \
@@ -221,6 +222,52 @@ def build_bone_node(bone, armature, parent_name=None):
     return node
 
 
+def bone_local_matrix(bone, armature):
+    if bone.parent:
+        return bone.parent.matrix_local.inverted() @ bone.matrix_local
+    return armature.matrix_world @ bone.matrix_local
+
+
+def rest_pose_animation(node_name, local_matrix):
+    return {
+        "node": node_name,
+        "parameter": "matrix",
+        "stream": stream(
+            "local_tm",
+            "CT_MATRIX4x4",
+            16,
+            matrix_values(local_matrix),
+        ),
+        "times": [0],
+    }
+
+
+def build_skin_activation_animations(armature, mesh_object, geometry_name):
+    animations = [
+        rest_pose_animation(bone.name, bone_local_matrix(bone, armature))
+        for bone in armature.data.bones
+    ]
+    root = next(bone for bone in armature.data.bones if bone.parent is None)
+    root_world = armature.matrix_world @ root.matrix_local
+    geometry_local = root_world.inverted() @ mesh_object.matrix_world
+    animations.append(rest_pose_animation(geometry_name, geometry_local))
+
+    return animations
+
+
+def write_animation_bones(output_path, armature):
+    bone_names = [bone.name for bone in armature.data.bones]
+    bones_path = os.path.splitext(output_path)[0] + ".bones"
+    bsi_format.write(
+        bones_path,
+        {
+            "bones": bone_names,
+            "lod_levels": [len(bone_names)],
+        },
+    )
+    return bones_path
+
+
 def build_skin(armature, mesh_object, geometry_name):
     bones = list(armature.data.bones)
     roots = [bone for bone in bones if bone.parent is None]
@@ -281,8 +328,14 @@ def main():
         skin_name, bone_indices, skins, nodes = build_skin(
             armatures[0], mesh_object, geometry_name
         )
+        activation_animations = build_skin_activation_animations(
+            armatures[0], mesh_object, geometry_name
+        )
+        bones_path = write_animation_bones(output_path, armatures[0])
     else:
         skin_name, bone_indices, skins = None, None, None
+        activation_animations = None
+        bones_path = None
         nodes = {
             "root_point": {
                 "children": {
@@ -304,6 +357,8 @@ def main():
         "nodes": nodes,
         "source_path": os.path.basename(input_path),
     }
+    if activation_animations:
+        document["animations"] = activation_animations
     if skins:
         document["skins"] = skins
     bsi_format.write(output_path, document, compress=args.compress)
@@ -313,7 +368,9 @@ def main():
         + json.dumps(
             {
                 "armatures": len(armatures),
+                "activation_nodes": len(activation_animations or []),
                 "bones": sum(len(item.data.bones) for item in armatures),
+                "bones_output": bones_path,
                 "compressed": args.compress,
                 "mesh": mesh_object.name,
                 "output": output_path,

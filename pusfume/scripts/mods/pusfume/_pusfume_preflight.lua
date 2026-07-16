@@ -29,17 +29,19 @@ local function backend_runtime_check(checks, registry)
         item_interface, registry.DONOR_CAREER_NAME, false)
     local pusfume_ok, pusfume_loadout = pcall(item_interface.get_loadout_by_career_name,
         item_interface, registry.CAREER_NAME, false)
+    local direct_loadouts = item_interface:get_loadout()
+    local direct_loadout = direct_loadouts and direct_loadouts[registry.CAREER_NAME]
 
-    if donor_loadout and pusfume_loadout then
-        add(checks, "backend data", "PASS", "donor loadout is exposed as pusfume")
+    if donor_loadout and pusfume_loadout and type(direct_loadout) == "table" then
+        add(checks, "backend data", "PASS", "donor loadout is exposed through method and table APIs")
     elseif donor_ok and pusfume_ok then
-        add(checks, "backend data", "WARN", "loadouts are not materialized yet; rerun in the Keep")
+        add(checks, "backend data", "WARN", "loadout method or table alias is not materialized yet")
     else
         add(checks, "backend data", "FAIL", "donor loadout adapter raised an error")
     end
 end
 
-function M.collect(registry, career_index, backend, compat, ui)
+function M.collect(registry, career_index, backend, compat, ui, native)
     local checks = {}
     local career = CareerSettings and CareerSettings[registry.CAREER_NAME]
     local donor = CareerSettings and CareerSettings[registry.DONOR_CAREER_NAME]
@@ -103,6 +105,62 @@ function M.collect(registry, career_index, backend, compat, ui)
         bot_aliases and "Ranger Veteran ability behavior aliased" or "bot tables not loaded yet")
 
     local ui_status = ui.status()
+    local native_status = native.status()
+    local native_enabled = native.enabled()
+    local native_ready = native_enabled and native_status.resource_available and native_status.hook_installed
+    add(checks, "native third-person unit",
+        native_ready and "PASS" or "WARN",
+        native_ready and "custom cosmetic resource and attachment hook are ready"
+            or native_enabled and "custom cosmetic registered; attachment hook is not ready"
+            or "source-only fallback active; use Build-NativePusfume.ps1 for a model test")
+    local donor_status = native.donor_status()
+
+    if donor_status.enabled then
+        -- The donor material only becomes gettable once its package is loaded,
+        -- so a missing material before the first Pusfume spawn is expected and
+        -- must not fail the whole preflight (2026-07-16 05:30 log false FAIL).
+        local donor_state, donor_detail
+
+        if not donor_status.package_ok then
+            donor_state = "FAIL"
+            donor_detail = "Globadier donor package is missing from installed game data"
+        elseif donor_status.package_loaded and not donor_status.material_ok then
+            donor_state = "FAIL"
+            donor_detail = "donor package is loaded but its outfit material did not resolve"
+        elseif donor_status.applied then
+            donor_state = "PASS"
+            donor_detail = "donor material resolved and applied to the native mesh"
+        elseif donor_status.material_ok then
+            donor_state = "PASS"
+            donor_detail = "donor content resolves; spawn Pusfume to apply it"
+        else
+            donor_state = "WARN"
+            donor_detail = "donor package resolves; material loads with it when Pusfume spawns"
+        end
+
+        add(checks, "donor material content", donor_state, donor_detail)
+    end
+
+    local animation_status = native.animation_status()
+
+    if animation_status.locomotion_events_enabled then
+        local probes_off = not animation_status.manual_clip_probe
+            and not animation_status.manual_skin_probe
+        local locomotion_detail
+
+        if not probes_off then
+            locomotion_detail = "a manual diagnostic probe overrides the locomotion controller"
+        elseif animation_status.locomotion_events_available then
+            locomotion_detail = "compiled controller exposes idle/walk events; driver is active"
+        else
+            locomotion_detail = "spawn Pusfume to verify the compiled idle/walk events"
+        end
+
+        add(checks, "locomotion animation events",
+            probes_off and (animation_status.locomotion_events_available and "PASS" or "WARN") or "WARN",
+            locomotion_detail)
+    end
+
     add(checks, "five-row grid hook", ui_status.legacy_hook_installed and "PASS" or "FAIL",
         ui_status.legacy_hook_installed and "CharacterSelectionStateCharacter hooked" or "class unavailable")
     add(checks, "five-row grid card", ui_status.legacy_card_seen and "PASS" or "WARN",
@@ -111,12 +169,18 @@ function M.collect(registry, career_index, backend, compat, ui)
             or "not rendered yet; reopen the selection grid and rerun")
     add(checks, "Pusfume preview hook", ui_status.preview_hook_installed and "PASS" or "FAIL",
         ui_status.preview_hook_installed and "donor menu spawn is intercepted" or "preview hook unavailable")
-    add(checks, "Pusfume preview widget", ui_status.preview_widget_seen and "PASS" or "WARN",
-        ui_status.preview_widget_seen and "model-derived texture widget initialized"
-            or "not rendered yet; reopen the selection grid and rerun")
-    add(checks, "donor preview suppression", ui_status.donor_preview_suppressed and "PASS" or "WARN",
-        ui_status.donor_preview_suppressed and "Ranger Veteran menu unit cleared"
-            or "select Pusfume, then rerun preflight")
+    if native_enabled then
+        add(checks, "native hero preview", ui_status.native_preview_enabled and "PASS" or "WARN",
+            ui_status.native_preview_enabled and "stock 3D previewer requested the Pusfume cosmetic"
+                or "select Pusfume, then rerun preflight")
+    else
+        add(checks, "Pusfume preview widget", ui_status.preview_widget_seen and "PASS" or "WARN",
+            ui_status.preview_widget_seen and "model-derived texture widget initialized"
+                or "not rendered yet; reopen the selection grid and rerun")
+        add(checks, "donor preview suppression", ui_status.donor_preview_suppressed and "PASS" or "WARN",
+            ui_status.donor_preview_suppressed and "Ranger Veteran menu unit cleared"
+                or "select Pusfume, then rerun preflight")
+    end
     add(checks, "Hero window hook", ui_status.modern_hook_installed and "PASS" or "WARN",
         ui_status.modern_hook_installed and "HeroWindowCharacterSelectionConsole hooked"
             or "class not loaded in this menu path")
@@ -148,14 +212,14 @@ function M.summarize(checks)
     return totals
 end
 
-function M.install(registry, career_index, backend, compat, ui)
+function M.install(registry, career_index, backend, compat, ui, native)
     mod:command("pusfume_preflight", "Run Pusfume registration and runtime checks.", function()
         registry.refresh_item_permissions()
         backend.install_runtime_guards(registry)
         compat.install(registry)
-        ui.install(registry)
+        ui.install(registry, native)
 
-        local checks = M.collect(registry, career_index, backend, compat, ui)
+        local checks = M.collect(registry, career_index, backend, compat, ui, native)
 
         for _, check in ipairs(checks) do
             mod:echo(string.format("[%s] %s: %s", check.status, check.name, check.detail))
@@ -168,8 +232,8 @@ function M.install(registry, career_index, backend, compat, ui)
     end)
 end
 
-function M.log_summary(registry, career_index, backend, compat, ui)
-    local totals = M.summarize(M.collect(registry, career_index, backend, compat, ui))
+function M.log_summary(registry, career_index, backend, compat, ui, native)
+    local totals = M.summarize(M.collect(registry, career_index, backend, compat, ui, native))
 
     mod:info("[pusfume] preflight summary pass=%d warn=%d fail=%d", totals.PASS, totals.WARN, totals.FAIL)
 end
