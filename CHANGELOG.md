@@ -10,6 +10,12 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed the v0.6.0-dev startup regression that aborted career and hero-selector
+  registration by replacing unsupported VMF proc and buff helpers with VT2's
+  synchronized native registries.
+
 ### Added
 
 - Added Pusfume's localized `Under-Empire Reject` career identity, `The Great

@@ -81,6 +81,34 @@ function M.collect(registry, career_index, backend, compat, ui, native)
     add(checks, "career kit", has_gameplay and "PASS" or "FAIL",
         "Skaven Ingenuity, The Great Scheme, perks, and donor talent tree")
 
+    local scaredy_rat_proc_ready = ProcFunctions
+        and type(ProcFunctions.pusfume_scaredy_rat_proc) == "function"
+    add(checks, "Scaredy-rat proc", scaredy_rat_proc_ready and "PASS" or "FAIL",
+        scaredy_rat_proc_ready and "native ProcFunctions callback is registered"
+            or "damage callback is missing from the engine proc registry")
+
+    local custom_buffs = {
+        "pusfume_scaredy_rat_listener",
+        "pusfume_scaredy_rat_speed",
+        "pusfume_insider_knowledge_aura",
+        "pusfume_insider_knowledge_team",
+    }
+    local custom_buffs_ready = true
+
+    for _, buff_name in ipairs(custom_buffs) do
+        local template = BuffTemplates and BuffTemplates[buff_name]
+
+        if not template or type(template.buffs) ~= "table"
+                or not NetworkLookup or not NetworkLookup.buff_templates[buff_name] then
+            custom_buffs_ready = false
+            break
+        end
+    end
+
+    add(checks, "career buff registry", custom_buffs_ready and "PASS" or "FAIL",
+        custom_buffs_ready and "four templates have synchronized native lookup IDs"
+            or "a custom template or network lookup is missing")
+
     local challenge_lookup_ready = NetworkLookup and NetworkLookup.challenges
         and NetworkLookup.challenges.pusfume_scheme_kill_skaven
         and NetworkLookup.challenges.pusfume_scheme_kill_skaven_specials

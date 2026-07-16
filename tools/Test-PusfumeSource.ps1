@@ -362,6 +362,14 @@ Test-Condition ($gameplayText -match 'duration\s*=\s*3' -and `
     $gameplayText -match 'multiplier\s*=\s*1\.2' -and `
     $gameplayText -match 'path_to_movement_setting_to_modify\s*=\s*\{ "move_speed" \}') `
     "Scaredy-rat" "damage grants 20 percent move speed for three seconds"
+Test-Condition ($gameplayText -notmatch 'mod:add_proc_function' -and `
+    $gameplayText -notmatch 'mod:add_buff_template' -and `
+    $gameplayText -match 'ProcFunctions\.pusfume_scaredy_rat_proc\s*=\s*function' -and `
+    $gameplayText -match 'BuffTemplates\[name\]\s*=\s*\{' -and `
+    $gameplayText -match 'append_lookup\(NetworkLookup\.buff_templates, name\)' -and `
+    $preflightText -match 'add\(checks, "Scaredy-rat proc"' -and `
+    $preflightText -match 'add\(checks, "career buff registry"') `
+    "career buff APIs" "uses synchronized VT2 registries instead of nonexistent VMF helpers"
 Test-Condition ($gameplayText -match 'stat_buff\s*=\s*"power_level_skaven"' -and `
     $gameplayText -match 'multiplier\s*=\s*0\.05' -and `
     $gameplayText -match 'max_stacks\s*=\s*1') `

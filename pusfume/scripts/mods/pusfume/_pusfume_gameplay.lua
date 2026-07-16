@@ -59,6 +59,16 @@ local function append_lookup(lookup, name)
 end
 
 
+local function register_buff_template(name, definition)
+    BuffTemplates[name] = {
+        buffs = {
+            definition,
+        },
+    }
+    append_lookup(NetworkLookup.buff_templates, name)
+end
+
+
 local function register_challenges()
     InGameChallengeTemplates[CHALLENGE_SKAVEN] = {
         default_target = 40,
@@ -219,7 +229,12 @@ end
 
 
 local function register_buffs()
-    mod:add_proc_function("pusfume_scaredy_rat_proc", function(owner_unit)
+    fassert(type(ProcFunctions) == "table",
+        "Pusfume requires VT2's ProcFunctions registry before gameplay registration.")
+    fassert(type(BuffTemplates) == "table" and NetworkLookup and type(NetworkLookup.buff_templates) == "table",
+        "Pusfume requires VT2's buff and network registries before gameplay registration.")
+
+    ProcFunctions.pusfume_scaredy_rat_proc = function(owner_unit)
         if not Unit.alive(owner_unit) or not is_pusfume_unit(owner_unit) then
             return
         end
@@ -227,14 +242,14 @@ local function register_buffs()
         local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
 
         buff_extension:add_buff("pusfume_scaredy_rat_speed")
-    end)
+    end
 
-    mod:add_buff_template("pusfume_scaredy_rat_listener", {
+    register_buff_template("pusfume_scaredy_rat_listener", {
         event = "on_damage_taken",
         event_buff = true,
         buff_func = "pusfume_scaredy_rat_proc",
     })
-    mod:add_buff_template("pusfume_scaredy_rat_speed", {
+    register_buff_template("pusfume_scaredy_rat_speed", {
         apply_buff_func = "apply_movement_buff",
         duration = 3,
         max_stacks = 1,
@@ -243,14 +258,14 @@ local function register_buffs()
         refresh_durations = true,
         remove_buff_func = "remove_movement_buff",
     })
-    mod:add_buff_template("pusfume_insider_knowledge_aura", {
+    register_buff_template("pusfume_insider_knowledge_aura", {
         buff_to_add = "pusfume_insider_knowledge_team",
         range = 100000,
         remove_buff_func = "remove_aura_buff",
         update_frequency = 0.1,
         update_func = "activate_buff_on_distance",
     })
-    mod:add_buff_template("pusfume_insider_knowledge_team", {
+    register_buff_template("pusfume_insider_knowledge_team", {
         max_stacks = 1,
         multiplier = 0.05,
         stat_buff = "power_level_skaven",
