@@ -2,6 +2,9 @@
 
 Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.5.0-dev` intentionally locks itself in Chaos Wastes, Weaves, Versus, and other mechanisms that snapshot or constrain the vanilla career list.
 
+Known-good native baseline: commit `0ffdf5a`, Workshop ManifestID
+`2405082174877027150`, in-game `last_updated="7/16/2026 6:45:43 PM"`.
+
 ## Before opening Heroes
 
 1. Put Vermintide Mod Framework above Pusfume in the launcher mod order.
@@ -15,11 +18,12 @@ Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.5.0-dev` inte
 1. Open **Heroes**.
 2. Confirm a full-size gold-trimmed card appears one row above Saltzpyre, to the right of the career heading.
 3. Confirm the five existing hero rows and their career cards retain their original size and positions.
-4. Click the card. The center preview should show Janfon's Pusfume model as a green debug-shaded 3D unit while the career heading says **Pusfume**.
+4. Click the card. The center preview should show Janfon's textured Pusfume model while the career heading says **Pusfume**.
 5. Confirm no Ranger Veteran body, beard, or hat is visible with the Pusfume mesh.
-6. Run `/pusfume_status`; `UI(card=true selected=true)` confirms both UI hooks executed.
-7. Run `/pusfume_preflight` again. The five-row card, preview hook, native hero preview, native third-person unit, and spawn weapon checks should pass.
-8. Confirm the selection through the normal Hero-menu button.
+6. Watch the preview long enough to confirm the generated spine/head/tail idle is visible and there is no green glow beneath dark texture regions.
+7. Run `/pusfume_status`; `UI(card=true selected=true)` confirms both UI hooks executed.
+8. Run `/pusfume_preflight` again. The five-row card, preview hook, native hero preview, native third-person unit, and spawn weapon checks should pass.
+9. Confirm the selection through the normal Hero-menu button.
 
 ## Spawn smoke test
 
@@ -30,8 +34,12 @@ Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.5.0-dev` inte
 5. Switch to another Bardin career, then back to Pusfume, checking that neither loadout nor talents disappear.
 6. Use `/pusfume` once as a fallback test. The command should print the host request and a `success` response.
 7. Open the in-game player list and keep it visible long enough for the portrait to refresh; confirm Pusfume's row renders without a Lua error.
-8. Walk, turn, crouch, jump, dodge, attack, and use the career ability while watching the third-person model. Note any rest-pose offset, detached region, inverted limb, or extreme stretch.
+8. Stand still and confirm the placeholder idle deforms the spine, head, and tail.
+9. Walk and confirm the controller blends into Janfon's walk cycle, then returns to idle after stopping.
+10. Confirm Pusfume's atlas remains correctly aligned and that no whole-body or dark-region green emissive glow returns.
+11. Turn, crouch, jump, dodge, attack, and use the career ability while watching the third-person model. These actions do not yet have dedicated Pusfume clips; record translation without matching pose as missing animation coverage, not a skinning regression.
+12. Note any rest-pose offset, detached region, inverted limb, or extreme stretch.
 
 ## Failure capture
 
-Do not continue into a mission after any preflight failure. Keep the newest log from `%APPDATA%\Fatshark\Vermintide 2\console_logs` and note the last checklist step completed. Warnings about an unopened card or backend loadouts that have not materialized yet are expected; Lua errors or any FAIL line are not.
+Do not continue into a mission after any preflight failure. Keep the newest log from `%APPDATA%\Fatshark\Vermintide 2\console_logs` and note the last checklist step completed. Confirm the log's Workshop `last_updated` value before treating a visual result as evidence. Warnings about an unopened card or backend loadouts that have not materialized yet are expected; Lua errors or any FAIL line are not.

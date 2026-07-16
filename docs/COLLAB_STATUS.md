@@ -5,6 +5,10 @@ Both agents read this before editing anything and update their section after
 every push. Live claims require either a user-observed result or supporting
 runtime logs; offline-only claims must be marked `[unverified]`.
 
+This file is the chronological experiment log. The consolidated successful
+architecture and reproduction contract are in
+[`NATIVE_CHARACTER_MILESTONE.md`](NATIVE_CHARACTER_MILESTONE.md).
+
 ## Ground rules
 
 - Pull before editing; the working tree is shared. Claim files below before
@@ -12,14 +16,16 @@ runtime logs; offline-only claims must be marked `[unverified]`.
   the other rebases.
 - Every change passes `tools/Test-PusfumeSource.ps1` and
   `py -m unittest discover -s tests` before commit.
-- Ship = `tools/Build-NativePusfume.ps1 -HeroPreview`, then VMBLauncher upload
+- Ship = `tools/Build-NativePusfume.ps1 -HeroPreview -SplicedGameChild`, then
+  VMBLauncher upload
   (settings file with ProjectRoot = `.build/native-workshop`; the staging root
   carries `.vmbrc`), then verify `Steam/logs/workshop_log.txt` gained a fresh
   `Uploaded new content` line, then commit + push. Experimental builds may stay
   deployed because the user can disable the mod, but must be identified as
   experimental in the issue/PR record.
-- Deployed experimental candidate: `f169b07` / ManifestID
-  `8845324977482480470` (ordered parent-child material test).
+- Confirmed live baseline: `0ffdf5a` / ManifestID
+  `2405082174877027150` (native child material, corrected texture channels,
+  neutralized inherited emissive color, and idle/walk deformation).
 
 ## Confirmed facts (do not re-litigate without new evidence)
 
@@ -53,12 +59,20 @@ runtime logs; offline-only claims must be marked `[unverified]`.
    eight surfaces. Parent lookup is solved; the compiled child's shader
    permutation still does not perform GPU skinning.
 
-## The one remaining core problem
+## Milestone resolution
 
-Bind Janfon's atlas to the exact game-owned `mtr_outfit` material while keeping
-that material's proven skinning permutation. The child-inheritance route is
-now empirically rejected; current work compares live material modes and tests
-whether controlled resource-hash shadowing can replace only donor textures.
+Track D-E solved the combined deformation and material problem by loading a
+mod-side child whose binding payload preserves the game character shader while
+its three texture ids target Janfon's atlas. Clearing the inherited Globadier
+`emissive_color` removed the remaining green underglow. See
+[`NATIVE_CHARACTER_MILESTONE.md`](NATIVE_CHARACTER_MILESTONE.md) for the
+current architecture and reproduction instructions.
+
+## Archived experiment plan
+
+Everything below through the archived test queue records intermediate
+hypotheses and candidate builds. It is retained for process-of-elimination
+evidence, not as current build or test instructions.
 
 ## Track A - bundle stub strip [CLAIMED: Claude]
 
@@ -93,7 +107,7 @@ gone, child bytes untouched). Files claimed: `tools/strip_bundle_resource.py`,
   `_update_units_visibility`.
 - B4: First-person arms and the husk path remain untouched.
 
-## Morning test plan (for the user)
+## Archived morning test plan
 
 1. First launch: current Workshop build (known-good donor swap). Expect:
    walk + idle deforming in game, menu previews animated with donor maps,
@@ -177,7 +191,7 @@ copy (stub incident). Corollary: you cannot override game texture content
 from a mod bundle for game-loaded materials; overrides must ride a material
 that itself loads mod-side.
 
-## Test queue (keep one candidate on the Workshop at a time)
+## Archived test queue
 
 1. LIVE NOW (uploaded 12:44, ManifestID 3900287846863039598): ordered shadow
    with the corrected Janfon material atlas. The working animation/shader path
@@ -189,6 +203,15 @@ that itself loads mod-side.
    depend on shadowing at all.
 
 ## Status log (append entries, newest first)
+
+- 13:53 Sol: NATIVE CHARACTER MILESTONE CONFIRMED. User verdict on Track D-E:
+  "Very good." Latest session records `last_updated` 18:45:43 UTC, matching
+  ManifestID 2405082174877027150; preflight 15 pass / 6 expected warnings /
+  0 fail; child material on all eight opaque slots; controller and idle/walk
+  events active; controller state changes 0 -> 1 with nonzero articulation;
+  no Pusfume runtime error. Visual baseline is now textured + deforming +
+  idle/walk + no Globadier green underglow. Canonical record:
+  `docs/NATIVE_CHARACTER_MILESTONE.md`.
 
 - 13:45 Sol: TRACK D-E SHIPPED - ManifestID 2405082174877027150.
   CORRECTED-MAP VERDICT was textured + deforming, with a residual

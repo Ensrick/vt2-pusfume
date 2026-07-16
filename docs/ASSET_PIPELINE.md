@@ -2,6 +2,9 @@
 
 Commit only original or authorized assets. Keep extracted game assets outside this public repository.
 
+The confirmed private build and its publication boundary are documented in
+[NATIVE_CHARACTER_MILESTONE.md](NATIVE_CHARACTER_MILESTONE.md).
+
 Recommended handoff layout:
 
 ```text
@@ -48,9 +51,9 @@ The repository includes a non-destructive cleanup pass for third-person FBX file
   "C:\path\to\pusfume_3p_clean.fbx"
 ```
 
-Pusfume's current mesh uses slave-rat bone names rather than the playable Globadier names. Do not rename or retarget it merely to satisfy the stock cosmetic table: `_pusfume_assets.lua` provides the explicit parent-to-child node bridge needed for the first in-game deformation test. A true Globadier-skeleton rebind remains an optimization if the bridge exposes rest-pose differences.
+Pusfume's current mesh uses slave-rat bone names rather than the playable Globadier names. Do not rename or retarget it merely to satisfy the stock cosmetic table: `_pusfume_assets.lua` provides the explicit parent-to-child node bridge that now deforms successfully in live testing. A true Globadier-skeleton rebind remains an optimization for the final armature.
 
-The cleaned FBX is an interchange asset, not the final Stingray scene. VT2's SDK requires a `.bsi` payload beside the `.unit` descriptor. This repository includes an account-free Blender 5.2 exporter for geometry, skeleton nodes, inverse bind matrices, and four-influence skin streams. Run the complete export and compiler probe with:
+The cleaned FBX is an interchange asset, not the final Stingray scene. The successful path gives an animated FBX to Stingray's DCC importer through a same-name `.dcc_asset` and `.unit`; the repository's Blender BSI exporter remains an account-free format diagnostic for geometry, skeleton nodes, inverse bind matrices, and four-influence skin streams. Run that fallback compiler probe with:
 
 ```powershell
 .\tools\Test-BsiPipeline.ps1 `
@@ -63,10 +66,12 @@ The exporter intentionally duplicates mesh corners in source BSI to keep UV seam
 
 ## Local native Workshop build
 
-After the compiler probe succeeds, stage and deploy the native unit without copying generated assets into the public source tree. The native build now gives Janfon's FBX to Stingray's supported DCC importer by default; use `-UseBsiSkinFallback` only to reproduce the experimental handwritten BSI path:
+Stage and deploy the native unit without copying generated assets into the public source tree. The native build gives Janfon's FBX to Stingray's supported DCC importer by default; use `-UseBsiSkinFallback` only to reproduce the experimental handwritten BSI path:
 
 ```powershell
 .\tools\Build-NativePusfume.ps1 `
+  -HeroPreview `
+  -SplicedGameChild `
   -TextureSource ".build\pusfume_handoff\textures conv"
 ```
 
@@ -80,7 +85,7 @@ A local deploy alone is not a release: Steam can re-sync a subscribed item back 
 & "<vermintide-2-tweaker>\tools\vmb-launcher\...\VMBLauncher.exe" upload pusfume --config <settings.json> --no-banner
 ```
 
-Then confirm `Steam\logs\workshop_log.txt` gained a fresh `Uploaded new content ... for item 3764954245` line; `ugc_tool` prints success even when nothing transferred. Use `-HeroPreview` only for an intentional 3D selector test and `-NoDeploy` only for CI or a compiler-only check. Pass `-BlenderExe` if Blender 5.2 is installed outside the default location. The tracked config intentionally leaves native mode and native preview disabled so a normal public build cannot reference an absent or unreviewed model.
+Then confirm `Steam\logs\workshop_log.txt` gained a fresh `Uploaded new content ... for item 3764954245` line; `ugc_tool` prints success even when nothing transferred. Record the ManifestID and verify the next game log's `last_updated` timestamp after a full Steam restart. Use `-HeroPreview` for this intentional private selector build and `-NoDeploy` only for CI or a compiler-only check. Pass `-BlenderExe` if Blender 5.2 is installed outside the default location. The tracked config intentionally leaves native mode and native preview disabled so a normal public build cannot reference absent or unreviewed assets.
 
 The third-person body, first-person arms, hats, and equipment should be separate exports. Preserve compatible VT2 bone names, hierarchy, and rest pose exactly. Send raw albedo, normal, emissive, roughness, metallic, and mask maps instead of relying on embedded FBX materials.
 
@@ -90,7 +95,7 @@ Autodesk's [character setup workflow](https://help.autodesk.com/cloudhelp/ENU/St
 
 At runtime, a valid controller is not sufficient proof of deformation. Stingray's [Unit animation API](https://help.autodesk.com/cloudhelp/ENU/Stingray-Help/lua_ref/obj_stingray_Unit.html) allows evaluated animation to be withheld from bone nodes when the unit's animation bone mode is `ignore`, and bone LOD can freeze unevaluated bones. The native integration therefore sets bone mode to `transform`, selects bone LOD 0, enables the state machine, and logs its current state alongside skeletal articulation. Do not probe an assumed animation layer index: Stingray treats `animation_layer_info` as experimental and asserts inside the engine when the requested layer is absent.
 
-The local diagnostic build replaces opaque material slots at runtime with the installed playable Globadier's `mtr_outfit` resource, then restores Pusfume's diffuse, normal, and packed response channels. The donor's inventory-listed `chr_third_person_mesh` package is loaded before assignment. This preserves the game-owned full-character shader permutation without copying extracted shader binaries into the repository or Workshop item. The selector and in-game body share this material path, so one live test covers both render contexts.
+The confirmed `-SplicedGameChild` build loads the installed playable Globadier package and applies a child material carrying the game character-skinning binding. The build replaces the SDK child's payload with the locally extracted game child, patches and verifies Pusfume diffuse and normal resource IDs, retains the donor black emissive texture, and sets the reflected Globadier `emissive_color` to zero. The selector and in-game body share this path, so one live test covers both render contexts. The raw extracted material is never committed, but the generated friends-only bundle embeds its patched 768-byte binding payload; this requires provenance review before wider publication.
 
 When a compiled controller remains in a fixed state, the local native build can isolate the animation blender from the state graph. It disables the controller, starts `pusfume_3p_walk` directly on layer 1, freezes automatic playback, and explicitly sweeps the returned clip ID over its verified 0.8-second range. This diagnostic is enabled only in the staged Workshop build; tracked public configuration keeps it disabled.
 

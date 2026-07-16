@@ -42,6 +42,7 @@ $animatedFbxToolPath = Join-Path $repoRoot "tools\prepare_animated_pusfume_fbx.p
 $idleFbxToolPath = Join-Path $repoRoot "tools\generate_idle_pusfume_fbx.py"
 $changelogPath = Join-Path $repoRoot "CHANGELOG.md"
 $contributingPath = Join-Path $repoRoot "CONTRIBUTING.md"
+$nativeMilestonePath = Join-Path $repoRoot "docs\NATIVE_CHARACTER_MILESTONE.md"
 $workflowPath = Join-Path $repoRoot ".github\workflows\source-preflight.yml"
 $previewPath = Join-Path $repoRoot "pusfume\textures\pusfume\pusfume_model_preview.png"
 $previewTexturePath = Join-Path $repoRoot "pusfume\textures\pusfume\pusfume_model_preview.texture"
@@ -67,6 +68,11 @@ $animatedFbxToolText = Get-Content -LiteralPath $animatedFbxToolPath -Raw
 $idleFbxToolText = Get-Content -LiteralPath $idleFbxToolPath -Raw
 $changelogText = Get-Content -LiteralPath $changelogPath -Raw
 $contributingText = Get-Content -LiteralPath $contributingPath -Raw
+$nativeMilestoneText = if (Test-Path -LiteralPath $nativeMilestonePath) {
+    Get-Content -LiteralPath $nativeMilestonePath -Raw
+} else {
+    ""
+}
 $workflowText = Get-Content -LiteralPath $workflowPath -Raw
 $mainVersion = [regex]::Match($mainText, 'MOD_VERSION\s*=\s*"([^"]+)"').Groups[1].Value
 $configVersion = [regex]::Match($configText, 'Prototype v([^";]+)').Groups[1].Value
@@ -78,6 +84,12 @@ Test-Condition ($changelogText -match '## \[Unreleased\]' -and `
     $changelogText -match '### Known Limitations' -and `
     $contributingText -match 'Update `CHANGELOG\.md`') `
     "release discipline" "changelog and contribution policy are present"
+Test-Condition ((Test-Path -LiteralPath $nativeMilestonePath) -and `
+    $nativeMilestoneText -match '2405082174877027150' -and `
+    $nativeMilestoneText -match 'Build-NativePusfume\.ps1 -HeroPreview -SplicedGameChild' -and `
+    $nativeMilestoneText -match 'texture_map_27b67fd2.*Emissive' -and `
+    $nativeMilestoneText -match 'Only idle and walk are animated') `
+    "native milestone documentation" "known-good build, material contract, and animation boundary are recorded"
 Test-Condition ($workflowText -match 'actions/setup-python@v6' -and `
     $workflowText -match 'python -m unittest discover -s tests -v') `
     "unit-test CI" "Python regression suite runs on every pull request"
@@ -270,7 +282,7 @@ Test-Condition ((Test-Path (Join-Path $repoRoot "tools\splice_bundle_resource.py
     $nativeBuildText -match 'texture_map_8bf37d8e=A4215592F6297E57' -and `
     $nativeBuildText -match '\$splicedInto\.Count -ne 1' -and `
     $nativeBuildText -notmatch 'spliced_child_payload\.bin"? *-Destination') `
-    "spliced game child" "-SplicedGameChild replaces the compiled child payload with the game's own binding table carrying atlas texture ids, and the game-derived payload stays in .build"
+    "spliced game child" "-SplicedGameChild validates a local game binding table and embeds the patched bytes only in generated output"
 Test-Condition ($nativeText -match 'pusfume_tint' -and `
     $nativeText -match 'Material\.set_scalar\(material, "gradient_variation", variation\)' -and `
     $nativeText -match 'Material\.set_scalar\(material, "tint_columns_pair", columns_pair\)') `

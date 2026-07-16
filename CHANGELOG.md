@@ -26,6 +26,9 @@ request rather than in release notes.
   and a verified animated-character FBX merge.
 - Added reverse-engineering, asset-pipeline, provenance, model-handoff, and live
   testing documentation.
+- Added a canonical native-character milestone record covering the confirmed
+  architecture, build reproduction, live evidence, rejected approaches,
+  provenance boundary, and remaining animation work.
 - Added source preflight coverage, BSI serialization unit tests, issue and pull
   request templates, CODEOWNERS, and CI patch-hygiene checks.
 - Added a `/pusfume_preflight` donor-content check that fails before a live
@@ -119,6 +122,10 @@ request rather than in release notes.
   used a strongly green-weighted `[14.2, 25.3, 2]`; Track D now resolves that
   reflected variable by hash and writes `[0,0,0]` without changing its proven
   skinning payload, diffuse atlas, or normal atlas.
+- Established the first live-confirmed native-character baseline: Janfon's
+  textured placeholder deforms in the selector and in game, the generated
+  idle and Janfon walk cycle transition through the compiled controller, and
+  the corrected material renders without the Globadier green underglow.
 - Added the `-SplicedGameChild` build (Track D): the compiled child material's
   payload is replaced inside the built bundle with the game's own `mtr_outfit`
   binding table, its three texture ids patched to the Pusfume atlas. The live
@@ -126,7 +133,9 @@ request rather than in release notes.
   deformation; the game payload carries the real skinning binding. New
   size-aware splice tooling (`splice_bundle_resource.py`,
   `make_spliced_child.py`) validates the bundle walk, index sizes, and
-  payload round-trip; the game-derived 768-byte payload never leaves `.build`.
+  payload round-trip. The raw extracted file is never committed, while the
+  generated friends-only Workshop bundle embeds the patched binding payload;
+  this remains subject to provenance review before wider publication.
 - Applied the donor character shader to the menu preview mesh; the preview
   spawned with skinning-incapable compiled materials, which is why the menu
   model never animated even with its controller running.
@@ -162,8 +171,11 @@ request rather than in release notes.
 
 ### Known Limitations
 
-- Visible in-game skeletal deformation for the new animated DCC build still
-  requires live confirmation; progress is tracked in
+- The native controller currently covers only idle and walk. Run/sprint,
+  crouch, jump/fall, dodge, attacks, ability actions, downed, death, and weapon
+  poses remain to be authored and integrated.
+- Remote-husk deformation and complete multiplayer synchronization still need
+  dedicated live testing; progress remains tracked in
   [issue #6](https://github.com/Ensrick/vt2-pusfume/issues/6) and
   [pull request #11](https://github.com/Ensrick/vt2-pusfume/pull/11).
 - The current third-person model and armature are placeholders assembled from
