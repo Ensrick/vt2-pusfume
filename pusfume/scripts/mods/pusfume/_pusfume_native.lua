@@ -15,6 +15,9 @@ local state = {
     child_package_requested = false,
     child_package_loaded = false,
     child_package_error_logged = false,
+    shadow_package_requested = false,
+    shadow_package_loaded = false,
+    shadow_package_error_logged = false,
     material_probe_command_installed = false,
     material_probe_mode = nil,
     material_probe_units = setmetatable({}, { __mode = "k" }),
@@ -131,6 +134,42 @@ local function ensure_child_package(config)
     return state.child_package_loaded
 end
 
+-- Texture resources are resolved by package load order. The startup package
+-- deliberately excludes the atlas, then this mod-owned package registers the
+-- atlas under the donor texture ids only AFTER the donor package is resident.
+local function ensure_shadow_package(config)
+    if not config.donor_texture_shadow then
+        return true
+    end
+
+    if state.shadow_package_loaded then
+        return true
+    end
+
+    if type(config.donor_texture_shadow_package) ~= "string"
+            or not state.donor_package_loaded or not mod.load_package or not mod.package_status then
+        return false
+    end
+
+    if not state.shadow_package_requested then
+        state.shadow_package_requested = true
+        mod:load_package(config.donor_texture_shadow_package, nil, true)
+        mod:info("[pusfume] Requested late donor texture shadow package: %s",
+            config.donor_texture_shadow_package)
+    end
+
+    state.shadow_package_loaded =
+        mod:package_status(config.donor_texture_shadow_package) == "loaded"
+
+    if not state.shadow_package_loaded and not state.shadow_package_error_logged then
+        state.shadow_package_error_logged = true
+        mod:error("[pusfume] Late donor texture shadow package did not load: %s",
+            config.donor_texture_shadow_package)
+    end
+
+    return state.shadow_package_loaded
+end
+
 
 -- The texture channels are Fatshark's literal generated slot names (present in
 -- the community hash dictionary as real strings). What failed in live testing
@@ -159,6 +198,10 @@ end
 
 local function apply_donor_material_to_unit(unit, config)
     if not config.donor_material_enabled or not ALIVE[unit] or not ensure_donor_package(config) then
+        return false
+    end
+
+    if not ensure_shadow_package(config) then
         return false
     end
 
@@ -833,6 +876,18 @@ function M.animation_status()
 end
 
 function M.shutdown(config)
+    if state.shadow_package_requested then
+        if mod.package_status and
+                mod:package_status(config.donor_texture_shadow_package) == "loaded" then
+            mod:unload_package(config.donor_texture_shadow_package)
+            mod:info("[pusfume] Released late donor texture shadow package")
+        end
+
+        state.shadow_package_requested = false
+        state.shadow_package_loaded = false
+        state.shadow_package_error_logged = false
+    end
+
     if state.child_package_requested then
         if mod.package_status and mod:package_status(config.parent_child_package) == "loaded" then
             mod:unload_package(config.parent_child_package)

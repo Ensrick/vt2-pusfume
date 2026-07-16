@@ -3,6 +3,7 @@ return {
     donor_material = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/mtr_outfit",
     donor_package = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/chr_third_person_mesh",
     donor_texture_shadow = false,
+    donor_texture_shadow_package = false,
     enabled = false,
     hero_preview_enabled = false,
     hide_donor_weapons = false,

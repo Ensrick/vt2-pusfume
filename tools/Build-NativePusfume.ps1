@@ -438,16 +438,36 @@ Write-NativeTextureRecipe "pusfume_atlas_df" $true
 Write-NativeTextureRecipe "pusfume_atlas_nm" $false
 Write-NativeTextureRecipe "pusfume_atlas_s" $false
 
-# Opaque slots sample atlas UVs after the merge-time remap, so their compiled
-# materials must bind the atlas maps too or every non-donor render path (hero
-# preview, donor fallback) samples per-slot textures at atlas coordinates.
-Write-NativeMaterial "pusfume_body" "pusfume_atlas_df" "pusfume_atlas_nm" "pusfume_atlas_s" 0.72
-Write-NativeMaterial "pusfume_eye" "pusfume_atlas_df" "pusfume_atlas_nm" "pusfume_atlas_s" 0.35 -Emissive
-Write-NativeMaterial "pusfume_metal" "pusfume_atlas_df" "pusfume_atlas_nm" "pusfume_atlas_s" 0.38 0.7
-Write-NativeMaterial "pusfume_globadier" "pusfume_atlas_df" "pusfume_atlas_nm" "pusfume_atlas_s" 0.58
-Write-NativeMaterial "pusfume_armor" "pusfume_atlas_df" "pusfume_atlas_nm" "pusfume_atlas_s" 0.48 0.35
-Write-NativeMaterial "pusfume_ammo_box" "pusfume_atlas_df" "pusfume_atlas_nm" "pusfume_atlas_s" 0.62
+# Shadow builds must keep the atlas out of the startup package. These fallback
+# materials therefore use their original per-slot maps; the runtime donor swap
+# happens before they are visible, and the atlas loads later from native_shadow.
+if (-not $NoDonorTextureShadow) {
+    Write-NativeMaterial "pusfume_body" "pusfume_body_new_df" "skaven_body_nm" "skaven_body_s" 0.72
+    Write-NativeMaterial "pusfume_eye" "pusfume_eyenormal" "skaven_body_nm" "skaven_body_s" 0.35 -Emissive
+    Write-NativeMaterial "pusfume_metal" "wpn_skaven_set_df" "wpn_skaven_set_nm" "wpn_skaven_set_s" 0.38 0.7
+    Write-NativeMaterial "pusfume_globadier" "globadier_outfit_df" "globadier_outfit_nm" "globadier_outfit_s" 0.58
+    Write-NativeMaterial "pusfume_armor" "stormvermin_outfit_df" "stormvermin_outfit_nm" "stormvermin_outfit_s" 0.48 0.35
+    Write-NativeMaterial "pusfume_ammo_box" "pup_ammo_box_limited_df" "pup_ammo_box_limited_nm" "pup_ammo_box_limited_s" 0.62
+} else {
+    Write-NativeMaterial "pusfume_body" "pusfume_atlas_df" "pusfume_atlas_nm" "pusfume_atlas_s" 0.72
+    Write-NativeMaterial "pusfume_eye" "pusfume_atlas_df" "pusfume_atlas_nm" "pusfume_atlas_s" 0.35 -Emissive
+    Write-NativeMaterial "pusfume_metal" "pusfume_atlas_df" "pusfume_atlas_nm" "pusfume_atlas_s" 0.38 0.7
+    Write-NativeMaterial "pusfume_globadier" "pusfume_atlas_df" "pusfume_atlas_nm" "pusfume_atlas_s" 0.58
+    Write-NativeMaterial "pusfume_armor" "pusfume_atlas_df" "pusfume_atlas_nm" "pusfume_atlas_s" 0.48 0.35
+    Write-NativeMaterial "pusfume_ammo_box" "pusfume_atlas_df" "pusfume_atlas_nm" "pusfume_atlas_s" 0.62
+}
 Write-NativeMaterial "pusfume_whiskers" "pusfume_whiskers_df" "pusfume_whiskers_nm" "pusfume_whiskers_s" 0.74 -Opacity
+
+if (-not $NoDonorTextureShadow) {
+    @'
+texture = [
+	"textures/pusfume/pusfume_atlas_df"
+	"textures/pusfume/pusfume_atlas_nm"
+	"textures/pusfume/pusfume_atlas_s"
+]
+'@ | Set-Content -LiteralPath (Join-Path $stageMod `
+        "resource_packages\pusfume\native_shadow.package") -Encoding utf8
+}
 
 # Child material inheriting the playable Globadier's compiled character
 # material. Runtime texture overrides never rebind on character materials, so
@@ -548,6 +568,11 @@ $parentChildPackageValue = if ($ParentChildMaterial) {
 # Lua runtime texture restore must not run: the atlas resources no longer
 # exist under their original paths.
 $donorTextureShadowValue = if ($NoDonorTextureShadow) { "false" } else { "true" }
+$donorTextureShadowPackageValue = if ($NoDonorTextureShadow) {
+    "false"
+} else {
+    '"resource_packages/pusfume/native_shadow"'
+}
 
 @"
 return {
@@ -555,6 +580,7 @@ return {
     donor_material = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/mtr_outfit",
     donor_package = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/chr_third_person_mesh",
     donor_texture_shadow = $donorTextureShadowValue,
+    donor_texture_shadow_package = $donorTextureShadowPackageValue,
     enabled = true,
     hero_preview_enabled = $heroPreviewEnabled,
     hide_donor_weapons = true,
@@ -597,12 +623,21 @@ animation = [
 '@ | Add-Content -LiteralPath (Join-Path $stageMod `
     "resource_packages\pusfume\pusfume.package") -Encoding utf8
 
-@'
+$rootTextureEntries = $textureNames | ForEach-Object { "    `"textures/pusfume/$_`"" }
+if ($NoDonorTextureShadow) {
+    $rootTextureEntries += @(
+        '    "textures/pusfume/pusfume_atlas_df"',
+        '    "textures/pusfume/pusfume_atlas_nm"',
+        '    "textures/pusfume/pusfume_atlas_s"'
+    )
+}
+
+@"
 
 texture = [
-    "textures/pusfume/*"
+$($rootTextureEntries -join "`n")
 ]
-'@ | Add-Content -LiteralPath (Join-Path $stageMod `
+"@ | Add-Content -LiteralPath (Join-Path $stageMod `
     "resource_packages\pusfume\pusfume.package") -Encoding utf8
 
 & node $vmbPath build pusfume -f $stageRoot --rc $repoRoot --clean --no-workshop

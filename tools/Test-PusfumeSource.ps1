@@ -234,8 +234,14 @@ Test-Condition ($nativeText -match 'function M\.apply_donor_to_unit' -and `
     $uiText -match 'native\.apply_donor_to_unit\(mesh_unit\)') `
     "menu preview shader" "the preview mesh receives the donor character shader so the menu idle can deform"
 Test-Condition ($nativeConfigText -match 'donor_texture_shadow\s*=\s*false' -and `
+    $nativeConfigText -match 'donor_texture_shadow_package\s*=\s*false' -and `
     $nativeBuildText -match '\[switch\]\$NoDonorTextureShadow' -and `
     $nativeBuildText -match 'donor_texture_shadow = \$donorTextureShadowValue' -and `
+    $nativeBuildText -match 'donor_texture_shadow_package = \$donorTextureShadowPackageValue' -and `
+    $nativeBuildText -match 'native_shadow\.package' -and `
+    $nativeText -match 'function ensure_shadow_package' -and `
+    $nativeText -match 'Requested late donor texture shadow package' -and `
+    $nativeText -match 'mod:load_package\(config\.donor_texture_shadow_package, nil, true\)' -and `
     $nativeBuildText -match 'DD74D8319F514D96' -and `
     $nativeBuildText -match '45FFAEEF53695A86' -and `
     $nativeBuildText -match 'E334A8CB6BCB5E6D' -and `
@@ -244,7 +250,7 @@ Test-Condition ($nativeConfigText -match 'donor_texture_shadow\s*=\s*false' -and
     $stripToolText -match '--new-hash' -and `
     $stripToolText -match 'preexisting_new' -and `
     $nativeText -match 'mode == "donor_atlas" and not config\.donor_texture_shadow') `
-    "donor texture shadow" "default builds rename the atlas identities to the game's mtr_outfit texture ids and skip the dead runtime restore"
+    "donor texture shadow" "an isolated atlas package loads after the donor, renames to mtr_outfit texture ids, and skips the dead runtime restore"
 Test-Condition ($nativeConfigText -match 'hide_donor_weapons\s*=\s*false' -and `
     $nativeBuildText -match 'hide_donor_weapons\s*=\s*true' -and `
     $nativeText -match 'function hide_donor_weapons' -and `

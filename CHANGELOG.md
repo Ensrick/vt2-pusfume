@@ -88,6 +88,9 @@ request rather than in release notes.
   Pusfume atlas under the three texture IDs already bound by the game-owned
   Globadier material, preserving its exact shader rather than compiling a
   mod material. `-NoDonorTextureShadow` keeps the previous path available.
+- Isolated the shadowed atlas in a standalone VMF package loaded synchronously
+  after the donor package. The first shadow test proved that the later-loaded
+  donor reclaimed its texture IDs; this reverses that measured load order.
 - Applied the donor character shader to the menu preview mesh; the preview
   spawned with skinning-incapable compiled materials, which is why the menu
   model never animated even with its controller running.
