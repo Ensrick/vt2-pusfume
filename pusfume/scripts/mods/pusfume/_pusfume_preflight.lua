@@ -99,7 +99,7 @@ function M.collect(registry, career_index, backend, compat, ui, native)
         local template = BuffTemplates and BuffTemplates[buff_name]
 
         if not template or type(template.buffs) ~= "table"
-                or not NetworkLookup or not NetworkLookup.buff_templates[buff_name] then
+                or not NetworkLookup or not rawget(NetworkLookup.buff_templates, buff_name) then
             custom_buffs_ready = false
             break
         end

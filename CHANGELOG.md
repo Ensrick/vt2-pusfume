@@ -12,6 +12,8 @@ request rather than in release notes.
 
 ### Fixed
 
+- Fixed v0.6.1-dev failing on VT2's strict network-lookup metatable while
+  checking whether new career buff identifiers were already registered.
 - Fixed the v0.6.0-dev startup regression that aborted career and hero-selector
   registration by replacing unsupported VMF proc and buff helpers with VT2's
   synchronized native registries.

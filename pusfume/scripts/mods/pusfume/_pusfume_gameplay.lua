@@ -46,14 +46,16 @@ local function is_skaven_breed(breed)
 end
 
 local function append_lookup(lookup, name)
-    if lookup[name] then
-        return lookup[name]
+    local existing_index = rawget(lookup, name)
+
+    if existing_index then
+        return existing_index
     end
 
     local index = #lookup + 1
 
-    lookup[index] = name
-    lookup[name] = index
+    rawset(lookup, index, name)
+    rawset(lookup, name, index)
 
     return index
 end

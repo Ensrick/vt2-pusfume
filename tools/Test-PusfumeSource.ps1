@@ -367,6 +367,8 @@ Test-Condition ($gameplayText -notmatch 'mod:add_proc_function' -and `
     $gameplayText -match 'ProcFunctions\.pusfume_scaredy_rat_proc\s*=\s*function' -and `
     $gameplayText -match 'BuffTemplates\[name\]\s*=\s*\{' -and `
     $gameplayText -match 'append_lookup\(NetworkLookup\.buff_templates, name\)' -and `
+    $gameplayText -match 'rawget\(lookup, name\)' -and `
+    $gameplayText -match 'rawset\(lookup, name, index\)' -and `
     $preflightText -match 'add\(checks, "Scaredy-rat proc"' -and `
     $preflightText -match 'add\(checks, "career buff registry"') `
     "career buff APIs" "uses synchronized VT2 registries instead of nonexistent VMF helpers"
