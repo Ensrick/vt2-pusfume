@@ -87,11 +87,13 @@ local function ensure_donor_package(config)
 end
 
 
--- Unit.set_texture_for_materials had no visible effect on the swapped donor
--- material in live testing (2026-07-16 05:31 log: textures=3 reported, donor
--- maps still rendered). Per-mesh Material.set_texture is the path that visibly
--- retextured the mesh in the 05:01 breakthrough session; with every opaque
--- slot on one shared atlas, identical values make instance sharing harmless.
+-- The texture channels are Fatshark's literal generated slot names (present in
+-- the community hash dictionary as real strings). What failed in live testing
+-- was the material INSTANCE lookup: name-keyed access resolved the orphaned
+-- pre-swap materials, so texture sets landed on materials that no longer
+-- render. Setting the channels on every material BY INDEX (the engine's own
+-- flow-callback pattern) reaches the donor instances regardless of naming;
+-- with every opaque slot on one shared atlas, identical values are harmless.
 local function set_material_texture(material, channel, texture_name)
     local texture_path = "textures/pusfume/" .. texture_name
 
@@ -140,21 +142,19 @@ local function apply_donor_material(extension, config)
     for mesh_index = 0, Unit.num_meshes(unit) - 1 do
         local mesh = Unit.mesh(unit, mesh_index)
 
-        for _, slot_name in ipairs(DONOR_MATERIAL_SLOTS) do
-            if Mesh.has_material(mesh, slot_name) then
-                local material = Mesh.material(mesh, slot_name)
+        for material_index = 0, Mesh.num_materials(mesh) - 1 do
+            local material = Mesh.material(mesh, material_index)
 
-                material_slots = material_slots + 1
-                texture_assignments = texture_assignments +
-                    (set_material_texture(material, DONOR_TEXTURE_CHANNELS.color,
-                        DONOR_ATLAS_TEXTURES.color) and 1 or 0)
-                texture_assignments = texture_assignments +
-                    (set_material_texture(material, DONOR_TEXTURE_CHANNELS.normal,
-                        DONOR_ATLAS_TEXTURES.normal) and 1 or 0)
-                texture_assignments = texture_assignments +
-                    (set_material_texture(material, DONOR_TEXTURE_CHANNELS.response,
-                        DONOR_ATLAS_TEXTURES.response) and 1 or 0)
-            end
+            material_slots = material_slots + 1
+            texture_assignments = texture_assignments +
+                (set_material_texture(material, DONOR_TEXTURE_CHANNELS.color,
+                    DONOR_ATLAS_TEXTURES.color) and 1 or 0)
+            texture_assignments = texture_assignments +
+                (set_material_texture(material, DONOR_TEXTURE_CHANNELS.normal,
+                    DONOR_ATLAS_TEXTURES.normal) and 1 or 0)
+            texture_assignments = texture_assignments +
+                (set_material_texture(material, DONOR_TEXTURE_CHANNELS.response,
+                    DONOR_ATLAS_TEXTURES.response) and 1 or 0)
         end
     end
 
@@ -416,6 +416,10 @@ local function initialize_link_probe(extension, unit, config)
 
         if probe.locomotion_events then
             probe.locomotion_state = "idle"
+            -- Enter the idle state explicitly instead of trusting default-state
+            -- auto-entry; the 05:45 session showed controller_state=0 with no
+            -- visible idle while event-driven walk transitions worked.
+            Unit.animation_event(mesh, "idle")
             mod:info("[pusfume] Locomotion animation events active (idle/walk)")
         else
             mod:warning("[pusfume] Compiled controller is missing idle/walk events")
@@ -512,6 +516,21 @@ local function register_cosmetic(registry, config)
         attachment_node_linking = attachment_node_linking,
     }
     Cosmetics[config.skin_name] = skin
+
+    -- Menu previewers spawn skin.third_person as the visible character, which
+    -- in the donor clone is Bardin's mesh; that is why hero select and the
+    -- inventory preview showed Ranger Veteran under or instead of Pusfume. The
+    -- preview-only skin makes the previewers spawn the Pusfume unit itself
+    -- (own skeleton, controller, and compiled atlas materials) with no donor
+    -- mesh and no bridge. Gameplay keeps the attachment-based skin above.
+    local preview_skin = deep_clone(skin)
+
+    preview_skin.third_person = config.third_person_unit
+    preview_skin.third_person_husk = config.third_person_unit
+    preview_skin.third_person_attachment = nil
+    state.preview_skin_name = config.skin_name .. "_preview"
+    Cosmetics[state.preview_skin_name] = preview_skin
+
     registry.set_native_skin(config.skin_name)
     state.cosmetic_registered = true
 
@@ -631,6 +650,10 @@ end
 
 function M.preview_enabled()
     return state.cosmetic_registered and state.hero_preview_enabled
+end
+
+function M.preview_skin_name()
+    return state.cosmetic_registered and state.preview_skin_name or nil
 end
 
 function M.enabled()

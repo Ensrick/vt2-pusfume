@@ -57,6 +57,14 @@ request rather than in release notes.
   native builds.
 - Stopped `/pusfume_preflight` from failing before the first spawn when the
   donor material is simply not loaded yet.
+- Made every menu previewer (character selection and the inventory hero view)
+  spawn a preview-only skin whose character IS the native Pusfume unit, ending
+  the Bardin-underneath rendering, and kept previewer weapon units hidden.
+- Reached the swapped donor material instances by setting atlas channels on
+  every mesh material by index; name-keyed lookups were landing on orphaned
+  pre-swap materials.
+- Entered the idle controller state explicitly at attach instead of relying on
+  default-state auto-entry.
 
 - Made the supported Stingray FBX/DCC importer the default native skin path;
   retained the handwritten BSI path as an explicit diagnostic fallback.

@@ -183,14 +183,21 @@ Test-Condition ($nativeMaterialTemplateText -match 'shader\s*=\s*\{' -and `
     $nativeBuildText -match 'character_skinned_cutout\.material') `
     "native material skinning" "local builds use a guarded, releasable Globadier donor while public source stays off"
 Test-Condition ($nativeText -match 'Material\.set_texture\(material, channel, texture_path\)' -and `
-    $nativeText -match 'Mesh\.has_material\(mesh, slot_name\)' -and `
+    $nativeText -match 'Mesh\.num_materials\(mesh\)' -and `
+    $nativeText -match 'Mesh\.material\(mesh, material_index\)' -and `
     $nativeText -notmatch 'Unit\.set_texture_for_materials\(' -and `
     $nativeText -match 'pusfume_atlas_df' -and `
     $nativeBuildText -match 'Write-PusfumeAtlas "pusfume_atlas_df"' -and `
     $nativeBuildText -match 'Write-NativeMaterial "pusfume_body" "pusfume_atlas_df" "pusfume_atlas_nm" "pusfume_atlas_s"' -and `
     $animatedFbxToolText -match 'remap_material_uvs_to_atlas' -and `
     $animatedFbxToolText -match 'shift_u = int\(anchor\.x // 1\)') `
-    "per-mesh donor atlas" "compiled and donor material paths share one wrap-safe atlas; per-mesh texture set is the live-verified API"
+    "per-mesh donor atlas" "atlas channels are set on every material by index so swapped donor instances are reached"
+Test-Condition ($nativeText -match 'third_person_attachment = nil' -and `
+    $nativeText -match 'function M\.preview_skin_name' -and `
+    $uiText -match 'MenuWorldPreviewer, "request_spawn_hero_unit"' -and `
+    $uiText -match 'MenuWorldPreviewer, "_update_units_visibility"' -and `
+    $uiText -match 'optional_skin = preview_skin') `
+    "menu preview purity" "menu previewers spawn the pure native unit and keep donor weapons hidden"
 Test-Condition ($nativeConfigText -match 'hide_donor_weapons\s*=\s*false' -and `
     $nativeBuildText -match 'hide_donor_weapons\s*=\s*true' -and `
     $nativeText -match 'function hide_donor_weapons' -and `

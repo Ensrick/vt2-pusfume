@@ -18,6 +18,7 @@ local state = {
     modern_card_seen = false,
     modern_hook_installed = false,
     preview_hook_installed = false,
+    previewer_purity_installed = false,
     preview_widget_seen = false,
     donor_preview_suppressed = false,
     native_preview_enabled = false,
@@ -307,6 +308,61 @@ local function install_legacy_hooks(registry)
     state.legacy_hook_installed = true
 end
 
+local function install_previewer_purity_hooks(registry, native)
+    if state.previewer_purity_installed or not MenuWorldPreviewer then
+        return
+    end
+
+    -- One hook covers every menu surface that previews a career through
+    -- MenuWorldPreviewer (character selection AND the inventory hero view):
+    -- when the previewed career is Pusfume, spawn the preview-only skin whose
+    -- third_person IS the native unit, and flag the previewer so its weapon
+    -- and ammo units stay hidden.
+    mod:hook(MenuWorldPreviewer, "request_spawn_hero_unit", function(func, previewer,
+            profile_name, career_index, state_character, callback, optional_scale,
+            camera_move_duration, optional_skin, reset_camera)
+        local preview_skin = native.preview_skin_name()
+        local is_pusfume = preview_skin
+            and career_index == registry.find_career_index()
+            and (profile_name == registry.PROFILE_NAME or profile_name == "bardin")
+
+        if is_pusfume then
+            previewer._pusfume_preview_active = true
+            optional_skin = preview_skin
+            mod:info("[pusfume] Menu previewer spawning native preview skin")
+        else
+            previewer._pusfume_preview_active = nil
+        end
+
+        return func(previewer, profile_name, career_index, state_character, callback,
+            optional_scale, camera_move_duration, optional_skin, reset_camera)
+    end)
+
+    mod:hook_safe(MenuWorldPreviewer, "_update_units_visibility", function(previewer)
+        if not previewer._pusfume_preview_active then
+            return
+        end
+
+        local equipment_units = previewer._equipment_units
+
+        if not equipment_units then
+            return
+        end
+
+        for _, hands in pairs(equipment_units) do
+            if type(hands) == "table" then
+                for _, weapon_unit in pairs(hands) do
+                    if weapon_unit and Unit.alive(weapon_unit) then
+                        Unit.set_unit_visibility(weapon_unit, false)
+                    end
+                end
+            end
+        end
+    end)
+
+    state.previewer_purity_installed = true
+end
+
 local function install_preview_hooks(registry, native)
     if state.preview_hook_installed or not CharacterSelectionStateCharacter then
         return
@@ -354,6 +410,7 @@ function M.install(registry, native)
     install_modern_hooks(registry)
     install_legacy_hooks(registry)
     install_preview_hooks(registry, native)
+    install_previewer_purity_hooks(registry, native)
 
     state.hook_installed = state.modern_hook_installed or state.legacy_hook_installed
 
