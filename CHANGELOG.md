@@ -65,7 +65,12 @@ request rather than in release notes.
   was replaced by this approach.
 - Reached the swapped donor material instances by setting atlas channels on
   every mesh material by index; name-keyed lookups were landing on orphaned
-  pre-swap materials.
+  pre-swap materials. Live testing then proved runtime texture overrides never
+  rebind on character materials at all.
+- Compiled a child material that inherits the playable Globadier's character
+  shader through a hash reference with Pusfume's atlas maps baked in, matching
+  the game's own child-material structure byte for byte; staged builds now
+  assign it instead of overriding textures at runtime.
 - Entered the idle controller state explicitly at attach instead of relying on
   default-state auto-entry.
 

@@ -10,6 +10,7 @@ return {
     manual_clip_name = "units/pusfume/anims/pusfume_3p_walk",
     manual_clip_probe = false,
     manual_skin_probe = false,
+    parent_child_material = false,
     root_animation_isolation = false,
     skin_name = "pusfume_skin",
     third_person_unit = "units/pusfume/pusfume_3p",

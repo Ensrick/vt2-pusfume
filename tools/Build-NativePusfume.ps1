@@ -447,6 +447,40 @@ Write-NativeMaterial "pusfume_armor" "pusfume_atlas_df" "pusfume_atlas_nm" "pusf
 Write-NativeMaterial "pusfume_ammo_box" "pusfume_atlas_df" "pusfume_atlas_nm" "pusfume_atlas_s" 0.62
 Write-NativeMaterial "pusfume_whiskers" "pusfume_whiskers_df" "pusfume_whiskers_nm" "pusfume_whiskers_s" 0.74 -Opacity
 
+# Child material inheriting the playable Globadier's compiled character
+# material. Runtime texture overrides never rebind on character materials, so
+# the atlas maps are baked in at compile time and the game's skinning shader is
+# inherited through the parent chain. The compiler demands a parent SOURCE at
+# the exact donor path; the stub below exists only to satisfy compilation. The
+# compiled child stores the parent as a hash reference (offline-verified
+# against the game's own mtr_outfit child), so at runtime the reference
+# resolves against whichever copy of the parent resource wins bundle
+# precedence - the live test distinguishes the two outcomes: deforming body
+# with atlas colors means the game parent won; rigid body with atlas colors
+# means the bundled stub shadowed it.
+$donorParentSourceDir = Join-Path $stageMod ("units\beings\player\dark_pact_skins\" +
+    "skaven_wind_globadier\skin_1001\third_person")
+New-Item -ItemType Directory -Path $donorParentSourceDir -Force | Out-Null
+$stubTemplate = Get-Content -LiteralPath (Join-Path $repoRoot `
+    "tools\material_templates\character_skinned.material") -Raw
+$stubTemplate = $stubTemplate.Replace("__COLOR_MAP__", "textures/pusfume/pusfume_atlas_df")
+$stubTemplate = $stubTemplate.Replace("__NORMAL_MAP__", "textures/pusfume/pusfume_atlas_nm")
+$stubTemplate = $stubTemplate.Replace("__DETAIL_MAP__", "textures/pusfume/pusfume_atlas_s")
+$stubTemplate = $stubTemplate.Replace("__EMISSIVE_MAP__", "textures/pusfume/pusfume_atlas_df")
+$stubTemplate | Set-Content -LiteralPath (Join-Path $donorParentSourceDir "mtr_outfit.material") -Encoding utf8
+
+@'
+parent_material = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/mtr_outfit"
+material_contexts = {
+	surface_material = ""
+}
+textures = {
+	texture_map_02af90f8 = "textures/pusfume/pusfume_atlas_df"
+	texture_map_27b67fd2 = "textures/pusfume/pusfume_atlas_nm"
+	texture_map_8bf37d8e = "textures/pusfume/pusfume_atlas_s"
+}
+'@ | Set-Content -LiteralPath (Join-Path $materialRoot "pusfume_outfit_child.material") -Encoding utf8
+
 @'
 animation_state_machine = "units/pusfume/pusfume_3p"
 materials = {
@@ -484,6 +518,7 @@ return {
     hero_preview_enabled = $heroPreviewEnabled,
     hide_donor_weapons = true,
     locomotion_events_enabled = true,
+    parent_child_material = "materials/pusfume/pusfume_outfit_child",
     manual_clip_length = 0.8,
     manual_clip_name = "units/pusfume/anims/pusfume_3p_walk",
     manual_clip_probe = false,

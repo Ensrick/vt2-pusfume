@@ -135,6 +135,39 @@ local function apply_donor_material(extension, config)
     local material_slots = 0
     local texture_assignments = 0
 
+    -- Runtime texture overrides never rebind on character materials (verified
+    -- twice in live testing), so the preferred path is the compiled child
+    -- material that inherits the donor's character shader with the atlas maps
+    -- baked in. The donor package still has to be resident for the parent
+    -- reference to resolve.
+    if config.parent_child_material then
+        if not can_get("material", config.parent_child_material) then
+            if not state.donor_material_error_logged then
+                state.donor_material_error_logged = true
+                mod:error("[pusfume] Compiled child material is unavailable: %s",
+                    config.parent_child_material)
+            end
+
+            return false
+        end
+
+        for _, slot_name in ipairs(DONOR_MATERIAL_SLOTS) do
+            Unit.set_material(unit, slot_name, config.parent_child_material)
+            material_slots = material_slots + 1
+        end
+
+        extension._pusfume_donor_material_applied = material_slots > 0
+        state.donor_material_applied = state.donor_material_applied
+            or extension._pusfume_donor_material_applied
+
+        mod:info(
+            "[pusfume] Globadier donor material applied slots=%d textures=baked mode=parent_child material=%s",
+            material_slots,
+            config.parent_child_material)
+
+        return extension._pusfume_donor_material_applied
+    end
+
     for _, slot_name in ipairs(DONOR_MATERIAL_SLOTS) do
         Unit.set_material(unit, slot_name, config.donor_material)
     end
