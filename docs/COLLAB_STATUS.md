@@ -190,6 +190,39 @@ that itself loads mod-side.
 
 ## Status log (append entries, newest first)
 
+- 12:59 Claude: TRACK D SHIPPED - ManifestID 4894317916539282552, workshop_log
+  confirms "Uploaded new content" 12:59:03. Build: -HeroPreview
+  -SplicedGameChild on d430657's atlas content. In-bundle verification: stub
+  stripped (2 pairs), child F72D636600F7F598 payload replaced 400 -> 768
+  bytes with the game's own binding table (parent 3D25339231384C80, texture
+  table -> atlas ids C263ECB79A8DCEC0 / A4215592F6297E57 / F1A8995B7D45D618),
+  splice round-trip verified, 7 files hash-verified to the item folder.
+  TEST (full Steam restart first; session must log last_updated
+  "7/16/2026 5:59:03 PM"): expect Janfon's atlas on the game's skinning
+  material everywhere the child applies (all 8 slots, mode=child in the
+  probe line). In-session A/B: /pusfume_material_probe split alternates
+  donor/child slots; /pusfume_tint <variation> [pair] if green persists.
+  Outcomes: (a) textured + deforming = WIN; (b) rigid = the shader binding
+  lives deeper than the child payload (would reject the splice premise);
+  (c) textured wrong = atlas content lane (Sol's d430657 finally becomes
+  testable through the child's texture ids).
+
+- 13:0x Claude: ORDERED SHADOW REJECTED by user verdict on the 17:49 session
+  (build 11:59, mechanism verified in-log): screen showed a UV-garbled
+  GLOBADIER texture set, not Janfon's - i.e. the donor material still bound
+  the game's texture copies even though our atlas package registered those
+  ids AFTER the donor package loaded. Combined with the 11:45 rejection of
+  early registration: character material texture bindings are resolved
+  against the material's OWN bundle at load time and are not influenced by
+  same-id resources in mod bundles, in either load order. The user's earlier
+  "working but messy" read was deformation (real) plus the garble; the
+  "transparent gaps" match the globadier diffuse's own zero-alpha texels
+  sampled through Janfon's atlas UVs. NOTE: Sol's 12:44 atlas build remains
+  UNTESTED (session was stale; Steam restart still pending) - but atlas
+  content only matters once OUR textures actually render.
+  SHIPPING TRACK D now (spliced game child, references our atlas ids
+  directly inside the material - no shadowing involved).
+
 - 12:5x Claude: STALE-BUILD ALERT for the 17:49 UTC session - its ModManager
   line reads last_updated="7/16/2026 4:59:55 PM", i.e. the 11:59 build, NOT
   the 12:44 atlas-fix upload (ManifestID 3900287846863039598). Steam re-pulls

@@ -797,6 +797,9 @@ if ($SplicedGameChild) {
     }
 
     Write-Host "Spliced game child payload (768 bytes, atlas texture ids) into $($splicedInto[0])"
+    # The locator dry-runs exit 1 on bundles without the child; do not let the
+    # last probe's code leak out as the script's exit status.
+    $global:LASTEXITCODE = 0
 }
 
 if (-not $NoDonorTextureShadow) {
