@@ -96,6 +96,11 @@ Test-Condition ($nativeBuildText -match '\[switch\]\$NoDeploy' -and `
 Test-Condition ($nativeBuildText -match '\$staleBundles' -and `
     $nativeBuildText -match 'Remove-Item -LiteralPath \$staleBundle\.FullName') `
     "local deployment" "obsolete Workshop bundles are removed inside the verified item directory"
+Test-Condition ($nativeBuildText -match '\[switch\]\$UseBsiSkinFallback' -and `
+    $nativeBuildText -match '\$useFbxDcc\s*=\s*-not \$UseBsiSkinFallback\.IsPresent' -and `
+    $nativeBuildText -match 'pusfume_3p\.dcc_asset' -and `
+    $nativeBuildText -match 'extension\s*=\s*"\.fbx"') `
+    "native FBX pipeline" "supported Stingray DCC import is default and BSI remains an explicit fallback"
 Test-Condition ($nativeExporterText -match 'build_skin_activation_animations' -and `
     $nativeExporterText -match 'for bone in armature\.data\.bones' -and `
     $nativeExporterText -match 'document\["animations"\]\s*=\s*activation_animations' -and `

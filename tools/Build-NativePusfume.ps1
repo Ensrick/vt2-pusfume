@@ -1,15 +1,18 @@
 param(
     [string]$InputBsi = ".build\compiler-fixture\pusfume_bsi_probe\units\pusfume_probe\pusfume_3p.bsi",
+    [string]$ModelFbx = ".build\pusfume_handoff\pusfume_3p.fbx",
     [string]$AnimationFbx = ".build\pusfume_handoff\pusfume_3p_walk.fbx",
     [string]$TextureSource = ".build\pusfume_handoff\textures conv",
     [string]$WorkshopPath = "C:\Program Files (x86)\Steam\steamapps\workshop\content\552500\3764954245",
     [switch]$HeroPreview,
+    [switch]$UseBsiSkinFallback,
     [switch]$NoDeploy
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $sourceMod = Join-Path $repoRoot "pusfume"
+$useFbxDcc = -not $UseBsiSkinFallback.IsPresent
 $inputPath = if ([IO.Path]::IsPathRooted($InputBsi)) {
     (Resolve-Path $InputBsi).Path
 } else {
@@ -23,6 +26,14 @@ $textureSourcePath = if ([IO.Path]::IsPathRooted($TextureSource)) {
 $inputBonesPath = [IO.Path]::ChangeExtension($inputPath, ".bones")
 if (-not (Test-Path -LiteralPath $inputBonesPath -PathType Leaf)) {
     throw "The native BSI is missing its same-name animation skeleton: $inputBonesPath"
+}
+$modelFbxPath = if ([IO.Path]::IsPathRooted($ModelFbx)) {
+    (Resolve-Path $ModelFbx).Path
+} else {
+    (Resolve-Path (Join-Path $repoRoot $ModelFbx)).Path
+}
+if ($useFbxDcc -and (Get-Item -LiteralPath $modelFbxPath).Length -lt 1024) {
+    throw "The native model FBX is unexpectedly small: $modelFbxPath"
 }
 $animationFbxPath = if ([IO.Path]::IsPathRooted($AnimationFbx)) {
     (Resolve-Path $AnimationFbx).Path
@@ -63,7 +74,18 @@ $unitRoot = Join-Path $stageMod "units\pusfume"
 $animationRoot = Join-Path $unitRoot "anims"
 New-Item -ItemType Directory -Path $unitRoot -Force | Out-Null
 New-Item -ItemType Directory -Path $animationRoot -Force | Out-Null
-Copy-Item -LiteralPath $inputPath -Destination (Join-Path $unitRoot "pusfume_3p.bsi") -Force
+if ($useFbxDcc) {
+    Copy-Item -LiteralPath $modelFbxPath -Destination (Join-Path $unitRoot "pusfume_3p.fbx") -Force
+    @'
+_data_root_version = 1
+_id = "0fb82f3d-675b-45bf-923e-b9ba33550f64"
+_name = "units/pusfume/pusfume_3p"
+asset = "units/pusfume/pusfume_3p"
+extension = ".fbx"
+'@ | Set-Content -LiteralPath (Join-Path $unitRoot "pusfume_3p.dcc_asset") -Encoding utf8
+} else {
+    Copy-Item -LiteralPath $inputPath -Destination (Join-Path $unitRoot "pusfume_3p.bsi") -Force
+}
 Copy-Item -LiteralPath $inputBonesPath -Destination (Join-Path $unitRoot "pusfume_3p.bones") -Force
 Copy-Item -LiteralPath $animationFbxPath `
     -Destination (Join-Path $animationRoot "pusfume_3p_walk.fbx") -Force
@@ -363,9 +385,11 @@ if (-not $NoDeploy) {
     Write-Host "Removed $($staleBundles.Count) obsolete native Pusfume bundles"
 }
 
-$bsiSize = (Get-Item -LiteralPath $inputPath).Length
+$nativeSource = if ($useFbxDcc) { $modelFbxPath } else { $inputPath }
+$nativeSourceKind = if ($useFbxDcc) { "FBX/DCC" } else { "BSI fallback" }
+$nativeSourceSize = (Get-Item -LiteralPath $nativeSource).Length
 $bundles = @(Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)
-Write-Host "Native Pusfume build passed: BSI=$bsiSize bytes bundles=$($bundles.Count)"
+Write-Host "Native Pusfume build passed: source=$nativeSourceKind bytes=$nativeSourceSize bundles=$($bundles.Count)"
 Write-Host "Native Pusfume materials passed: textures=$($textureNames.Count) materials=7"
 Write-Host "Native Pusfume animation package passed: controller=pusfume_3p clip=pusfume_3p_walk"
 Write-Host "Native Pusfume hero preview enabled: $($HeroPreview.IsPresent)"

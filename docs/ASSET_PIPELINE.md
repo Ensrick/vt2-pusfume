@@ -63,7 +63,7 @@ The exporter intentionally duplicates mesh corners in source BSI to keep UV seam
 
 ## Local native Workshop build
 
-After the compiler probe succeeds, stage and deploy the generated BSI without copying it into the public source tree:
+After the compiler probe succeeds, stage and deploy the native unit without copying generated assets into the public source tree. The native build now gives Janfon's FBX to Stingray's supported DCC importer by default; use `-UseBsiSkinFallback` only to reproduce the experimental handwritten BSI path:
 
 ```powershell
 .\tools\Build-NativePusfume.ps1 `
