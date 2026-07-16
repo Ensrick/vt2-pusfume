@@ -85,6 +85,12 @@ Test-Condition ($nativeText -match 'Unit\.set_animation_bone_mode\(mesh, "transf
     "native animation evaluation" "runtime enforces deforming bone output and safely logs controller state"
 Test-Condition ($nativeText -notmatch 'Unit\.animation_layer_info\(') `
     "native animation diagnostics" "experimental layer indexing cannot assert in the game runtime"
+Test-Condition ($nativeConfigText -match 'manual_clip_probe\s*=\s*false' -and `
+    $nativeBuildText -match 'manual_clip_probe\s*=\s*true' -and `
+    $nativeText -match 'Unit\.disable_animation_state_machine\(mesh\)' -and `
+    $nativeText -match 'Unit\.crossfade_animation\(mesh, config\.manual_clip_name, 1, 0, true, "normal"\)' -and `
+    $nativeText -match 'Unit\.crossfade_animation_set_time\(') `
+    "native animation blender" "local build directly sweeps Janfon's clip without changing public defaults"
 Test-Condition ($nativeText -match 'articulation source_delta=' -and `
     $nativeText -match 'initial_target_articulation') `
     "native animation diagnostics" "runtime probe distinguishes skeletal articulation from unit translation"

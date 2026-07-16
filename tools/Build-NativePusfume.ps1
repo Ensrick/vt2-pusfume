@@ -289,6 +289,9 @@ $heroPreviewEnabled = if ($HeroPreview) { "true" } else { "false" }
 return {
     enabled = true,
     hero_preview_enabled = $heroPreviewEnabled,
+    manual_clip_length = 0.8,
+    manual_clip_name = "units/pusfume/anims/pusfume_3p_walk",
+    manual_clip_probe = true,
     manual_skin_probe = false,
     root_animation_isolation = true,
     skin_name = "pusfume_skin",

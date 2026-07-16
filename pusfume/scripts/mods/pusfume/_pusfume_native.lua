@@ -42,6 +42,23 @@ local function apply_manual_skin_probe(extension, t)
     probe.manual_angle = angle
 end
 
+local function apply_manual_clip_probe(extension, t)
+    local probe = extension._pusfume_native_probe
+
+    if not probe or not probe.manual_clip_id or not ALIVE[probe.mesh] then
+        return
+    end
+
+    probe.manual_clip_started_at = probe.manual_clip_started_at or t
+    probe.manual_clip_time = (t - probe.manual_clip_started_at) % probe.manual_clip_length
+
+    Unit.crossfade_animation_set_time(
+        probe.mesh,
+        probe.manual_clip_id,
+        probe.manual_clip_time,
+        true)
+end
+
 local function sample_link_probe(extension, unit, t)
     local probe = extension._pusfume_native_probe
 
@@ -58,12 +75,22 @@ local function sample_link_probe(extension, unit, t)
     end
 
     local details = {}
-    local animation_states = { Unit.animation_get_state(probe.mesh) }
+    if probe.manual_clip_id then
+        details[#details + 1] = string.format(
+            "manual_clip_id=%s manual_clip_time=%.4f/%.4f crossfading=%s bone_mode=%s",
+            tostring(probe.manual_clip_id),
+            probe.manual_clip_time or 0,
+            probe.manual_clip_length,
+            tostring(Unit.is_crossfading_animation(probe.mesh)),
+            Unit.animation_bone_mode(probe.mesh))
+    else
+        local animation_states = { Unit.animation_get_state(probe.mesh) }
 
-    details[#details + 1] = string.format(
-        "controller_state=%s bone_mode=%s",
-        tostring(animation_states[1]),
-        Unit.animation_bone_mode(probe.mesh))
+        details[#details + 1] = string.format(
+            "controller_state=%s bone_mode=%s",
+            tostring(animation_states[1]),
+            Unit.animation_bone_mode(probe.mesh))
+    end
 
     for _, link in ipairs(PROBE_LINKS) do
         local source_position = Unit.world_position(unit, Unit.node(unit, link.source))
@@ -142,7 +169,19 @@ local function initialize_link_probe(extension, unit, config)
         samples = 0,
     }
 
-    if config.manual_skin_probe then
+    if config.manual_clip_probe then
+        Unit.disable_animation_state_machine(mesh)
+
+        probe.manual_clip_length = config.manual_clip_length
+        probe.manual_clip_id = Unit.crossfade_animation(mesh, config.manual_clip_name, 1, 0, true, "normal")
+
+        Unit.crossfade_animation_set_speed(mesh, probe.manual_clip_id, 0)
+        mod:warning(
+            "[pusfume] Manual animation blender probe active clip=%s id=%s length=%.4f",
+            config.manual_clip_name,
+            tostring(probe.manual_clip_id),
+            probe.manual_clip_length)
+    elseif config.manual_skin_probe then
         probe.manual_skin_probe = true
         probe.manual_node = Unit.node(mesh, "j_spine1")
         probe.manual_base_rotation = QuaternionBox(Unit.local_rotation(mesh, probe.manual_node))
@@ -254,6 +293,7 @@ local function install_probe_hook()
     end
 
     mod:hook_safe(PlayerUnitCosmeticExtension, "update", function(extension, unit, dummy_input, dt, context, t)
+        apply_manual_clip_probe(extension, t)
         apply_manual_skin_probe(extension, t)
         sample_link_probe(extension, unit, t)
     end)
