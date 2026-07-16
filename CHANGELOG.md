@@ -109,6 +109,11 @@ request rather than in release notes.
   map there) and `texture_map_8bf37d8e` is the normal-plus-gloss slot. The
   splice now patches diffuse and normal only and keeps the donor's black
   emissive, so a normal map can never feed the emissive channel again.
+- Added compiled-material channel verification to the splice build. The build
+  now parses the final 768-byte texture table and aborts unless diffuse points
+  to the Pusfume atlas, emissive remains the donor's black map, and normal
+  points to the Pusfume normal atlas; the regression suite also proves a
+  missing or swapped channel is rejected.
 - Added the `-SplicedGameChild` build (Track D): the compiled child material's
   payload is replaced inside the built bundle with the game's own `mtr_outfit`
   binding table, its three texture ids patched to the Pusfume atlas. The live

@@ -43,6 +43,22 @@ def build_structured_bundle(path, resources):
     return bytes(image)
 
 
+def build_material_payload(bindings, size=768):
+    payload = bytearray(size)
+    struct.pack_into("<IIIIII", payload, 0, 43, 1, 24, size - 24,
+                     0xFFFFFFFF, 0)
+    position = 24
+    struct.pack_into("<IQI", payload, position, 0, 0x3D25339231384C80,
+                     len(bindings))
+    position += 16
+    for channel, resource in bindings:
+        struct.pack_into("<IQ", payload, position,
+                         make_child._short_hash(channel), resource)
+        position += 12
+    struct.pack_into("<III", payload, position, 0, 0, 0)
+    return payload
+
+
 class SpliceBundleResourceTests(unittest.TestCase):
     MAT = splice.murmur64a(b"material")
     TEX = splice.murmur64a(b"texture")
@@ -115,26 +131,50 @@ class SpliceBundleResourceTests(unittest.TestCase):
         self.assertEqual(rc, 1)
 
     def test_make_spliced_child_patches_each_id_once(self):
-        game_child = bytearray(200)
-        struct.pack_into("<Q", game_child, 28, 0x3D25339231384C80)
-        struct.pack_into("<Q", game_child, 92, 0xDD74D8319F514D96)
-        struct.pack_into("<Q", game_child, 104, 0x45FFAEEF53695A86)
+        game_child = build_material_payload([
+            ("texture_map_02af90f8", 0xDD74D8319F514D96),
+            ("texture_map_27b67fd2", 0x45FFAEEF53695A86),
+            ("texture_map_8bf37d8e", 0xE334A8CB6BCB5E6D),
+        ])
         extracted = self.dir / "child.material"
         extracted.write_bytes(bytes(game_child))
         out = self.dir / "payload.bin"
 
         rc = self.run_main(make_child, [
             "make_spliced_child.py", "--extracted", str(extracted),
-            "--resource", "hash:90BDF3BAC6F81BA8", "--expect-size", "200",
+            "--resource", "hash:90BDF3BAC6F81BA8", "--expect-size", "768",
             "--map", "DD74D8319F514D96=C263ECB79A8DCEC0",
-            "--map", "45FFAEEF53695A86=A4215592F6297E57",
+            "--map", "E334A8CB6BCB5E6D=A4215592F6297E57",
+            "--expect-texture", "texture_map_02af90f8=C263ECB79A8DCEC0",
+            "--expect-texture", "texture_map_27b67fd2=45FFAEEF53695A86",
+            "--expect-texture", "texture_map_8bf37d8e=A4215592F6297E57",
             "--out", str(out),
         ])
         self.assertEqual(rc, 0)
         patched = out.read_bytes()
         self.assertEqual(struct.unpack_from("<Q", patched, 28)[0], 0x3D25339231384C80)
-        self.assertEqual(struct.unpack_from("<Q", patched, 92)[0], 0xC263ECB79A8DCEC0)
-        self.assertEqual(struct.unpack_from("<Q", patched, 104)[0], 0xA4215592F6297E57)
+        bindings = make_child.read_texture_bindings(patched)
+        self.assertEqual(bindings[make_child._short_hash("texture_map_02af90f8")],
+                         0xC263ECB79A8DCEC0)
+        self.assertEqual(bindings[make_child._short_hash("texture_map_27b67fd2")],
+                         0x45FFAEEF53695A86)
+        self.assertEqual(bindings[make_child._short_hash("texture_map_8bf37d8e")],
+                         0xA4215592F6297E57)
+
+    def test_make_spliced_child_rejects_wrong_channel_binding(self):
+        game_child = build_material_payload([
+            ("texture_map_02af90f8", 0xDD74D8319F514D96),
+        ])
+        extracted = self.dir / "child.material"
+        extracted.write_bytes(bytes(game_child))
+        rc = self.run_main(make_child, [
+            "make_spliced_child.py", "--extracted", str(extracted),
+            "--resource", "hash:90BDF3BAC6F81BA8",
+            "--map", "DD74D8319F514D96=C263ECB79A8DCEC0",
+            "--expect-texture", "texture_map_27b67fd2=45FFAEEF53695A86",
+            "--out", str(self.dir / "payload.bin"),
+        ])
+        self.assertEqual(rc, 1)
 
     def test_make_spliced_child_rejects_ambiguous_id(self):
         game_child = bytearray(64)

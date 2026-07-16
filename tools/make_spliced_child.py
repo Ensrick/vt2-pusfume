@@ -1,7 +1,7 @@
 """Build the Track D spliced-child payload from the installed game data.
 
 Extracts the game's compiled mtr_outfit child material from the donor bundle
-and patches exactly its three texture ids to Pusfume's atlas texture ids. The
+and patches selected texture ids to Pusfume's atlas texture ids. The
 output payload is written under .build and is never committed: it derives
 from Fatshark game data (a 768-byte binding table - parent hash, slot keys,
 texture ids - with no embedded shader payload).
@@ -28,6 +28,37 @@ _splice = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_splice)
 
 
+def _short_hash(name):
+    return _splice.murmur64a(name.encode("utf-8")) >> 32
+
+
+def read_texture_bindings(payload):
+    """Return a compiled single material's short-hash -> resource-id table."""
+    if len(payload) < 40:
+        raise ValueError("payload is too short for a VT2 material header")
+
+    version, is_single, material_offset = struct.unpack_from("<III", payload, 0)
+    if version != 43 or is_single != 1:
+        raise ValueError(
+            f"expected VT2 single material version 43, got {version}/{is_single}")
+
+    position = material_offset + 12  # shader short hash + parent resource id
+    texture_count = struct.unpack_from("<I", payload, position)[0]
+    position += 4
+    end = position + texture_count * 12
+    if end > len(payload):
+        raise ValueError("material texture table extends beyond payload")
+
+    bindings = {}
+    for _ in range(texture_count):
+        channel, resource = struct.unpack_from("<IQ", payload, position)
+        if channel in bindings:
+            raise ValueError(f"duplicate texture channel {channel:08X}")
+        bindings[channel] = resource
+        position += 12
+    return bindings
+
+
 def main():
     parser = argparse.ArgumentParser()
     source = parser.add_mutually_exclusive_group(required=True)
@@ -47,6 +78,10 @@ def main():
     parser.add_argument("--expect-size", type=int, default=None,
                         help="require the extracted payload to be exactly "
                              "this many bytes")
+    parser.add_argument("--expect-texture", action="append", default=[],
+                        metavar="CHANNEL=ID",
+                        help="require a compiled texture channel to reference "
+                             "the given resource id after patching")
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
 
@@ -88,6 +123,35 @@ def main():
             return 1
         payload = payload.replace(old, new)
         print(f"patched {old_hex.upper()} -> {new_hex.upper()}")
+
+    if args.expect_texture:
+        try:
+            bindings = read_texture_bindings(payload)
+        except ValueError as error:
+            print(f"cannot verify texture bindings: {error}", file=sys.stderr)
+            return 1
+
+        for expectation in args.expect_texture:
+            channel_name, separator, resource_hex = expectation.partition("=")
+            if not separator:
+                print(f"invalid texture expectation {expectation!r}",
+                      file=sys.stderr)
+                return 1
+            try:
+                channel = (int(channel_name, 16) if len(channel_name) == 8
+                           else _short_hash(channel_name))
+                expected = int(resource_hex, 16)
+            except ValueError:
+                print(f"invalid texture expectation {expectation!r}",
+                      file=sys.stderr)
+                return 1
+            actual = bindings.get(channel)
+            if actual != expected:
+                shown = "missing" if actual is None else f"{actual:016X}"
+                print(f"texture channel {channel_name} is {shown}, expected "
+                      f"{expected:016X}", file=sys.stderr)
+                return 1
+            print(f"verified texture {channel_name} -> {expected:016X}")
 
     with open(args.out, "wb") as out:
         out.write(bytes(payload))

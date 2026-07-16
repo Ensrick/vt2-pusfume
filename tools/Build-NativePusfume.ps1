@@ -777,6 +777,9 @@ if ($SplicedGameChild) {
         --resource hash:90BDF3BAC6F81BA8 --expect-size 768 `
         --map DD74D8319F514D96=C263ECB79A8DCEC0 `
         --map E334A8CB6BCB5E6D=A4215592F6297E57 `
+        --expect-texture texture_map_02af90f8=C263ECB79A8DCEC0 `
+        --expect-texture texture_map_27b67fd2=45FFAEEF53695A86 `
+        --expect-texture texture_map_8bf37d8e=A4215592F6297E57 `
         --out $splicePayload
     if ($LASTEXITCODE -ne 0) {
         throw "Spliced child payload generation failed"
@@ -815,8 +818,8 @@ if (-not $NoDonorTextureShadow) {
     # maps instead of the Globadier's. The ids were parsed from the game's own
     # compiled child (bundle 7a8e617a32277fc4, resource 90BDF3BAC6F81BA8):
     #   texture_map_02af90f8 (diffuse) -> DD74D8319F514D96
-    #   texture_map_27b67fd2 (normal)  -> 45FFAEEF53695A86
-    #   texture_map_8bf37d8e (packed)  -> E334A8CB6BCB5E6D
+    #   texture_map_27b67fd2 (emissive) -> 45FFAEEF53695A86
+    #   texture_map_8bf37d8e (normal)   -> E334A8CB6BCB5E6D
     # Bare mode rewrites every 8-byte name-hash occurrence: bundle index, file
     # header, package listing, AND texture references inside our own compiled
     # materials, so every internal reference stays consistent under the new id.

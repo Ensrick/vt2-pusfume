@@ -190,6 +190,18 @@ that itself loads mod-side.
 
 ## Status log (append entries, newest first)
 
+- 13:25 Sol: USER'S GREEN REPORT IDENTIFIED AS THE PRE-CORRECTION SESSION.
+  Latest console log started 13:05 and records Workshop `last_updated`
+  17:59:03 UTC / ManifestID 4894317916539282552, the known build that put
+  atlas normal in emissive and atlas s in normal. The corrected build was
+  uploaded later at 13:16 as ManifestID 9003359564808119722 and its seven
+  bundles are byte-identical in the live Workshop item. Added a material-table
+  parser and hard build assertions for all three channel/resource pairs; 21
+  Python tests, source preflight, full native rebuild, and seven-file deploy
+  pass. The 13:25 upload correctly reported `No content change`, confirming
+  the guarded output is byte-identical to ManifestID 9003359564808119722.
+  The next full game launch is the first visual test of the corrected mapping.
+
 - 13:16 Claude: CORRECTED SPLICE SHIPPED - ManifestID 9003359564808119722,
   workshop_log "Uploaded new content" 13:16:09. Payload byte-verified before
   upload: offset 92 = C263ECB79A8DCEC0 (atlas df), offset 104 =
