@@ -3,7 +3,8 @@ local M = {}
 -- The Ranger Veteran base animates the placeholder. Extra Skaven nodes remain
 -- parented under these linked bones until the final Globadier rebind is ready.
 M.third_person_attachment = {
-    { source = "root_point", target = "root_point" },
+    -- Link the generated DCC scene root so the mesh and armature move together.
+    { source = "root_point", target = 0 },
     { source = "j_hips", target = "j_hips" },
     { source = "j_spine", target = "j_spine" },
     { source = "j_spine1", target = "j_spine1" },
@@ -61,7 +62,7 @@ M.third_person_attachment = {
 -- Pusfume's complete child skeleton. This isolates skin deformation from the
 -- production Bardin-to-Pusfume bone bridge without removing that bridge.
 M.root_animation_attachment = {
-    { source = "root_point", target = "root_point" },
+    { source = "root_point", target = 0 },
 }
 
 function M.install()

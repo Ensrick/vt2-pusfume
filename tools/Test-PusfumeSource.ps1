@@ -195,6 +195,8 @@ $bridgeSources = @([regex]::Matches($bridgeSection, 'source\s*=\s*"([^"]+)"') | 
 $bridgeTargets = @([regex]::Matches($bridgeSection, 'target\s*=\s*"([^"]+)"') | ForEach-Object {
     $_.Groups[1].Value
 })
+$bridgeUsesSceneRoot = $bridgeSection -match `
+    'source\s*=\s*"root_point"\s*,\s*target\s*=\s*0'
 $duplicateBridgeTargets = @($bridgeTargets | Group-Object | Where-Object Count -gt 1)
 $officialLinkPath = Join-Path $SourceRoot "scripts\settings\attachment_node_linking.lua"
 $officialLinkText = Get-Content -LiteralPath $officialLinkPath -Raw
@@ -208,11 +210,13 @@ $bardinNodes = @([regex]::Matches($bardinSection, 'source\s*=\s*"([^"]+)"') | Fo
 })
 $missingParentNodes = @($bridgeSources | Where-Object { $_ -notin $bardinNodes })
 
-Test-Condition ($bridgeSources.Count -eq 52 -and $bridgeTargets.Count -eq 52) `
+Test-Condition ($bridgeSources.Count -eq 52 -and $bridgeTargets.Count -eq 51 -and `
+    $bridgeUsesSceneRoot) `
     "asset bridge" "$($bridgeSources.Count) parent-to-child links"
 Test-Condition ($assetsText -match 'pusfume_root_animation_attachment' -and `
-    $assetsText -match 'M\.root_animation_attachment') `
-    "asset bridge" "root-only animation isolation bridge is registered"
+    $assetsText -match 'M\.root_animation_attachment' -and `
+    $assetsText -match '(?s)M\.root_animation_attachment\s*=\s*\{.*?target\s*=\s*0') `
+    "asset bridge" "root-only animation isolation links the complete DCC scene"
 Test-Condition ($duplicateBridgeTargets.Count -eq 0) "asset bridge" "child targets are unique"
 Test-Condition ($missingParentNodes.Count -eq 0) "asset bridge" "all parent nodes exist on Bardin"
 
