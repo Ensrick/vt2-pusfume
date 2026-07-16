@@ -4,8 +4,13 @@ This document records the first implementation contract for Pusfume's career
 gameplay. The mod remains Adventure-only, friends-only, and requires the same
 version on every peer.
 
-Current uploaded test build: Steam ManifestID `3469601573243844172` on
-2026-07-16 at 14:42:05 local time.
+Current uploaded test build: v0.6.4-dev, Steam ManifestID
+`5314442994604280740`, uploaded 2026-07-16 at 16:04:10 local time.
+
+The v0.6.3 live log confirmed selection, player spawn, native model/material
+attachment, controller startup, and weapon setup. v0.6.4 normalizes custom
+sub-buff names before Insider Knowledge applies and awaits live stability
+verification.
 
 ## Identity
 

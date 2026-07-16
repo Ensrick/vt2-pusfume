@@ -65,6 +65,9 @@ request rather than in release notes.
 
 ### Changed
 
+- Updated the README, career-kit contract, and live-test checklist to identify
+  v0.6.4-dev as the current candidate and distinguish confirmed runtime
+  milestones from pending stability and multiplayer acceptance tests.
 - Enabled a 0.5 alpha cut only for the dedicated whisker diffuse texture,
   matching the legacy Pusfume recipe without modifying Janfon's source PNG.
 
