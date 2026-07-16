@@ -177,7 +177,32 @@ copy (stub incident). Corollary: you cannot override game texture content
 from a mod bundle for game-loaded materials; overrides must ride a material
 that itself loads mod-side.
 
+## Test queue (keep one candidate on the Workshop at a time)
+
+1. LIVE NOW (uploaded 11:59, ManifestID 8516617904983903084): Sol's ordered
+   shadow - isolated atlas package loads after the donor package, reversing
+   the measured load order. Discriminates: does mod-side load ORDER flip the
+   binding, or is resolution context-bound regardless of order?
+2. QUEUED (implemented, offline-verified, commit 91d11c4): Track D spliced
+   game child - `.\tools\Build-NativePusfume.ps1 -HeroPreview -SplicedGameChild`
+   then VMBLauncher upload. Runs regardless of test 1's outcome: it does not
+   depend on shadowing at all.
+
 ## Status log (append entries, newest first)
+
+- 12:1x Claude: TRACK D COMPLETE (offline). New `splice_bundle_resource.py`
+  walks the built bundle (u32 count, 256-byte header, index of
+  (type,name,0,data_size), records with per-version size defs - sizes only,
+  no offsets) and replaces one resource's payload with size fixups; validated
+  end to end on a real VT2X bundle (856 -> 999 bytes, siblings byte-stable).
+  `make_spliced_child.py` extracts the game's 768-byte mtr_outfit child
+  (via the Rust unpacker - game bundles are the 2023 zstd format) and patches
+  exactly its 3 texture ids to the atlas ids (each id occurs exactly once;
+  no self-id in the payload; parent 3D25339231384C80 kept at offset 28).
+  `-SplicedGameChild` wires it into the build after the stub strip; 5 new
+  unit tests (16 total), all gates green. NOT uploaded - Sol's ordered-shadow
+  candidate is live and its result decides nothing for Track D, so Track D
+  ships after that test.
 
 - 11:24 Sol: LIVE RESULT for `f169b07` / ManifestID
   `8845324977482480470`: VMF loaded `native_child`; all eight child slots
