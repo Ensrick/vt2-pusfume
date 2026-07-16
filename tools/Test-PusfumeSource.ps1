@@ -86,10 +86,10 @@ Test-Condition ($nativeConfigText -match 'root_animation_isolation\s*=\s*false' 
     $nativeBuildText -match 'root_animation_isolation\s*=\s*true') `
     "native animation isolation" "local native builds use a reversible root-only attachment test"
 Test-Condition ($nativeConfigText -match 'manual_skin_probe\s*=\s*false' -and `
-    $nativeBuildText -match 'manual_skin_probe\s*=\s*true' -and `
+    $nativeBuildText -match 'manual_skin_probe\s*=\s*false' -and `
     $nativeText -match 'Unit\.set_local_rotation\(probe\.mesh, probe\.manual_node, rotation\)' -and `
     $nativeText -match 'Unit\.disable_animation_state_machine\(mesh\)') `
-    "native skin diagnostics" "local build directly rotates a joint with controller playback disabled"
+    "native skin diagnostics" "manual joint rotation remains available without disabling deployed controller playback"
 Test-Condition ($nativeBuildText -match '\[switch\]\$NoDeploy' -and `
     $nativeBuildText -match 'if \(-not \$NoDeploy\)') `
     "local deployment" "native builds deploy to the active Workshop item by default"
