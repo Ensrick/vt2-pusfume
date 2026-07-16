@@ -8,7 +8,7 @@ Pusfume changes synchronized VT2 career data and can crash every connected peer 
 2. Open an issue with reproducible behavior, scope, and acceptance criteria when no issue exists.
 3. Create a focused branch named `fix/<issue>-<topic>`, `feat/<issue>-<topic>`, `docs/<issue>-<topic>`, or `chore/<issue>-<topic>`.
 4. Keep commits reviewable and imperative. Do not mix unrelated refactors, assets, and behavior changes.
-5. Run `tools/Test-PusfumeSource.ps1` and an SDK build before requesting review when runtime files change.
+5. Run `py -3.13 -m unittest discover -s tests -v`, `tools/Test-PusfumeSource.ps1`, and an SDK build before requesting review when runtime files change.
 6. Deploy every local runtime update to Workshop item `3764954245` and verify the deployed hashes before reporting it ready for testing.
 7. Open a pull request that links the issue, explains risks, and records exact verification results.
 8. Resolve review conversations and pass CI before merging. Do not push directly to `main`.
@@ -22,12 +22,14 @@ Pusfume changes synchronized VT2 career data and can crash every connected peer 
 - Add a preflight diagnostic for every failure mode that can invalidate spawn or synchronization.
 - Keep Lua changes small, readable, and free of hidden global mutation unless the engine API requires it.
 - Update documentation and the live-test checklist when behavior or support boundaries change.
+- Update `CHANGELOG.md` for user-visible behavior, compatibility, pipeline, or support-boundary changes. Keep detailed diagnostic chronology in the linked issue or pull request.
 
 ## Verification
 
 Runtime pull requests must include:
 
 - Source preflight output.
+- Python unit-test output.
 - SDK build result.
 - Mod list and realm used for the in-game test.
 - Relevant Pusfume log lines, redacted of account, machine, and network identifiers.

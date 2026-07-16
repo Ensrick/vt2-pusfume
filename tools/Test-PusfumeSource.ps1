@@ -39,6 +39,9 @@ $nativeMaterialTemplatePath = Join-Path $repoRoot "tools\material_templates\char
 $nativeCutoutTemplatePath = Join-Path $repoRoot "tools\material_templates\character_skinned_cutout.material"
 $nativeExporterPath = Join-Path $repoRoot "tools\export_blender_bsi.py"
 $animatedFbxToolPath = Join-Path $repoRoot "tools\prepare_animated_pusfume_fbx.py"
+$changelogPath = Join-Path $repoRoot "CHANGELOG.md"
+$contributingPath = Join-Path $repoRoot "CONTRIBUTING.md"
+$workflowPath = Join-Path $repoRoot ".github\workflows\source-preflight.yml"
 $previewPath = Join-Path $repoRoot "pusfume\textures\pusfume\pusfume_model_preview.png"
 $previewTexturePath = Join-Path $repoRoot "pusfume\textures\pusfume\pusfume_model_preview.texture"
 $previewMaterialPath = Join-Path $repoRoot "pusfume\materials\pusfume\pusfume_model_preview.material"
@@ -59,12 +62,22 @@ $nativeMaterialTemplateText = Get-Content -LiteralPath $nativeMaterialTemplatePa
 $nativeCutoutTemplateText = Get-Content -LiteralPath $nativeCutoutTemplatePath -Raw
 $nativeExporterText = Get-Content -LiteralPath $nativeExporterPath -Raw
 $animatedFbxToolText = Get-Content -LiteralPath $animatedFbxToolPath -Raw
+$changelogText = Get-Content -LiteralPath $changelogPath -Raw
+$contributingText = Get-Content -LiteralPath $contributingPath -Raw
+$workflowText = Get-Content -LiteralPath $workflowPath -Raw
 $mainVersion = [regex]::Match($mainText, 'MOD_VERSION\s*=\s*"([^"]+)"').Groups[1].Value
 $configVersion = [regex]::Match($configText, 'Prototype v([^";]+)').Groups[1].Value
 
 Test-Condition ($mainVersion -and $mainVersion -eq $configVersion) "version" "$mainVersion"
 Test-Condition ($configText -match 'visibility\s*=\s*"friends"') "Workshop visibility" "friends only"
 Test-Condition ($configText -match 'published_id\s*=\s*3764954245L') "Workshop identity" "3764954245"
+Test-Condition ($changelogText -match '## \[Unreleased\]' -and `
+    $changelogText -match '### Known Limitations' -and `
+    $contributingText -match 'Update `CHANGELOG\.md`') `
+    "release discipline" "changelog and contribution policy are present"
+Test-Condition ($workflowText -match 'actions/setup-python@v7' -and `
+    $workflowText -match 'python -m unittest discover -s tests -v') `
+    "unit-test CI" "Python regression suite runs on every pull request"
 Test-Condition (Test-Path (Join-Path $repoRoot "pusfume\resource_packages\pusfume\pusfume.package")) `
     "resource package" "package manifest exists"
 Test-Condition ($nativeUnitPackageText -match 'unit\s*=\s*\[' -and `

@@ -15,15 +15,24 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Check out Pusfume
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Check out VT2 source reference
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: Aussiemon/Vermintide-2-Source-Code
           path: Vermintide-2-Source-Code
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Run Python unit tests
+        shell: pwsh
+        run: python -m unittest discover -s tests -v
 
       - name: Run source preflight
         shell: pwsh
