@@ -190,6 +190,19 @@ that itself loads mod-side.
 
 ## Status log (append entries, newest first)
 
+- 13:45 Sol: TRACK D-E SHIPPED - ManifestID 2405082174877027150.
+  CORRECTED-MAP VERDICT was textured + deforming, with a residual
+  green underglow only beneath dark regions. Log confirms the right build
+  (`last_updated` 18:16:09 UTC / ManifestID 9003359564808119722), child mode
+  on all eight slots, and active animation. Root cause isolated in the copied
+  Globadier child: variable hash C985395A resolves to `emissive_color` and is
+  `[14.2,25.3,2]`, versus the parent shader default `[1,1,1]`. The
+  one-variable Track D-E candidate sets it to `[0,0,0]` while retaining the
+  working diffuse, donor black emissive map, normal, material parent, and
+  animation. Binary audit shows only the two established texture-id ranges
+  and this reflected vector differ from the installed game child. Full DCC
+  build, 23 tests, source preflight, seven-file deployment, and upload pass.
+
 - 13:31 Claude: corrected-splice verdict session confirmed on the right build
   (18:30 UTC session, last_updated 6:16:09 PM = ManifestID
   9003359564808119722); child applied to all 8 slots at 18:31:45, zero

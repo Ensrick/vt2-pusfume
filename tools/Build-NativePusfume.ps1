@@ -777,6 +777,7 @@ if ($SplicedGameChild) {
         --resource hash:90BDF3BAC6F81BA8 --expect-size 768 `
         --map DD74D8319F514D96=C263ECB79A8DCEC0 `
         --map E334A8CB6BCB5E6D=A4215592F6297E57 `
+        --set-variable emissive_color=0,0,0 `
         --expect-texture texture_map_02af90f8=C263ECB79A8DCEC0 `
         --expect-texture texture_map_27b67fd2=45FFAEEF53695A86 `
         --expect-texture texture_map_8bf37d8e=A4215592F6297E57 `

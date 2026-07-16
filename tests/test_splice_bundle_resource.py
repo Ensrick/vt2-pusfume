@@ -43,7 +43,7 @@ def build_structured_bundle(path, resources):
     return bytes(image)
 
 
-def build_material_payload(bindings, size=768):
+def build_material_payload(bindings, variables=(), size=768):
     payload = bytearray(size)
     struct.pack_into("<IIIIII", payload, 0, 43, 1, 24, size - 24,
                      0xFFFFFFFF, 0)
@@ -55,7 +55,19 @@ def build_material_payload(bindings, size=768):
         struct.pack_into("<IQ", payload, position,
                          make_child._short_hash(channel), resource)
         position += 12
-    struct.pack_into("<III", payload, position, 0, 0, 0)
+    struct.pack_into("<II", payload, position, 0, len(variables))
+    position += 8
+    value_offset = 0
+    for name, values in variables:
+        struct.pack_into("<IIIII", payload, position, len(values) - 1, 0,
+                         make_child._short_hash(name), value_offset, 0)
+        position += 20
+        value_offset += len(values) * 4
+    struct.pack_into("<I", payload, position, value_offset)
+    position += 4
+    for _, values in variables:
+        struct.pack_into("<" + "f" * len(values), payload, position, *values)
+        position += len(values) * 4
     return payload
 
 
@@ -172,6 +184,43 @@ class SpliceBundleResourceTests(unittest.TestCase):
             "--resource", "hash:90BDF3BAC6F81BA8",
             "--map", "DD74D8319F514D96=C263ECB79A8DCEC0",
             "--expect-texture", "texture_map_27b67fd2=45FFAEEF53695A86",
+            "--out", str(self.dir / "payload.bin"),
+        ])
+        self.assertEqual(rc, 1)
+
+    def test_make_spliced_child_sets_reflected_vector(self):
+        game_child = build_material_payload(
+            [("texture_map_02af90f8", 0xDD74D8319F514D96)],
+            [("emissive_color", (14.2, 25.3, 2.0))])
+        extracted = self.dir / "child.material"
+        extracted.write_bytes(bytes(game_child))
+        out = self.dir / "payload.bin"
+        rc = self.run_main(make_child, [
+            "make_spliced_child.py", "--extracted", str(extracted),
+            "--resource", "hash:90BDF3BAC6F81BA8",
+            "--map", "DD74D8319F514D96=C263ECB79A8DCEC0",
+            "--set-variable", "emissive_color=0,0,0",
+            "--out", str(out),
+        ])
+        self.assertEqual(rc, 0)
+        patched = out.read_bytes()
+        variables = make_child.read_variable_bindings(patched)
+        components, offset = variables[make_child._short_hash("emissive_color")]
+        self.assertEqual(components, 3)
+        self.assertEqual(struct.unpack_from("<fff", patched, offset),
+                         (0.0, 0.0, 0.0))
+
+    def test_make_spliced_child_rejects_wrong_variable_shape(self):
+        game_child = build_material_payload(
+            [("texture_map_02af90f8", 0xDD74D8319F514D96)],
+            [("emissive_color", (14.2, 25.3, 2.0))])
+        extracted = self.dir / "child.material"
+        extracted.write_bytes(bytes(game_child))
+        rc = self.run_main(make_child, [
+            "make_spliced_child.py", "--extracted", str(extracted),
+            "--resource", "hash:90BDF3BAC6F81BA8",
+            "--map", "DD74D8319F514D96=C263ECB79A8DCEC0",
+            "--set-variable", "emissive_color=0",
             "--out", str(self.dir / "payload.bin"),
         ])
         self.assertEqual(rc, 1)

@@ -114,6 +114,11 @@ request rather than in release notes.
   to the Pusfume atlas, emissive remains the donor's black map, and normal
   points to the Pusfume normal atlas; the regression suite also proves a
   missing or swapped channel is rejected.
+- Neutralized the inherited Globadier `emissive_color` after the corrected
+  texture build revealed a green underglow only in dark areas. The donor child
+  used a strongly green-weighted `[14.2, 25.3, 2]`; Track D now resolves that
+  reflected variable by hash and writes `[0,0,0]` without changing its proven
+  skinning payload, diffuse atlas, or normal atlas.
 - Added the `-SplicedGameChild` build (Track D): the compiled child material's
   payload is replaced inside the built bundle with the game's own `mtr_outfit`
   binding table, its three texture ids patched to the Pusfume atlas. The live

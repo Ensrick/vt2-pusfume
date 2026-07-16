@@ -32,6 +32,10 @@ def _short_hash(name):
     return _splice.murmur64a(name.encode("utf-8")) >> 32
 
 
+def _parse_short_hash(name):
+    return int(name, 16) if len(name) == 8 else _short_hash(name)
+
+
 def read_texture_bindings(payload):
     """Return a compiled single material's short-hash -> resource-id table."""
     if len(payload) < 40:
@@ -59,6 +63,51 @@ def read_texture_bindings(payload):
     return bindings
 
 
+def read_variable_bindings(payload):
+    """Return short hash -> (component count, absolute value offset)."""
+    if len(payload) < 40:
+        raise ValueError("payload is too short for a VT2 material header")
+
+    version, is_single, material_offset = struct.unpack_from("<III", payload, 0)
+    if version != 43 or is_single != 1:
+        raise ValueError(
+            f"expected VT2 single material version 43, got {version}/{is_single}")
+
+    position = material_offset + 12
+    texture_count = struct.unpack_from("<I", payload, position)[0]
+    position += 4 + texture_count * 12
+    context_count = struct.unpack_from("<I", payload, position)[0]
+    position += 4 + context_count * 8
+    variable_count = struct.unpack_from("<I", payload, position)[0]
+    position += 4
+    reflection_end = position + variable_count * 20
+    if reflection_end + 4 > len(payload):
+        raise ValueError("material variable table extends beyond payload")
+
+    reflections = []
+    for _ in range(variable_count):
+        variable_type, elements, name, offset, stride = struct.unpack_from(
+            "<IIIII", payload, position)
+        if variable_type > 3 or elements != 0 or stride != 0:
+            raise ValueError(f"unsupported variable reflection {name:08X}")
+        reflections.append((name, variable_type + 1, offset))
+        position += 20
+
+    data_length = struct.unpack_from("<I", payload, position)[0]
+    data_start = position + 4
+    if data_start + data_length > len(payload):
+        raise ValueError("material variable data extends beyond payload")
+
+    bindings = {}
+    for name, components, offset in reflections:
+        if name in bindings:
+            raise ValueError(f"duplicate variable {name:08X}")
+        if offset + components * 4 > data_length:
+            raise ValueError(f"variable {name:08X} extends beyond variable data")
+        bindings[name] = (components, data_start + offset)
+    return bindings
+
+
 def main():
     parser = argparse.ArgumentParser()
     source = parser.add_mutually_exclusive_group(required=True)
@@ -82,6 +131,10 @@ def main():
                         metavar="CHANNEL=ID",
                         help="require a compiled texture channel to reference "
                              "the given resource id after patching")
+    parser.add_argument("--set-variable", action="append", default=[],
+                        metavar="NAME=FLOAT[,FLOAT...]",
+                        help="set a reflected scalar/vector value after "
+                             "validating its component count")
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
 
@@ -124,6 +177,39 @@ def main():
         payload = payload.replace(old, new)
         print(f"patched {old_hex.upper()} -> {new_hex.upper()}")
 
+    if args.set_variable:
+        try:
+            variables = read_variable_bindings(payload)
+        except ValueError as error:
+            print(f"cannot patch material variables: {error}", file=sys.stderr)
+            return 1
+
+        for assignment in args.set_variable:
+            variable_name, separator, raw_values = assignment.partition("=")
+            values = ()
+            try:
+                variable = _parse_short_hash(variable_name)
+                values = tuple(float(value) for value in raw_values.split(","))
+            except ValueError:
+                separator = ""
+            if not separator or not values:
+                print(f"invalid variable assignment {assignment!r}",
+                      file=sys.stderr)
+                return 1
+            reflection = variables.get(variable)
+            if reflection is None:
+                print(f"material variable {variable_name} is missing",
+                      file=sys.stderr)
+                return 1
+            components, offset = reflection
+            if len(values) != components:
+                print(f"material variable {variable_name} needs {components} "
+                      f"value(s), got {len(values)}", file=sys.stderr)
+                return 1
+            struct.pack_into("<" + "f" * components, payload, offset, *values)
+            shown = ",".join(format(value, "g") for value in values)
+            print(f"set variable {variable_name} -> [{shown}]")
+
     if args.expect_texture:
         try:
             bindings = read_texture_bindings(payload)
@@ -138,8 +224,7 @@ def main():
                       file=sys.stderr)
                 return 1
             try:
-                channel = (int(channel_name, 16) if len(channel_name) == 8
-                           else _short_hash(channel_name))
+                channel = _parse_short_hash(channel_name)
                 expected = int(resource_hex, 16)
             except ValueError:
                 print(f"invalid texture expectation {expectation!r}",
