@@ -267,6 +267,7 @@ $heroPreviewEnabled = if ($HeroPreview) { "true" } else { "false" }
 return {
     enabled = true,
     hero_preview_enabled = $heroPreviewEnabled,
+    root_animation_isolation = true,
     skin_name = "pusfume_skin",
     third_person_unit = "units/pusfume/pusfume_3p",
 }

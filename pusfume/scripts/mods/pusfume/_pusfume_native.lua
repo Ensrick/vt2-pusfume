@@ -16,6 +16,13 @@ local PROBE_LINKS = {
     { source = "j_lefthand", target = "j_hand_L" },
 }
 
+local function articulation_vector(unit, hips_node, hand_node)
+    local hips_position = Unit.world_position(unit, Unit.node(unit, hips_node))
+    local hand_position = Unit.world_position(unit, Unit.node(unit, hand_node))
+
+    return hand_position - hips_position
+end
+
 local function sample_link_probe(extension, unit, t)
     local probe = extension._pusfume_native_probe
 
@@ -45,6 +52,14 @@ local function sample_link_probe(extension, unit, t)
             Vector3.distance(target_position, initial.target:unbox()),
             Vector3.distance(source_position, target_position))
     end
+
+    local source_articulation = articulation_vector(unit, "j_hips", "j_lefthand")
+    local target_articulation = articulation_vector(probe.mesh, "j_hips", "j_hand_L")
+
+    details[#details + 1] = string.format(
+        "articulation source_delta=%.4f target_delta=%.4f",
+        Vector3.distance(source_articulation, probe.initial_source_articulation:unbox()),
+        Vector3.distance(target_articulation, probe.initial_target_articulation:unbox()))
 
     probe.samples = probe.samples + 1
     probe.next_sample_at = probe.samples == 1 and 2 or 5
@@ -80,6 +95,8 @@ local function initialize_link_probe(extension, unit)
     extension._pusfume_native_probe = {
         complete = false,
         initial = initial,
+        initial_source_articulation = Vector3Box(articulation_vector(unit, "j_hips", "j_lefthand")),
+        initial_target_articulation = Vector3Box(articulation_vector(mesh, "j_hips", "j_hand_L")),
         mesh = mesh,
         next_sample_at = 0.5,
         samples = 0,
@@ -133,15 +150,23 @@ local function register_cosmetic(registry, config)
     skin.always_hide_attachment_slots = { "slot_hat" }
     skin.equip_hat_event = nil
     skin.material_changes = nil
+    local attachment_node_linking = config.root_animation_isolation
+            and AttachmentNodeLinking.pusfume_root_animation_attachment
+        or AttachmentNodeLinking.pusfume_third_person_attachment
+
     skin.third_person_attachment = {
         unit = config.third_person_unit,
-        attachment_node_linking = AttachmentNodeLinking.pusfume_third_person_attachment,
+        attachment_node_linking = attachment_node_linking,
     }
     Cosmetics[config.skin_name] = skin
     registry.set_native_skin(config.skin_name)
     state.cosmetic_registered = true
 
     mod:info("[pusfume] Native third-person cosmetic registered: %s", config.third_person_unit)
+
+    if config.root_animation_isolation then
+        mod:warning("[pusfume] Root-only animation isolation is active")
+    end
 
     return true
 end

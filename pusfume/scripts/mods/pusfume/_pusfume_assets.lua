@@ -57,12 +57,20 @@ M.third_person_attachment = {
     { source = "j_righthandthumb2", target = "j_handthumb2_R" },
 }
 
+-- Diagnostic bridge: preserve placement while the packaged controller drives
+-- Pusfume's complete child skeleton. This isolates skin deformation from the
+-- production Bardin-to-Pusfume bone bridge without removing that bridge.
+M.root_animation_attachment = {
+    { source = "root_point", target = "root_point" },
+}
+
 function M.install()
     if not AttachmentNodeLinking then
         return false
     end
 
     AttachmentNodeLinking.pusfume_third_person_attachment = M.third_person_attachment
+    AttachmentNodeLinking.pusfume_root_animation_attachment = M.root_animation_attachment
 
     return true
 end

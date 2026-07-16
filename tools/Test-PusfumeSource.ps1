@@ -79,6 +79,12 @@ Test-Condition ($nativeText -match 'PlayerUnitCosmeticExtension' -and `
 Test-Condition ($nativeText -match 'Unit\.has_animation_state_machine\(mesh\)' -and `
     $nativeText -match 'Unit\.has_animation_event\(mesh, "enable"\)') `
     "native animation diagnostics" "runtime log verifies controller and enable event availability"
+Test-Condition ($nativeText -match 'articulation source_delta=' -and `
+    $nativeText -match 'initial_target_articulation') `
+    "native animation diagnostics" "runtime probe distinguishes skeletal articulation from unit translation"
+Test-Condition ($nativeConfigText -match 'root_animation_isolation\s*=\s*false' -and `
+    $nativeBuildText -match 'root_animation_isolation\s*=\s*true') `
+    "native animation isolation" "local native builds use a reversible root-only attachment test"
 Test-Condition ($nativeBuildText -match '\[switch\]\$NoDeploy' -and `
     $nativeBuildText -match 'if \(-not \$NoDeploy\)') `
     "local deployment" "native builds deploy to the active Workshop item by default"
@@ -167,10 +173,13 @@ Test-Condition ($backendText -match 'unresolved.*slot_melee.*slot_ranged' -or `
     ($backendText -match 'slot_melee' -and $backendText -match 'slot_ranged')) `
     "spawn guard" "both default weapon slots are validated"
 
-$bridgeSources = @([regex]::Matches($assetsText, 'source\s*=\s*"([^"]+)"') | ForEach-Object {
+$bridgeSection = [regex]::Match(
+    $assetsText,
+    '(?s)M\.third_person_attachment\s*=\s*\{(.*?)\n\}').Groups[1].Value
+$bridgeSources = @([regex]::Matches($bridgeSection, 'source\s*=\s*"([^"]+)"') | ForEach-Object {
     $_.Groups[1].Value
 })
-$bridgeTargets = @([regex]::Matches($assetsText, 'target\s*=\s*"([^"]+)"') | ForEach-Object {
+$bridgeTargets = @([regex]::Matches($bridgeSection, 'target\s*=\s*"([^"]+)"') | ForEach-Object {
     $_.Groups[1].Value
 })
 $duplicateBridgeTargets = @($bridgeTargets | Group-Object | Where-Object Count -gt 1)
@@ -188,6 +197,9 @@ $missingParentNodes = @($bridgeSources | Where-Object { $_ -notin $bardinNodes }
 
 Test-Condition ($bridgeSources.Count -eq 52 -and $bridgeTargets.Count -eq 52) `
     "asset bridge" "$($bridgeSources.Count) parent-to-child links"
+Test-Condition ($assetsText -match 'pusfume_root_animation_attachment' -and `
+    $assetsText -match 'M\.root_animation_attachment') `
+    "asset bridge" "root-only animation isolation bridge is registered"
 Test-Condition ($duplicateBridgeTargets.Count -eq 0) "asset bridge" "child targets are unique"
 Test-Condition ($missingParentNodes.Count -eq 0) "asset bridge" "all parent nodes exist on Bardin"
 
