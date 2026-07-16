@@ -167,6 +167,11 @@ Test-Condition ($nativeMaterialTemplateText -match 'shader\s*=\s*\{' -and `
     $nativeText -match 'Managers\.package:unload\(config\.donor_package, DONOR_PACKAGE_REFERENCE\)' -and `
     $nativeBuildText -match 'character_skinned_cutout\.material') `
     "native material skinning" "local builds use a guarded, releasable Globadier donor while public source stays off"
+Test-Condition ($nativeText -match 'function M\.donor_status' -and `
+    $nativeText -match 'installed_config = config' -and `
+    $preflightText -match 'native\.donor_status\(\)' -and `
+    $preflightText -match 'add\(checks, "donor material content"') `
+    "donor content preflight" "preflight fails before a live test when donor game content cannot resolve"
 Test-Condition ($uiText -match 'native\.preview_enabled\(\)' -and `
     $nativeBuildText -match '\[switch\]\$HeroPreview' -and `
     $nativeBuildText -match 'hero_preview_enabled\s*=\s*\$heroPreviewEnabled') `
