@@ -11,6 +11,27 @@ import sys
 import bpy
 
 
+ATLAS_SIZE = 4096
+ATLAS_REGIONS = {
+    "p_main": {"origin": (0, 0), "size": (2048, 4096)},
+    "p_eye": {"center": (2560, 512), "size": (512, 512), "repeat": True},
+    "p_eye_g": {"center": (2560, 512), "size": (512, 512), "repeat": True},
+    "p_ammo_box_limited_a": {
+        "center": (2560, 2048),
+        "size": (512, 512),
+        "repeat": True,
+    },
+    "p_ammo_box_limited_b": {
+        "center": (2560, 2048),
+        "size": (512, 512),
+        "repeat": True,
+    },
+    "p_glob": {"center": (2304, 3328), "size": (256, 256), "repeat": True},
+    "p_metal": {"origin": (2816, 3072), "size": (512, 512)},
+    "p_armor": {"origin": (3328, 3072), "size": (512, 512)},
+}
+
+
 def scene_objects(object_type):
     return [obj for obj in bpy.context.scene.objects if obj.type == object_type]
 
@@ -35,6 +56,44 @@ def transfer_action(model_armature, walk_armature):
 
     action.name = "pusfume_walk"
     return action
+
+
+def remap_material_uvs_to_atlas(mesh_object):
+    uv_layer = mesh_object.data.uv_layers.active
+    if uv_layer is None:
+        raise RuntimeError("The model FBX has no active UV layer")
+
+    material_names = [material.name for material in mesh_object.data.materials]
+    missing = sorted(set(ATLAS_REGIONS) - set(material_names))
+    if missing:
+        raise RuntimeError(f"The model FBX is missing atlas material slots: {missing}")
+
+    remapped = {}
+    for polygon in mesh_object.data.polygons:
+        material_name = material_names[polygon.material_index]
+        region = ATLAS_REGIONS.get(material_name)
+        if region is None:
+            continue
+
+        loops = [uv_layer.data[index] for index in polygon.loop_indices]
+        if region.get("repeat"):
+            anchor = loops[0].uv
+            shift_u = int(anchor.x // 1)
+            shift_v = int(anchor.y // 1)
+            origin_x, origin_y = region["center"]
+        else:
+            shift_u = 0
+            shift_v = 0
+            origin_x, origin_y = region["origin"]
+
+        width, height = region["size"]
+        for loop in loops:
+            loop.uv.x = (origin_x + (loop.uv.x - shift_u) * width) / ATLAS_SIZE
+            loop.uv.y = (origin_y + (loop.uv.y - shift_v) * height) / ATLAS_SIZE
+
+        remapped[material_name] = remapped.get(material_name, 0) + len(loops)
+
+    return remapped
 
 
 def main(model_path, walk_path, output_path):
@@ -73,6 +132,7 @@ def main(model_path, walk_path, output_path):
         )
 
     action = transfer_action(model_armature, walk_armature)
+    atlas_loops = remap_material_uvs_to_atlas(model_mesh)
 
     for obj in list(bpy.context.scene.objects):
         if obj.name not in model_object_names:
@@ -127,6 +187,8 @@ def main(model_path, walk_path, output_path):
 
     result = {
         "action": action.name,
+        "atlas_loops": atlas_loops,
+        "atlas_size": ATLAS_SIZE,
         "bones": len(model_bones),
         "frame_end": bpy.context.scene.frame_end,
         "frame_start": bpy.context.scene.frame_start,

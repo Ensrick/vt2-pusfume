@@ -33,7 +33,19 @@ request rather than in release notes.
   offline hash verification and the dalokraff donor-material precedent in the
   model handoff documentation.
 
+- Added a state-driven animation controller with a generated placeholder idle:
+  the staged state machine defaults to `base/idle`, blends to `base/walk` on
+  events, and the mod fires those events from the player's measured speed with
+  hysteresis. `/pusfume_preflight` verifies the compiled idle/walk events.
+
 ### Changed
+
+- Repacked Pusfume's opaque surfaces into a wrap-safe generated atlas and switched
+  the proven Globadier character shader to per-unit texture overrides, preventing
+  shared material slots from overwriting one another during animated rendering.
+- Retired the manual clip sweep from staged builds now that deformation is
+  confirmed; the packaged controller owns playback and the sweep remains a
+  source-level diagnostic.
 
 - Made the supported Stingray FBX/DCC importer the default native skin path;
   retained the handwritten BSI path as an explicit diagnostic fallback.

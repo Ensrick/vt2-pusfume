@@ -101,11 +101,23 @@ Test-Condition ($nativeText -match 'Unit\.set_animation_bone_mode\(mesh, "transf
 Test-Condition ($nativeText -notmatch 'Unit\.animation_layer_info\(') `
     "native animation diagnostics" "experimental layer indexing cannot assert in the game runtime"
 Test-Condition ($nativeConfigText -match 'manual_clip_probe\s*=\s*false' -and `
-    $nativeBuildText -match 'manual_clip_probe\s*=\s*true' -and `
+    $nativeBuildText -match 'manual_clip_probe\s*=\s*false' -and `
     $nativeText -match 'Unit\.disable_animation_state_machine\(mesh\)' -and `
     $nativeText -match 'Unit\.crossfade_animation\(mesh, config\.manual_clip_name, 1, 0, true, "normal"\)' -and `
     $nativeText -match 'Unit\.crossfade_animation_set_time\(') `
-    "native animation blender" "local build directly sweeps Janfon's clip without changing public defaults"
+    "native animation blender" "manual clip sweep remains available without overriding the deployed controller"
+Test-Condition ($nativeConfigText -match 'locomotion_events_enabled\s*=\s*false' -and `
+    $nativeBuildText -match 'locomotion_events_enabled\s*=\s*true' -and `
+    $nativeText -match 'function drive_locomotion_events' -and `
+    $nativeText -match 'Unit\.animation_event\(probe\.mesh, "walk"\)' -and `
+    $nativeText -match 'Unit\.animation_event\(probe\.mesh, "idle"\)' -and `
+    $nativeText -match 'function M\.animation_status' -and `
+    $preflightText -match 'add\(checks, "locomotion animation events"' -and `
+    $nativeBuildText -match 'default_state = "base/idle"' -and `
+    $nativeBuildText -match '"units/pusfume/anims/pusfume_3p_idle"' -and `
+    $nativeBuildText -match 'generate_idle_pusfume_fbx\.py' -and `
+    (Test-Path (Join-Path $repoRoot "tools\generate_idle_pusfume_fbx.py"))) `
+    "state-driven locomotion" "staged controller plays idle by default and Lua drives idle/walk from player speed"
 Test-Condition ($nativeText -match 'articulation source_delta=' -and `
     $nativeText -match 'initial_target_articulation') `
     "native animation diagnostics" "runtime probe distinguishes skeletal articulation from unit translation"
@@ -145,9 +157,10 @@ Test-Condition ($nativeBuildText -match 'ChangeExtension\(\$inputPath, "\.bones"
     "native animation" "same-name animation skeleton is required by the native build"
 Test-Condition ($nativeBuildText -match '\[string\]\$AnimationFbx' -and `
     $nativeBuildText -match 'pusfume_3p_walk\.animation' -and `
+    $nativeBuildText -match 'pusfume_3p_idle\.animation' -and `
     $nativeBuildText -match 'animation_state_machine\s*=\s*"units/pusfume/pusfume_3p"' -and `
-    $nativeBuildText -match 'default_state\s*=\s*"base/walk"') `
-    "native animation" "Janfon's baked walk FBX is packaged as the default controller state"
+    $nativeBuildText -match 'name = "base/walk"') `
+    "native animation" "Janfon's baked walk FBX is packaged as a controller state beside the generated idle"
 Test-Condition ($nativeBuildText -match 'state_machine\s*=\s*\[' -and `
     $nativeBuildText -match 'animation\s*=\s*\[' -and `
     $nativeBuildText -match 'bones\s*=\s*\[') `
@@ -162,11 +175,18 @@ Test-Condition ($nativeMaterialTemplateText -match 'shader\s*=\s*\{' -and `
     $nativeConfigText -match 'donor_material_enabled\s*=\s*false' -and `
     $nativeBuildText -match 'donor_material_enabled\s*=\s*true' -and `
     $nativeText -match 'Unit\.set_material\(unit, slot_name, config\.donor_material\)' -and `
-    $nativeText -match 'Material\.set_texture\(material, channel, texture_path\)' -and `
+    $nativeText -match 'Unit\.set_texture_for_materials\(unit, channel, texture_path\)' -and `
     $nativeText -match 'Application\.can_get\(resource_type, path\)' -and `
     $nativeText -match 'Managers\.package:unload\(config\.donor_package, DONOR_PACKAGE_REFERENCE\)' -and `
     $nativeBuildText -match 'character_skinned_cutout\.material') `
     "native material skinning" "local builds use a guarded, releasable Globadier donor while public source stays off"
+Test-Condition ($nativeText -match 'Unit\.set_texture_for_materials\(unit, channel, texture_path\)' -and `
+    $nativeText -notmatch 'Material\.set_texture' -and `
+    $nativeText -match 'pusfume_atlas_df' -and `
+    $nativeBuildText -match 'Write-PusfumeAtlas "pusfume_atlas_df"' -and `
+    $animatedFbxToolText -match 'remap_material_uvs_to_atlas' -and `
+    $animatedFbxToolText -match 'shift_u = int\(anchor\.x // 1\)') `
+    "per-unit donor atlas" "opaque surfaces use guarded atlas UVs and do not mutate the shared donor material"
 Test-Condition ($nativeText -match 'function M\.donor_status' -and `
     $nativeText -match 'installed_config = config' -and `
     $preflightText -match 'native\.donor_status\(\)' -and `

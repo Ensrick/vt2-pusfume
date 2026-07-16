@@ -15,7 +15,11 @@ local state = {
     donor_material_error_logged = false,
     donor_material_applied = false,
     donor_texture_errors = {},
+    locomotion_events_available = false,
 }
+
+local WALK_ENTER_SPEED = 0.5
+local IDLE_ENTER_SPEED = 0.2
 
 local installed_config
 
@@ -25,23 +29,20 @@ local DONOR_TEXTURE_CHANNELS = {
     normal = "texture_map_27b67fd2",
     response = "texture_map_8bf37d8e",
 }
-local DONOR_SLOT_TEXTURES = {
-    p_main = { "pusfume_body_new_df", "skaven_body_nm", "skaven_body_s" },
-    p_eye = { "pusfume_eyenormal", "pusfume_eyenormal", "pusfume_eyenormal" },
-    p_metal = { "wpn_skaven_set_df", "wpn_skaven_set_nm", "wpn_skaven_set_s" },
-    p_glob = { "globadier_outfit_df", "globadier_outfit_nm", "globadier_outfit_s" },
-    p_armor = { "stormvermin_outfit_df", "stormvermin_outfit_nm", "stormvermin_outfit_s" },
-    p_eye_g = { "pusfume_eyenormal", "pusfume_eyenormal", "pusfume_eyenormal" },
-    p_ammo_box_limited_a = {
-        "pup_ammo_box_limited_df",
-        "pup_ammo_box_limited_nm",
-        "pup_ammo_box_limited_s",
-    },
-    p_ammo_box_limited_b = {
-        "pup_ammo_box_limited_df",
-        "pup_ammo_box_limited_nm",
-        "pup_ammo_box_limited_s",
-    },
+local DONOR_MATERIAL_SLOTS = {
+    "p_main",
+    "p_eye",
+    "p_metal",
+    "p_glob",
+    "p_armor",
+    "p_eye_g",
+    "p_ammo_box_limited_a",
+    "p_ammo_box_limited_b",
+}
+local DONOR_ATLAS_TEXTURES = {
+    color = "pusfume_atlas_df",
+    normal = "pusfume_atlas_nm",
+    response = "pusfume_atlas_s",
 }
 
 local PROBE_LINKS = {
@@ -85,7 +86,7 @@ local function ensure_donor_package(config)
 end
 
 
-local function set_texture(material, channel, texture_name)
+local function set_unit_texture(unit, channel, texture_name)
     local texture_path = "textures/pusfume/" .. texture_name
 
     if not can_get("texture", texture_path) then
@@ -97,7 +98,7 @@ local function set_texture(material, channel, texture_name)
         return false
     end
 
-    Material.set_texture(material, channel, texture_path)
+    Unit.set_texture_for_materials(unit, channel, texture_path)
 
     return true
 end
@@ -126,32 +127,24 @@ local function apply_donor_material(extension, config)
     local material_slots = 0
     local texture_assignments = 0
 
-    for slot_name, textures in pairs(DONOR_SLOT_TEXTURES) do
+    for _, slot_name in ipairs(DONOR_MATERIAL_SLOTS) do
         Unit.set_material(unit, slot_name, config.donor_material)
-
-        for mesh_index = 0, Unit.num_meshes(unit) - 1 do
-            local mesh = Unit.mesh(unit, mesh_index)
-
-            if Mesh.has_material(mesh, slot_name) then
-                local material = Mesh.material(mesh, slot_name)
-
-                material_slots = material_slots + 1
-                texture_assignments = texture_assignments +
-                    (set_texture(material, DONOR_TEXTURE_CHANNELS.color, textures[1]) and 1 or 0)
-                texture_assignments = texture_assignments +
-                    (set_texture(material, DONOR_TEXTURE_CHANNELS.normal, textures[2]) and 1 or 0)
-                texture_assignments = texture_assignments +
-                    (set_texture(material, DONOR_TEXTURE_CHANNELS.response, textures[3]) and 1 or 0)
-            end
-        end
+        material_slots = material_slots + 1
     end
+
+    texture_assignments = texture_assignments +
+        (set_unit_texture(unit, DONOR_TEXTURE_CHANNELS.color, DONOR_ATLAS_TEXTURES.color) and 1 or 0)
+    texture_assignments = texture_assignments +
+        (set_unit_texture(unit, DONOR_TEXTURE_CHANNELS.normal, DONOR_ATLAS_TEXTURES.normal) and 1 or 0)
+    texture_assignments = texture_assignments +
+        (set_unit_texture(unit, DONOR_TEXTURE_CHANNELS.response, DONOR_ATLAS_TEXTURES.response) and 1 or 0)
 
     extension._pusfume_donor_material_applied = material_slots > 0
     state.donor_material_applied = state.donor_material_applied
         or extension._pusfume_donor_material_applied
 
     mod:info(
-        "[pusfume] Globadier donor material applied slots=%d textures=%d material=%s",
+        "[pusfume] Globadier donor material applied slots=%d textures=%d mode=per_unit_atlas material=%s",
         material_slots,
         texture_assignments,
         config.donor_material)
@@ -333,9 +326,51 @@ local function initialize_link_probe(extension, unit, config)
         probe.manual_base_rotation = QuaternionBox(Unit.local_rotation(mesh, probe.manual_node))
         Unit.disable_animation_state_machine(mesh)
         mod:warning("[pusfume] Manual skin deformation probe is active on j_spine1")
+    elseif config.locomotion_events_enabled and has_state_machine then
+        probe.locomotion_events = Unit.has_animation_event(mesh, "walk")
+            and Unit.has_animation_event(mesh, "idle")
+        state.locomotion_events_available = probe.locomotion_events == true
+
+        if probe.locomotion_events then
+            probe.locomotion_state = "idle"
+            mod:info("[pusfume] Locomotion animation events active (idle/walk)")
+        else
+            mod:warning("[pusfume] Compiled controller is missing idle/walk events")
+        end
     end
 
     extension._pusfume_native_probe = probe
+end
+
+local function drive_locomotion_events(extension, unit, dt)
+    local probe = extension._pusfume_native_probe
+
+    if not probe or not probe.locomotion_events or not ALIVE[unit] or not ALIVE[probe.mesh] then
+        return
+    end
+
+    local position = Unit.world_position(unit, 0)
+
+    if not probe.last_position then
+        probe.last_position = Vector3Box(position)
+
+        return
+    end
+
+    if dt and dt > 0 then
+        local horizontal_delta = Vector3.flat(position - probe.last_position:unbox())
+        local speed = Vector3.length(horizontal_delta) / dt
+
+        if probe.locomotion_state ~= "walk" and speed > WALK_ENTER_SPEED then
+            probe.locomotion_state = "walk"
+            Unit.animation_event(probe.mesh, "walk")
+        elseif probe.locomotion_state ~= "idle" and speed < IDLE_ENTER_SPEED then
+            probe.locomotion_state = "idle"
+            Unit.animation_event(probe.mesh, "idle")
+        end
+    end
+
+    probe.last_position:store(position)
 end
 
 local function deep_clone(value, seen)
@@ -445,6 +480,7 @@ local function install_probe_hook()
 
         apply_manual_clip_probe(extension, t)
         apply_manual_skin_probe(extension, t)
+        drive_locomotion_events(extension, unit, dt)
         sample_link_probe(extension, unit, t)
     end)
 
@@ -536,6 +572,17 @@ function M.donor_status()
         material_ok = can_get("material", config.donor_material) == true,
         package_loaded = state.donor_package_loaded,
         applied = state.donor_material_applied,
+    }
+end
+
+function M.animation_status()
+    local config = installed_config
+
+    return {
+        locomotion_events_enabled = (config and config.locomotion_events_enabled) == true,
+        locomotion_events_available = state.locomotion_events_available,
+        manual_clip_probe = (config and config.manual_clip_probe) == true,
+        manual_skin_probe = (config and config.manual_skin_probe) == true,
     }
 end
 

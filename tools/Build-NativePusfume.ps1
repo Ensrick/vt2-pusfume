@@ -44,13 +44,28 @@ $animationFbxPath = if ([IO.Path]::IsPathRooted($AnimationFbx)) {
 if ((Get-Item -LiteralPath $animationFbxPath).Length -lt 1024) {
     throw "The native animation FBX is unexpectedly small: $animationFbxPath"
 }
+$blenderExePath = (Resolve-Path $BlenderExe).Path
+$generatedRoot = Join-Path $repoRoot ".build\generated-native"
+New-Item -ItemType Directory -Path $generatedRoot -Force | Out-Null
+
+$idleFbxTool = Join-Path $repoRoot "tools\generate_idle_pusfume_fbx.py"
+$idleFbxPath = Join-Path $generatedRoot "pusfume_3p_idle.fbx"
+
+& $blenderExePath --background --factory-startup --disable-autoexec `
+    --python $idleFbxTool -- `
+    $modelFbxPath $idleFbxPath
+if ($LASTEXITCODE -ne 0) {
+    throw "Idle Pusfume FBX generation failed with exit code $LASTEXITCODE"
+}
+if (-not (Test-Path -LiteralPath $idleFbxPath -PathType Leaf) -or `
+        (Get-Item -LiteralPath $idleFbxPath).Length -lt 1024) {
+    throw "Idle Pusfume FBX generation produced no usable output"
+}
+
 $animatedModelFbxPath = $modelFbxPath
 if ($useFbxDcc) {
-    $blenderExePath = (Resolve-Path $BlenderExe).Path
     $animatedFbxTool = Join-Path $repoRoot "tools\prepare_animated_pusfume_fbx.py"
-    $generatedRoot = Join-Path $repoRoot ".build\generated-native"
     $animatedModelFbxPath = Join-Path $generatedRoot "pusfume_3p_animated.fbx"
-    New-Item -ItemType Directory -Path $generatedRoot -Force | Out-Null
 
     & $blenderExePath --background --factory-startup --disable-autoexec `
         --python $animatedFbxTool -- `
@@ -110,8 +125,10 @@ extension = ".fbx"
 Copy-Item -LiteralPath $inputBonesPath -Destination (Join-Path $unitRoot "pusfume_3p.bones") -Force
 Copy-Item -LiteralPath $animationFbxPath `
     -Destination (Join-Path $animationRoot "pusfume_3p_walk.fbx") -Force
+Copy-Item -LiteralPath $idleFbxPath `
+    -Destination (Join-Path $animationRoot "pusfume_3p_idle.fbx") -Force
 
-@'
+$animationRecipe = @'
 bones = "units/pusfume/pusfume_3p"
 tolerance = {
     "" = [
@@ -121,16 +138,43 @@ tolerance = {
         false
     ]
 }
-'@ | Set-Content -LiteralPath (Join-Path $animationRoot "pusfume_3p_walk.animation") -Encoding utf8
+'@
+$animationRecipe | Set-Content -LiteralPath (Join-Path $animationRoot "pusfume_3p_walk.animation") -Encoding utf8
+$animationRecipe | Set-Content -LiteralPath (Join-Path $animationRoot "pusfume_3p_idle.animation") -Encoding utf8
 
 @'
 events = {
     enable = {}
+    idle = {}
+    walk = {}
 }
 layers = [
     {
-        default_state = "base/walk"
+        default_state = "base/idle"
         states = [
+            {
+                animations = [
+                    "units/pusfume/anims/pusfume_3p_idle"
+                ]
+                loop_animation = true
+                name = "base/idle"
+                randomization_type = "every_loop"
+                root_driving = "ignore"
+                speed = "1"
+                state_type = "regular"
+                transitions = [
+                    {
+                        blend_time = 0.25
+                        event = "walk"
+                        mode = "direct"
+                        on_beat = ""
+                        to = "base/walk"
+                    }
+                ]
+                weights = [
+                    "1.0"
+                ]
+            }
             {
                 animations = [
                     "units/pusfume/anims/pusfume_3p_walk"
@@ -141,7 +185,15 @@ layers = [
                 root_driving = "ignore"
                 speed = "1"
                 state_type = "regular"
-                transitions = []
+                transitions = [
+                    {
+                        blend_time = 0.25
+                        event = "idle"
+                        mode = "direct"
+                        on_beat = ""
+                        to = "base/idle"
+                    }
+                ]
                 weights = [
                     "1.0"
                 ]
@@ -156,6 +208,8 @@ bones = "units/pusfume/pusfume_3p"
 
 $textureRoot = Join-Path $stageMod "textures\pusfume"
 $materialRoot = Join-Path $stageMod "materials\pusfume"
+New-Item -ItemType Directory -Path $textureRoot -Force | Out-Null
+New-Item -ItemType Directory -Path $materialRoot -Force | Out-Null
 $textureNames = @(
     "globadier_outfit_df", "globadier_outfit_nm", "globadier_outfit_s",
     "pup_ammo_box_limited_df", "pup_ammo_box_limited_nm", "pup_ammo_box_limited_s",
@@ -202,6 +256,107 @@ common = {
     }
 }
 "@ | Set-Content -LiteralPath (Join-Path $textureRoot "$Name.texture") -Encoding utf8
+}
+
+function Write-NativeTextureRecipe {
+    param(
+        [string]$Name,
+        [bool]$Srgb
+    )
+
+    $srgbValue = if ($Srgb) { "true" } else { "false" }
+    @"
+common = {
+    input = {
+        filename = "textures/pusfume/$Name"
+    }
+    output = {
+        apply_processing = true
+        category = ""
+        cut_alpha_threshold = 0.5
+        enable_cut_alpha_threshold = false
+        format = "DXT5"
+        mipmap_filter = "kaiser"
+        mipmap_filter_wrap_mode = "mirror"
+        mipmap_keep_original = false
+        mipmap_num_largest_steps_to_discard = 0
+        mipmap_num_smallest_steps_to_discard = 0
+        srgb = $srgbValue
+        streamable = true
+    }
+}
+"@ | Set-Content -LiteralPath (Join-Path $textureRoot "$Name.texture") -Encoding utf8
+}
+
+function Write-PusfumeAtlas {
+    param(
+        [string]$Name,
+        [string]$Suffix,
+        [System.Drawing.Color]$ClearColor
+    )
+
+    Add-Type -AssemblyName System.Drawing
+    $atlasSize = 4096
+    $atlas = New-Object Drawing.Bitmap($atlasSize, $atlasSize, [Drawing.Imaging.PixelFormat]::Format32bppArgb)
+    $graphics = [Drawing.Graphics]::FromImage($atlas)
+    $graphics.Clear($ClearColor)
+    $graphics.CompositingMode = [Drawing.Drawing2D.CompositingMode]::SourceCopy
+    $graphics.InterpolationMode = [Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+    $graphics.PixelOffsetMode = [Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+    $bodyTexture = if ($Suffix -eq "df") { "pusfume_body_new_df" } else { "skaven_body_$Suffix" }
+
+    function Draw-AtlasTile {
+        param(
+            [string]$Texture,
+            [int]$X,
+            [int]$Y,
+            [int]$Width,
+            [int]$Height
+        )
+
+        $sourcePath = Join-Path $textureSourcePath "$Texture.png"
+        if (-not (Test-Path -LiteralPath $sourcePath -PathType Leaf)) {
+            throw "Required Pusfume atlas texture is missing: $sourcePath"
+        }
+
+        $source = [Drawing.Image]::FromFile($sourcePath)
+        try {
+            $top = $atlasSize - $Y - $Height
+            $graphics.DrawImage($source, $X, $top, $Width, $Height)
+        } finally {
+            $source.Dispose()
+        }
+    }
+
+    function Draw-RepeatedAtlasTile {
+        param(
+            [string]$Texture,
+            [int]$X,
+            [int]$Y,
+            [int]$Size
+        )
+
+        foreach ($row in 0..2) {
+            foreach ($column in 0..2) {
+                Draw-AtlasTile $Texture ($X + $column * $Size) ($Y + $row * $Size) $Size $Size
+            }
+        }
+    }
+
+    try {
+        Draw-AtlasTile $bodyTexture 0 0 2048 4096
+        Draw-RepeatedAtlasTile "pusfume_eyenormal" 2048 0 512
+        Draw-RepeatedAtlasTile "pup_ammo_box_limited_$Suffix" 2048 1536 512
+        Draw-RepeatedAtlasTile "globadier_outfit_$Suffix" 2048 3072 256
+        Draw-AtlasTile "wpn_skaven_set_$Suffix" 2816 3072 512 512
+        Draw-AtlasTile "stormvermin_outfit_$Suffix" 3328 3072 512 512
+
+        $output = Join-Path $textureRoot "$Name.png"
+        $atlas.Save($output, [Drawing.Imaging.ImageFormat]::Png)
+    } finally {
+        $graphics.Dispose()
+        $atlas.Dispose()
+    }
 }
 
 function Write-NativeMaterial {
@@ -270,6 +425,13 @@ foreach ($textureName in $textureNames) {
     Write-NativeTexture $textureName
 }
 
+Write-PusfumeAtlas "pusfume_atlas_df" "df" ([Drawing.Color]::Black)
+Write-PusfumeAtlas "pusfume_atlas_nm" "nm" ([Drawing.Color]::FromArgb(255, 128, 128, 255))
+Write-PusfumeAtlas "pusfume_atlas_s" "s" ([Drawing.Color]::Black)
+Write-NativeTextureRecipe "pusfume_atlas_df" $true
+Write-NativeTextureRecipe "pusfume_atlas_nm" $false
+Write-NativeTextureRecipe "pusfume_atlas_s" $false
+
 Write-NativeMaterial "pusfume_body" "pusfume_body_new_df" "skaven_body_nm" "skaven_body_s" 0.72
 Write-NativeMaterial "pusfume_eye" "pusfume_eyenormal" "" "pusfume_eyenormal" 0.35 -Emissive
 Write-NativeMaterial "pusfume_metal" "wpn_skaven_set_df" "wpn_skaven_set_nm" "wpn_skaven_set_s" 0.38 0.7
@@ -313,9 +475,10 @@ return {
     donor_package = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/chr_third_person_mesh",
     enabled = true,
     hero_preview_enabled = $heroPreviewEnabled,
+    locomotion_events_enabled = true,
     manual_clip_length = 0.8,
     manual_clip_name = "units/pusfume/anims/pusfume_3p_walk",
-    manual_clip_probe = true,
+    manual_clip_probe = false,
     manual_skin_probe = false,
     root_animation_isolation = true,
     skin_name = "pusfume_skin",
@@ -344,6 +507,7 @@ bones = [
 
 animation = [
     "units/pusfume/anims/pusfume_3p_walk"
+    "units/pusfume/anims/pusfume_3p_idle"
 ]
 '@ | Add-Content -LiteralPath (Join-Path $stageMod `
     "resource_packages\pusfume\pusfume.package") -Encoding utf8
@@ -418,5 +582,5 @@ $nativeSourceSize = (Get-Item -LiteralPath $nativeSource).Length
 $bundles = @(Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)
 Write-Host "Native Pusfume build passed: source=$nativeSourceKind bytes=$nativeSourceSize bundles=$($bundles.Count)"
 Write-Host "Native Pusfume materials passed: textures=$($textureNames.Count) materials=7"
-Write-Host "Native Pusfume animation package passed: controller=pusfume_3p clip=pusfume_3p_walk"
+Write-Host "Native Pusfume animation package passed: controller=pusfume_3p clips=pusfume_3p_idle,pusfume_3p_walk"
 Write-Host "Native Pusfume hero preview enabled: $($HeroPreview.IsPresent)"

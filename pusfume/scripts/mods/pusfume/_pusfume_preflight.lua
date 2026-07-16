@@ -132,6 +132,26 @@ function M.collect(registry, career_index, backend, compat, ui, native)
         add(checks, "donor material content", donor_content_ok and "PASS" or "FAIL", donor_detail)
     end
 
+    local animation_status = native.animation_status()
+
+    if animation_status.locomotion_events_enabled then
+        local probes_off = not animation_status.manual_clip_probe
+            and not animation_status.manual_skin_probe
+        local locomotion_detail
+
+        if not probes_off then
+            locomotion_detail = "a manual diagnostic probe overrides the locomotion controller"
+        elseif animation_status.locomotion_events_available then
+            locomotion_detail = "compiled controller exposes idle/walk events; driver is active"
+        else
+            locomotion_detail = "spawn Pusfume to verify the compiled idle/walk events"
+        end
+
+        add(checks, "locomotion animation events",
+            probes_off and (animation_status.locomotion_events_available and "PASS" or "WARN") or "WARN",
+            locomotion_detail)
+    end
+
     add(checks, "five-row grid hook", ui_status.legacy_hook_installed and "PASS" or "FAIL",
         ui_status.legacy_hook_installed and "CharacterSelectionStateCharacter hooked" or "class unavailable")
     add(checks, "five-row grid card", ui_status.legacy_card_seen and "PASS" or "WARN",
