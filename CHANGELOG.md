@@ -99,6 +99,9 @@ request rather than in release notes.
 
 ### Fixed
 
+- Removed the SDK `SKINNED_DISABLED` output option from both native character
+  material templates. The corrected body material now compiles a distinct
+  four-weight shader payload instead of reproducing static SDK standard.
 - Prevented crashes caused by unresolved donor weapon loadouts and a missing
   Pusfume career color registry entry.
 - Prevented stale Ranger Veteran models and queued package loads from replacing
