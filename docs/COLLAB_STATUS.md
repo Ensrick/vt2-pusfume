@@ -137,6 +137,46 @@ anyway. Opt-out: `-NoDonorTextureShadow`.
 Known tradeoff: anything else rendering the dark-pact Globadier `skin_1001`
 outfit samples Janfon's atlas with Globadier UVs (garbled). Dev-acceptable.
 
+## Track D - spliced game child material [CLAIMED: Claude, 2026-07-16 ~12:00]
+
+Every ingredient is independently live-proven; this recombines them:
+
+1. Take the GAME's compiled `mtr_outfit` child (768 bytes, extracted at build
+   time from installed bundle `7a8e617a32277fc4`, never committed).
+2. Patch exactly its three texture ids (offsets found by searching the donor
+   ids) to OUR atlas texture ids.
+3. Splice those bytes over our SDK-compiled child's payload inside the built
+   bundle (new tool: size-aware resource payload replacement - the bundle
+   index stores sizes, not offsets, so records after the splice just shift).
+
+Why this should render skinned AND textured where every prior candidate
+failed one half:
+- The 11:45 live test eliminated cross-context shadowing: game-package loads
+  bind game copies (globadier maps persisted through a verified id rename in
+  our bundles). Mod-context loads DO see mod resources (black-body stub).
+- Sol's 11:24 live test showed our SDK child renders (parent chain resolves
+  from mod context) but rigid/dark - the shader binding baked at compile time
+  from the STUB is what kills deformation. The spliced payload carries the
+  game's own compile-time binding: the real skinning permutation.
+- The texture ids in the spliced child are OUR atlas ids, loaded mod-side at
+  boot; the child itself loads mod-side (mod-handle package) - same side, so
+  resolution follows the proven mod-context rule.
+- Donor package still loads first (Lua ordering unchanged), so the parent's
+  shader library is resident before the child binds.
+
+Build: `-SplicedGameChild` (implies the -ParentChildMaterial staging, forces
+the texture shadow OFF - one variable at a time).
+
+## Fact 6 refinement (2026-07-16 11:45 live test)
+
+Bundle-resource shadowing is CONTEXT-BOUND, not global: a resource loaded
+through a GAME package binds the game bundle's copy even when a mod bundle
+carries the same (type, name) - the verified donor-texture-id rename changed
+nothing on screen. A resource loaded through a MOD package binds the mod
+copy (stub incident). Corollary: you cannot override game texture content
+from a mod bundle for game-loaded materials; overrides must ride a material
+that itself loads mod-side.
+
 ## Status log (append entries, newest first)
 
 - 11:24 Sol: LIVE RESULT for `f169b07` / ManifestID
