@@ -36,6 +36,9 @@ request rather than in release notes.
 - Changed native builds to merge Janfon's skinned model and baked walk into one
   character FBX and reject the export unless both bones and evaluated vertices
   move.
+- Changed the local diagnostic build to assign the installed playable
+  Globadier's full-character material at runtime while restoring only Pusfume
+  texture maps; extracted game shaders are neither committed nor packaged.
 - Isolated development-only animation and skin probes from public source
   defaults so normal builds fail safely when unreviewed assets are absent.
 - Limited the current prototype to Adventure Keep and Adventure missions while

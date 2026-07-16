@@ -157,12 +157,16 @@ Test-Condition ($nativeBuildText -match 'Write-NativeTexture' -and `
     $nativeBuildText -notmatch 'p_main\s*=\s*"materials/pusfume/pusfume_debug_3p"') `
     "native materials" "staged build uses handoff textures instead of the green diagnostic material"
 Test-Condition ($nativeMaterialTemplateText -match 'shader\s*=\s*\{' -and `
-    $nativeMaterialTemplateText -match 'core/stingray_renderer/output_nodes/standard_base' -and `
-    $nativeMaterialTemplateText -notmatch 'parent_material\s*=\s*"core/stingray_renderer/shader_import/standard"' -and `
     $nativeCutoutTemplateText -match 'shader\s*=\s*\{' -and `
     $nativeCutoutTemplateText -match 'core/stingray_renderer/output_nodes/standard_base' -and `
+    $nativeConfigText -match 'donor_material_enabled\s*=\s*false' -and `
+    $nativeBuildText -match 'donor_material_enabled\s*=\s*true' -and `
+    $nativeText -match 'Unit\.set_material\(unit, slot_name, config\.donor_material\)' -and `
+    $nativeText -match 'Material\.set_texture\(material, channel, texture_path\)' -and `
+    $nativeText -match 'Application\.can_get\(resource_type, path\)' -and `
+    $nativeText -match 'Managers\.package:unload\(config\.donor_package, DONOR_PACKAGE_REFERENCE\)' -and `
     $nativeBuildText -match 'character_skinned_cutout\.material') `
-    "native material skinning" "staged materials embed character-capable opaque and cutout shader graphs"
+    "native material skinning" "local builds use a guarded, releasable Globadier donor while public source stays off"
 Test-Condition ($uiText -match 'native\.preview_enabled\(\)' -and `
     $nativeBuildText -match '\[switch\]\$HeroPreview' -and `
     $nativeBuildText -match 'hero_preview_enabled\s*=\s*\$heroPreviewEnabled') `

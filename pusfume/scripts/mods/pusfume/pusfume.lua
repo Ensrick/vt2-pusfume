@@ -42,6 +42,10 @@ mod.on_game_state_changed = function()
     refresh_runtime_integrations()
 end
 
+mod.on_unload = function()
+    native.shutdown(native_config)
+end
+
 mod:echo(string.format(
     "Pusfume prototype v%s loaded. Run /pusfume_preflight in the Keep before selecting the career.",
     MOD_VERSION))

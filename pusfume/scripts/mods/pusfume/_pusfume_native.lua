@@ -9,12 +9,150 @@ local state = {
     preview_package_filtered = false,
     resource_available = false,
     hero_preview_enabled = false,
+    donor_package_requested = false,
+    donor_package_loaded = false,
+    donor_package_error_logged = false,
+    donor_material_error_logged = false,
+    donor_texture_errors = {},
+}
+
+local DONOR_PACKAGE_REFERENCE = "pusfume_globadier_material"
+local DONOR_TEXTURE_CHANNELS = {
+    color = "texture_map_02af90f8",
+    normal = "texture_map_27b67fd2",
+    response = "texture_map_8bf37d8e",
+}
+local DONOR_SLOT_TEXTURES = {
+    p_main = { "pusfume_body_new_df", "skaven_body_nm", "skaven_body_s" },
+    p_eye = { "pusfume_eyenormal", "pusfume_eyenormal", "pusfume_eyenormal" },
+    p_metal = { "wpn_skaven_set_df", "wpn_skaven_set_nm", "wpn_skaven_set_s" },
+    p_glob = { "globadier_outfit_df", "globadier_outfit_nm", "globadier_outfit_s" },
+    p_armor = { "stormvermin_outfit_df", "stormvermin_outfit_nm", "stormvermin_outfit_s" },
+    p_eye_g = { "pusfume_eyenormal", "pusfume_eyenormal", "pusfume_eyenormal" },
+    p_ammo_box_limited_a = {
+        "pup_ammo_box_limited_df",
+        "pup_ammo_box_limited_nm",
+        "pup_ammo_box_limited_s",
+    },
+    p_ammo_box_limited_b = {
+        "pup_ammo_box_limited_df",
+        "pup_ammo_box_limited_nm",
+        "pup_ammo_box_limited_s",
+    },
 }
 
 local PROBE_LINKS = {
     { source = "j_hips", target = "j_hips" },
     { source = "j_lefthand", target = "j_hand_L" },
 }
+
+local function can_get(resource_type, path)
+    return path and Application.can_get(resource_type, path)
+end
+
+local function ensure_donor_package(config)
+    if not config.donor_material_enabled then
+        return false
+    end
+
+    if state.donor_package_loaded then
+        return true
+    end
+
+    if not Managers.package or not can_get("package", config.donor_package) then
+        if not state.donor_package_error_logged then
+            state.donor_package_error_logged = true
+            mod:error("[pusfume] Globadier donor package is unavailable: %s", config.donor_package)
+        end
+
+        return false
+    end
+
+    if not state.donor_package_requested then
+        state.donor_package_requested = true
+        Managers.package:load(config.donor_package, DONOR_PACKAGE_REFERENCE)
+        mod:info("[pusfume] Requested Globadier donor package: %s", config.donor_package)
+    end
+
+    state.donor_package_loaded = Managers.package:has_loaded(
+        config.donor_package,
+        DONOR_PACKAGE_REFERENCE)
+
+    return state.donor_package_loaded
+end
+
+
+local function set_texture(material, channel, texture_name)
+    local texture_path = "textures/pusfume/" .. texture_name
+
+    if not can_get("texture", texture_path) then
+        if not state.donor_texture_errors[texture_path] then
+            state.donor_texture_errors[texture_path] = true
+            mod:error("[pusfume] Donor material texture is unavailable: %s", texture_path)
+        end
+
+        return false
+    end
+
+    Material.set_texture(material, channel, texture_path)
+
+    return true
+end
+
+
+local function apply_donor_material(extension, config)
+    if extension._pusfume_donor_material_applied or not config.donor_material_enabled then
+        return extension._pusfume_donor_material_applied == true
+    end
+
+    local unit = extension._tp_unit_mesh
+
+    if not ALIVE[unit] or not ensure_donor_package(config) then
+        return false
+    end
+
+    if not can_get("material", config.donor_material) then
+        if not state.donor_material_error_logged then
+            state.donor_material_error_logged = true
+            mod:error("[pusfume] Globadier donor material is unavailable: %s", config.donor_material)
+        end
+
+        return false
+    end
+
+    local material_slots = 0
+    local texture_assignments = 0
+
+    for slot_name, textures in pairs(DONOR_SLOT_TEXTURES) do
+        Unit.set_material(unit, slot_name, config.donor_material)
+
+        for mesh_index = 0, Unit.num_meshes(unit) - 1 do
+            local mesh = Unit.mesh(unit, mesh_index)
+
+            if Mesh.has_material(mesh, slot_name) then
+                local material = Mesh.material(mesh, slot_name)
+
+                material_slots = material_slots + 1
+                texture_assignments = texture_assignments +
+                    (set_texture(material, DONOR_TEXTURE_CHANNELS.color, textures[1]) and 1 or 0)
+                texture_assignments = texture_assignments +
+                    (set_texture(material, DONOR_TEXTURE_CHANNELS.normal, textures[2]) and 1 or 0)
+                texture_assignments = texture_assignments +
+                    (set_texture(material, DONOR_TEXTURE_CHANNELS.response, textures[3]) and 1 or 0)
+            end
+        end
+    end
+
+    extension._pusfume_donor_material_applied = material_slots > 0
+
+    mod:info(
+        "[pusfume] Globadier donor material applied slots=%d textures=%d material=%s",
+        material_slots,
+        texture_assignments,
+        config.donor_material)
+
+    return extension._pusfume_donor_material_applied
+end
 
 local function articulation_vector(unit, hips_node, hand_node)
     local hips_position = Unit.world_position(unit, Unit.node(unit, hips_node))
@@ -127,6 +265,9 @@ local function initialize_link_probe(extension, unit, config)
     if not mesh then
         return
     end
+
+    extension._pusfume_native_config = config
+    apply_donor_material(extension, config)
 
     local has_state_machine = Unit.has_animation_state_machine(mesh)
     local has_enable_event = has_state_machine and Unit.has_animation_event(mesh, "enable")
@@ -293,6 +434,10 @@ local function install_probe_hook()
     end
 
     mod:hook_safe(PlayerUnitCosmeticExtension, "update", function(extension, unit, dummy_input, dt, context, t)
+        if extension._pusfume_native_config then
+            apply_donor_material(extension, extension._pusfume_native_config)
+        end
+
         apply_manual_clip_probe(extension, t)
         apply_manual_skin_probe(extension, t)
         sample_link_probe(extension, unit, t)
@@ -368,6 +513,18 @@ end
 
 function M.status()
     return state
+end
+
+function M.shutdown(config)
+    if state.donor_package_requested and Managers.package then
+        Managers.package:unload(config.donor_package, DONOR_PACKAGE_REFERENCE)
+        state.donor_package_requested = false
+        state.donor_package_loaded = false
+        state.donor_package_error_logged = false
+        state.donor_material_error_logged = false
+        state.donor_texture_errors = {}
+        mod:info("[pusfume] Released Globadier donor package")
+    end
 end
 
 return M
