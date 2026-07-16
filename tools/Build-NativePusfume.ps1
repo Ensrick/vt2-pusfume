@@ -459,18 +459,19 @@ Write-NativeMaterial "pusfume_whiskers" "pusfume_whiskers_df" "pusfume_whiskers_
 # precedence - the live test distinguishes the two outcomes: deforming body
 # with atlas colors means the game parent won; rigid body with atlas colors
 # means the bundled stub shadowed it.
-$donorParentSourceDir = Join-Path $stageMod ("units\beings\player\dark_pact_skins\" +
-    "skaven_wind_globadier\skin_1001\third_person")
-New-Item -ItemType Directory -Path $donorParentSourceDir -Force | Out-Null
-$stubTemplate = Get-Content -LiteralPath (Join-Path $repoRoot `
-    "tools\material_templates\character_skinned.material") -Raw
-$stubTemplate = $stubTemplate.Replace("__COLOR_MAP__", "textures/pusfume/pusfume_atlas_df")
-$stubTemplate = $stubTemplate.Replace("__NORMAL_MAP__", "textures/pusfume/pusfume_atlas_nm")
-$stubTemplate = $stubTemplate.Replace("__DETAIL_MAP__", "textures/pusfume/pusfume_atlas_s")
-$stubTemplate = $stubTemplate.Replace("__EMISSIVE_MAP__", "textures/pusfume/pusfume_atlas_df")
-$stubTemplate | Set-Content -LiteralPath (Join-Path $donorParentSourceDir "mtr_outfit.material") -Encoding utf8
+if ($ParentChildMaterial) {
+    $donorParentSourceDir = Join-Path $stageMod ("units\beings\player\dark_pact_skins\" +
+        "skaven_wind_globadier\skin_1001\third_person")
+    New-Item -ItemType Directory -Path $donorParentSourceDir -Force | Out-Null
+    $stubTemplate = Get-Content -LiteralPath (Join-Path $repoRoot `
+        "tools\material_templates\character_skinned.material") -Raw
+    $stubTemplate = $stubTemplate.Replace("__COLOR_MAP__", "textures/pusfume/pusfume_atlas_df")
+    $stubTemplate = $stubTemplate.Replace("__NORMAL_MAP__", "textures/pusfume/pusfume_atlas_nm")
+    $stubTemplate = $stubTemplate.Replace("__DETAIL_MAP__", "textures/pusfume/pusfume_atlas_s")
+    $stubTemplate = $stubTemplate.Replace("__EMISSIVE_MAP__", "textures/pusfume/pusfume_atlas_df")
+    $stubTemplate | Set-Content -LiteralPath (Join-Path $donorParentSourceDir "mtr_outfit.material") -Encoding utf8
 
-@'
+    @'
 parent_material = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/mtr_outfit"
 material_contexts = {
 	surface_material = ""
@@ -481,6 +482,7 @@ textures = {
 	texture_map_8bf37d8e = "textures/pusfume/pusfume_atlas_s"
 }
 '@ | Set-Content -LiteralPath (Join-Path $materialRoot "pusfume_outfit_child.material") -Encoding utf8
+}
 
 @'
 animation_state_machine = "units/pusfume/pusfume_3p"
