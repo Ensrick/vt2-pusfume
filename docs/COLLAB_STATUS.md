@@ -190,6 +190,16 @@ that itself loads mod-side.
 
 ## Status log (append entries, newest first)
 
+- 13:16 Claude: CORRECTED SPLICE SHIPPED - ManifestID 9003359564808119722,
+  workshop_log "Uploaded new content" 13:16:09. Payload byte-verified before
+  upload: offset 92 = C263ECB79A8DCEC0 (atlas df), offset 104 =
+  45FFAEEF53695A86 (donor's own black emissive, unpatched), offset 116 =
+  A4215592F6297E57 (atlas nm). TEST after a FULL Steam restart; the session
+  must log last_updated "7/16/2026 6:16:09 PM". Expect: deforming (proven on
+  this lane) with Janfon's diffuse and normal on the game shader and NO
+  whole-body glow. Remaining polish after that verdict is atlas content
+  (seams/regions) and an authored emissive for the eyes.
+
 - 13:2x Claude: GLOW ROOT-CAUSED and corrected candidate building. Track D
   verdict was deforming + all-glowy; channel statistics of the donor's own
   decoded maps (Pillow BC3/BC7) prove the slot semantics we inherited were
