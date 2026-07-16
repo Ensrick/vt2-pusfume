@@ -58,6 +58,13 @@ local function sample_link_probe(extension, unit, t)
     end
 
     local details = {}
+    local layer_time, layer_length = Unit.animation_layer_info(probe.mesh, 1)
+
+    details[#details + 1] = string.format(
+        "controller_time=%.4f/%.4f bone_mode=%s",
+        layer_time,
+        layer_length,
+        Unit.animation_bone_mode(probe.mesh))
 
     for _, link in ipairs(PROBE_LINKS) do
         local source_position = Unit.world_position(unit, Unit.node(unit, link.source))
@@ -97,11 +104,25 @@ local function initialize_link_probe(extension, unit, config)
 
     local has_state_machine = Unit.has_animation_state_machine(mesh)
     local has_enable_event = has_state_machine and Unit.has_animation_event(mesh, "enable")
+    local initial_bone_mode = Unit.animation_bone_mode(mesh)
+
+    Unit.set_animation_bone_mode(mesh, "transform")
+    Unit.set_bones_lod(mesh, 0)
+
+    if has_state_machine then
+        Unit.enable_animation_state_machine(mesh)
+
+        if has_enable_event then
+            Unit.animation_event(mesh, "enable")
+        end
+    end
 
     mod:info(
-        "[pusfume] Native animation controller state_machine=%s enable_event=%s",
+        "[pusfume] Native animation controller state_machine=%s enable_event=%s bone_mode=%s->%s",
         tostring(has_state_machine),
-        tostring(has_enable_event))
+        tostring(has_enable_event),
+        tostring(initial_bone_mode),
+        tostring(Unit.animation_bone_mode(mesh)))
 
     local initial = {}
 

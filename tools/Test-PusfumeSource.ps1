@@ -79,6 +79,10 @@ Test-Condition ($nativeText -match 'PlayerUnitCosmeticExtension' -and `
 Test-Condition ($nativeText -match 'Unit\.has_animation_state_machine\(mesh\)' -and `
     $nativeText -match 'Unit\.has_animation_event\(mesh, "enable"\)') `
     "native animation diagnostics" "runtime log verifies controller and enable event availability"
+Test-Condition ($nativeText -match 'Unit\.set_animation_bone_mode\(mesh, "transform"\)' -and `
+    $nativeText -match 'Unit\.set_bones_lod\(mesh, 0\)' -and `
+    $nativeText -match 'Unit\.animation_layer_info\(probe\.mesh, 1\)') `
+    "native animation evaluation" "runtime enforces deforming bone output and logs controller playhead"
 Test-Condition ($nativeText -match 'articulation source_delta=' -and `
     $nativeText -match 'initial_target_articulation') `
     "native animation diagnostics" "runtime probe distinguishes skeletal articulation from unit translation"
