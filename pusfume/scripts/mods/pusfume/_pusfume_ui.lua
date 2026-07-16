@@ -315,27 +315,57 @@ local function install_previewer_purity_hooks(registry, native)
 
     -- One hook covers every menu surface that previews a career through
     -- MenuWorldPreviewer (character selection AND the inventory hero view):
-    -- when the previewed career is Pusfume, spawn the preview-only skin whose
-    -- third_person IS the native unit, and flag the previewer so its weapon
-    -- and ammo units stay hidden.
+    -- when the previewed career is Pusfume, force the native skin instead of
+    -- the equipped donor Ranger skin (the inventory surface resolved the
+    -- equipped loadout skin and therefore spawned Bardin), and flag the
+    -- previewer so its weapon and ammo units stay hidden.
     mod:hook(MenuWorldPreviewer, "request_spawn_hero_unit", function(func, previewer,
             profile_name, career_index, state_character, callback, optional_scale,
             camera_move_duration, optional_skin, reset_camera)
-        local preview_skin = native.preview_skin_name()
-        local is_pusfume = preview_skin
+        local native_skin = native.native_skin_name()
+        local is_pusfume = native_skin
             and career_index == registry.find_career_index()
             and (profile_name == registry.PROFILE_NAME or profile_name == "bardin")
 
         if is_pusfume then
             previewer._pusfume_preview_active = true
-            optional_skin = preview_skin
-            mod:info("[pusfume] Menu previewer spawning native preview skin")
+            optional_skin = native_skin
+            mod:info("[pusfume] Menu previewer forcing the native Pusfume skin")
         else
             previewer._pusfume_preview_active = nil
         end
 
         return func(previewer, profile_name, career_index, state_character, callback,
             optional_scale, camera_move_duration, optional_skin, reset_camera)
+    end)
+
+    -- The previewer spawns the mesh attachment raw, so its packaged idle/walk
+    -- controller never starts by itself; mirror the gameplay activation.
+    mod:hook_safe(MenuWorldPreviewer, "_spawn_hero_unit", function(previewer)
+        if not previewer._pusfume_preview_active then
+            return
+        end
+
+        local mesh_unit = previewer.mesh_unit
+
+        if not mesh_unit or not Unit.alive(mesh_unit)
+                or not Unit.has_animation_state_machine(mesh_unit) then
+            return
+        end
+
+        Unit.set_animation_bone_mode(mesh_unit, "transform")
+        Unit.set_bones_lod(mesh_unit, 0)
+        Unit.enable_animation_state_machine(mesh_unit)
+
+        if Unit.has_animation_event(mesh_unit, "enable") then
+            Unit.animation_event(mesh_unit, "enable")
+        end
+
+        if Unit.has_animation_event(mesh_unit, "idle") then
+            Unit.animation_event(mesh_unit, "idle")
+        end
+
+        mod:info("[pusfume] Menu previewer native controller enabled")
     end)
 
     mod:hook_safe(MenuWorldPreviewer, "_update_units_visibility", function(previewer)

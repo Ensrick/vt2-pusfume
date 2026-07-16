@@ -192,12 +192,14 @@ Test-Condition ($nativeText -match 'Material\.set_texture\(material, channel, te
     $animatedFbxToolText -match 'remap_material_uvs_to_atlas' -and `
     $animatedFbxToolText -match 'shift_u = int\(anchor\.x // 1\)') `
     "per-mesh donor atlas" "atlas channels are set on every material by index so swapped donor instances are reached"
-Test-Condition ($nativeText -match 'third_person_attachment = nil' -and `
-    $nativeText -match 'function M\.preview_skin_name' -and `
+Test-Condition ($nativeText -match 'function M\.native_skin_name' -and `
+    $nativeText -notmatch 'third_person_attachment = nil' -and `
     $uiText -match 'MenuWorldPreviewer, "request_spawn_hero_unit"' -and `
     $uiText -match 'MenuWorldPreviewer, "_update_units_visibility"' -and `
-    $uiText -match 'optional_skin = preview_skin') `
-    "menu preview purity" "menu previewers spawn the pure native unit and keep donor weapons hidden"
+    $uiText -match 'MenuWorldPreviewer, "_spawn_hero_unit"' -and `
+    $uiText -match 'optional_skin = native_skin' -and `
+    $uiText -match 'Unit\.enable_animation_state_machine\(mesh_unit\)') `
+    "menu preview purity" "menu previewers force the native skin, hide donor weapons, and start the mesh controller"
 Test-Condition ($nativeConfigText -match 'hide_donor_weapons\s*=\s*false' -and `
     $nativeBuildText -match 'hide_donor_weapons\s*=\s*true' -and `
     $nativeText -match 'function hide_donor_weapons' -and `

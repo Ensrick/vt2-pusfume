@@ -58,8 +58,11 @@ request rather than in release notes.
 - Stopped `/pusfume_preflight` from failing before the first spawn when the
   donor material is simply not loaded yet.
 - Made every menu previewer (character selection and the inventory hero view)
-  spawn a preview-only skin whose character IS the native Pusfume unit, ending
-  the Bardin-underneath rendering, and kept previewer weapon units hidden.
+  force the native Pusfume skin instead of the equipped donor Ranger skin,
+  hid previewer weapon units, and started the mesh controller after preview
+  spawn so the idle plays in menus. An earlier preview-only skin that removed
+  `third_person_attachment` crashed `retrieve_skin_packages_for_preview` and
+  was replaced by this approach.
 - Reached the swapped donor material instances by setting atlas channels on
   every mesh material by index; name-keyed lookups were landing on orphaned
   pre-swap materials.

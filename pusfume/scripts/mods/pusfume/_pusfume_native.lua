@@ -516,21 +516,7 @@ local function register_cosmetic(registry, config)
         attachment_node_linking = attachment_node_linking,
     }
     Cosmetics[config.skin_name] = skin
-
-    -- Menu previewers spawn skin.third_person as the visible character, which
-    -- in the donor clone is Bardin's mesh; that is why hero select and the
-    -- inventory preview showed Ranger Veteran under or instead of Pusfume. The
-    -- preview-only skin makes the previewers spawn the Pusfume unit itself
-    -- (own skeleton, controller, and compiled atlas materials) with no donor
-    -- mesh and no bridge. Gameplay keeps the attachment-based skin above.
-    local preview_skin = deep_clone(skin)
-
-    preview_skin.third_person = config.third_person_unit
-    preview_skin.third_person_husk = config.third_person_unit
-    preview_skin.third_person_attachment = nil
-    state.preview_skin_name = config.skin_name .. "_preview"
-    Cosmetics[state.preview_skin_name] = preview_skin
-
+    state.native_skin_name = config.skin_name
     registry.set_native_skin(config.skin_name)
     state.cosmetic_registered = true
 
@@ -652,8 +638,8 @@ function M.preview_enabled()
     return state.cosmetic_registered and state.hero_preview_enabled
 end
 
-function M.preview_skin_name()
-    return state.cosmetic_registered and state.preview_skin_name or nil
+function M.native_skin_name()
+    return state.cosmetic_registered and state.native_skin_name or nil
 end
 
 function M.enabled()
