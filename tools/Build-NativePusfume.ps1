@@ -586,6 +586,41 @@ if (-not (Test-Path -LiteralPath $modFile -PathType Leaf)) {
     throw "SDK reported success but did not produce $modFile"
 }
 
+if ($ParentChildMaterial) {
+    # The compiled stub parent rides into a bundle at the game's resource path
+    # and shadows the real mtr_outfit (2026-07-16: black rigid body). Rename
+    # its identity to an unused hash so the child material's parent reference
+    # resolves against the game's copy. Exactly three pairs exist: the bundle
+    # index, the file data header, and the compiled package listing.
+    $stripTool = Join-Path $repoRoot "tools\strip_bundle_resource.py"
+    $donorParentPath = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/mtr_outfit"
+    $totalStripped = 0
+
+    foreach ($bundleFile in (Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)) {
+        $dryOutput = & py $stripTool $bundleFile.FullName --type material `
+            --old $donorParentPath --new "units/pusfume/retired_stub_parent" --dry-run 2>&1
+        $found = 0
+        if ($dryOutput -join "`n" -match '(\d+) occurrence') {
+            $found = [int]$Matches[1]
+        }
+
+        if ($found -gt 0) {
+            & py $stripTool $bundleFile.FullName --type material `
+                --old $donorParentPath --new "units/pusfume/retired_stub_parent" --expect $found
+            if ($LASTEXITCODE -ne 0) {
+                throw "Stub strip failed on $($bundleFile.Name)"
+            }
+            $totalStripped += $found
+        }
+    }
+
+    if ($totalStripped -ne 3) {
+        throw "Expected to strip exactly 3 stub identity pairs across bundles, stripped $totalStripped"
+    }
+
+    Write-Host "Stub parent identity stripped: $totalStripped pair(s) renamed to units/pusfume/retired_stub_parent"
+}
+
 if (-not $NoDeploy) {
     $resolvedWorkshop = [IO.Path]::GetFullPath($WorkshopPath)
     if (-not $resolvedWorkshop.EndsWith("552500\3764954245", [StringComparison]::OrdinalIgnoreCase)) {

@@ -91,5 +91,26 @@ gone, child bytes untouched). Files claimed: `tools/strip_bundle_resource.py`,
 
 ## Status log (append entries, newest first)
 
+- 02:2x Claude: TRACK A COMPLETE (offline). `tools/strip_bundle_resource.py`
+  renames the stub's (type,name) identity inside the built bundle (index +
+  file header + package listing = exactly 3 pairs, verified on the real
+  bundle). The rewritten bundle parses cleanly in the independent Rust
+  unpacker; the stub id is gone; the compiled child
+  (`materials/pusfume/pusfume_outfit_child` = 34482D9DD0D8E385, 400 bytes)
+  still carries parent hash 90BDF3BAC6F81BA8 + atlas texture ids.
+  Build integration: `Build-NativePusfume.ps1 -ParentChildMaterial` now
+  strips automatically post-compile and hard-fails unless exactly 3 pairs are
+  renamed. 4 new unit tests. THE MORNING TEST CANDIDATE: run
+  `.\tools\Build-NativePusfume.ps1 -HeroPreview -ParentChildMaterial` then
+  upload; expected result is the full win (character shader + Pusfume atlas
+  textures + deformation everywhere the donor apply runs). Workshop item
+  deliberately left on the known-good donor-swap build
+  (ManifestID 189582177882697334).
+- 02:10 Claude: found and fixed a serious regression: the stub/child were
+  generated UNCONDITIONALLY, so the "known-good revert" 1125d4f still bundled
+  the shadowing stub - its donor swap resolved the stub (standard shader,
+  rigid). 1cdcc7b makes generation conditional; clean build re-uploaded
+  (ManifestID 189582177882697334) and package verified stub-free. NOTE for
+  Sol: any build made from 1125d4f..1c087d1 is silently broken the same way.
 - 02:05 Claude: shipped 1125d4f (revert to donor swap + menu preview shader).
   Starting Track A.

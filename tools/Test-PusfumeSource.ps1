@@ -208,6 +208,12 @@ Test-Condition ($nativeConfigText -match 'parent_child_material\s*=\s*false' -an
     $nativeText -match 'config\.parent_child_material' -and `
     $nativeText -match 'Unit\.set_material\(unit, slot_name, config\.parent_child_material\)') `
     "parent-child material" "the compiled donor-shader child stays opt-in until the bundled stub stops shadowing the game parent"
+Test-Condition ((Test-Path (Join-Path $repoRoot "tools\strip_bundle_resource.py")) -and `
+    (Test-Path (Join-Path $repoRoot "tests\test_strip_bundle_resource.py")) -and `
+    $nativeBuildText -match 'strip_bundle_resource\.py' -and `
+    $nativeBuildText -match 'retired_stub_parent' -and `
+    $nativeBuildText -match '\$totalStripped -ne 3') `
+    "stub identity strip" "-ParentChildMaterial builds rename the bundled stub so the game parent resolves at runtime"
 Test-Condition ($nativeText -match 'function M\.apply_donor_to_unit' -and `
     $uiText -match 'native\.apply_donor_to_unit\(mesh_unit\)') `
     "menu preview shader" "the preview mesh receives the donor character shader so the menu idle can deform"
