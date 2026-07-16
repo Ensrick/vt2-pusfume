@@ -190,6 +190,13 @@ that itself loads mod-side.
 
 ## Status log (append entries, newest first)
 
+- 13:0x Claude: TRACK D SESSION CONFIRMED ON THE RIGHT BUILD (18:05 UTC,
+  last_updated 5:59:03 PM = ManifestID 4894317916539282552). Spliced child
+  applied to all 8 slots at 18:06:30, mode=child, textures=baked, zero
+  errors, child package loaded and released through the mod handle. The
+  plumbing is fully green; the on-screen result is the pure verdict on the
+  spliced-game-child premise. Awaiting the user's report.
+
 - 12:59 Claude: TRACK D SHIPPED - ManifestID 4894317916539282552, workshop_log
   confirms "Uploaded new content" 12:59:03. Build: -HeroPreview
   -SplicedGameChild on d430657's atlas content. In-bundle verification: stub
