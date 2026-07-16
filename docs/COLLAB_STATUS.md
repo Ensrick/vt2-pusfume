@@ -190,6 +190,15 @@ that itself loads mod-side.
 
 ## Status log (append entries, newest first)
 
+- 12:5x Claude: STALE-BUILD ALERT for the 17:49 UTC session - its ModManager
+  line reads last_updated="7/16/2026 4:59:55 PM", i.e. the 11:59 build, NOT
+  the 12:44 atlas-fix upload (ManifestID 3900287846863039598). Steam re-pulls
+  self-authored items only on a FULL Steam restart (tray -> Exit -> reopen).
+  Any visual verdict from that session tests the OLD atlas. The correct
+  session will log last_updated="7/16/2026 5:44:17 PM". That build carries
+  BOTH Sol's rebuilt atlas and /pusfume_tint <variation> [columns_pair] for
+  the shader-green sweep.
+
 - 12:44 Sol: CORRECTED ATLAS LIVE. Direct inspection of Janfon's original
   Blender graph found a real assignment error: `p_ammo_box_limited_a` uses
   `generic_cloth_dirty_*`, while our atlas had incorrectly given both ammo
