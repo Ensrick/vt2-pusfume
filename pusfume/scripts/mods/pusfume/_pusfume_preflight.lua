@@ -98,7 +98,8 @@ function M.collect(registry, career_index, backend, compat, ui, native)
     for _, buff_name in ipairs(custom_buffs) do
         local template = BuffTemplates and BuffTemplates[buff_name]
 
-        if not template or type(template.buffs) ~= "table"
+        if not template or type(template.buffs) ~= "table" or not template.buffs[1]
+                or template.buffs[1].name ~= buff_name
                 or not NetworkLookup or not rawget(NetworkLookup.buff_templates, buff_name) then
             custom_buffs_ready = false
             break
@@ -106,8 +107,8 @@ function M.collect(registry, career_index, backend, compat, ui, native)
     end
 
     add(checks, "career buff registry", custom_buffs_ready and "PASS" or "FAIL",
-        custom_buffs_ready and "four templates have synchronized native lookup IDs"
-            or "a custom template or network lookup is missing")
+        custom_buffs_ready and "four normalized templates have synchronized native lookup IDs"
+            or "a custom template name or network lookup is missing")
 
     local challenge_lookup_ready = NetworkLookup and NetworkLookup.challenges
         and NetworkLookup.challenges.pusfume_scheme_kill_skaven

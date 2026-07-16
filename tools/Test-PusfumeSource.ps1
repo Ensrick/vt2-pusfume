@@ -371,12 +371,13 @@ Test-Condition ($gameplayText -notmatch 'mod:add_proc_function' -and `
     $gameplayText -notmatch 'mod:add_buff_template' -and `
     $gameplayText -match 'ProcFunctions\.pusfume_scaredy_rat_proc\s*=\s*function' -and `
     $gameplayText -match 'BuffTemplates\[name\]\s*=\s*\{' -and `
+    $gameplayText -match 'definition\.name\s*=\s*name' -and `
     $gameplayText -match 'append_lookup\(NetworkLookup\.buff_templates, name\)' -and `
     $gameplayText -match 'rawget\(lookup, name\)' -and `
     $gameplayText -match 'rawset\(lookup, name, index\)' -and `
     $preflightText -match 'add\(checks, "Scaredy-rat proc"' -and `
     $preflightText -match 'add\(checks, "career buff registry"') `
-    "career buff APIs" "uses synchronized VT2 registries instead of nonexistent VMF helpers"
+    "career buff APIs" "normalizes late templates and uses synchronized VT2 registries"
 Test-Condition ($gameplayText -match 'stat_buff\s*=\s*"power_level_skaven"' -and `
     $gameplayText -match 'multiplier\s*=\s*0\.05' -and `
     $gameplayText -match 'max_stacks\s*=\s*1') `

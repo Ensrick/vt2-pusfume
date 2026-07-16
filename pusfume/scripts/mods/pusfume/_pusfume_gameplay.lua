@@ -62,6 +62,10 @@ end
 
 
 local function register_buff_template(name, definition)
+    -- BuffUtils.copy_talent_buff_names performs this during vanilla boot.
+    -- Runtime-added templates must reproduce it before BuffExtension indexes
+    -- stacking state by sub-buff name.
+    definition.name = name
     BuffTemplates[name] = {
         buffs = {
             definition,

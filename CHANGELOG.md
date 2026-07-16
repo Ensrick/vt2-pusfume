@@ -12,6 +12,9 @@ request rather than in release notes.
 
 ### Fixed
 
+- Fixed v0.6.3-dev omitting vanilla's generated sub-buff `name` metadata from
+  runtime-registered templates, which crashed when Insider Knowledge first
+  added its team stat buff after spawning Pusfume.
 - Fixed v0.6.2-dev sending a localization key instead of Pusfume's internal
   career token to `ProfileRequester`, which produced a nil career index when
   confirming the hero selection.
