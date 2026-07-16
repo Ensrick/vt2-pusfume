@@ -255,6 +255,7 @@ function Write-NativeTexture {
     } else {
         "false"
     }
+    $cutAlphaEnabled = if ($Name -eq "pusfume_whiskers_df") { "true" } else { "false" }
 
     @"
 common = {
@@ -265,7 +266,7 @@ common = {
         apply_processing = true
         category = ""
         cut_alpha_threshold = 0.5
-        enable_cut_alpha_threshold = false
+        enable_cut_alpha_threshold = $cutAlphaEnabled
         format = "DXT5"
         mipmap_filter = "kaiser"
         mipmap_filter_wrap_mode = "mirror"

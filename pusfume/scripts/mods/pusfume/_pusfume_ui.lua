@@ -276,6 +276,24 @@ local function track_selection(registry, profile_index, career_index)
     return selected
 end
 
+local function sync_pusfume_identity(window, registry, profile_index, career_index)
+    if not is_pusfume_selection(window, registry, profile_index, career_index) or not window._set_hero_info then
+        return
+    end
+
+    profile_index = profile_index or window._selected_profile_index
+    local profile = profile_index and SPProfiles[profile_index]
+    local hero_name = profile and profile.display_name
+    local hero_attributes = Managers.backend and Managers.backend:get_interface("hero_attributes")
+    local experience = hero_attributes and hero_name and hero_attributes:get(hero_name, "experience") or 0
+    local level = ExperienceSettings.get_level(experience)
+
+    window:_set_hero_info(
+        mod:localize("pusfume_character_name"),
+        mod:localize("pusfume_career_name"),
+        level)
+end
+
 local function install_modern_hooks(registry)
     if state.modern_hook_installed or not HeroWindowCharacterSelectionConsole then
         return
@@ -287,6 +305,7 @@ local function install_modern_hooks(registry)
 
     mod:hook_safe(HeroWindowCharacterSelectionConsole, "_select_hero", function(window, profile_index, career_index)
         sync_preview_visibility(window, track_selection(registry, profile_index, career_index))
+        sync_pusfume_identity(window, registry, profile_index, career_index)
     end)
 
     state.modern_hook_installed = true
@@ -303,6 +322,7 @@ local function install_legacy_hooks(registry)
 
     mod:hook_safe(CharacterSelectionStateCharacter, "_select_hero", function(window, profile_index, career_index)
         sync_preview_visibility(window, track_selection(registry, profile_index, career_index))
+        sync_pusfume_identity(window, registry, profile_index, career_index)
     end)
 
     state.legacy_hook_installed = true

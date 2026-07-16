@@ -31,6 +31,7 @@ $assetsPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_assets.
 $nativePath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_native.lua"
 $nativeConfigPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_native_config.lua"
 $uiPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_ui.lua"
+$gameplayPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_gameplay.lua"
 $dataPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\pusfume_data.lua"
 $packagePath = Join-Path $repoRoot "pusfume\resource_packages\pusfume\pusfume.package"
 $nativeUnitPackagePath = Join-Path $repoRoot "pusfume\units\pusfume\pusfume_3p.package"
@@ -56,6 +57,7 @@ $assetsText = Get-Content -LiteralPath $assetsPath -Raw
 $nativeText = Get-Content -LiteralPath $nativePath -Raw
 $nativeConfigText = Get-Content -LiteralPath $nativeConfigPath -Raw
 $uiText = Get-Content -LiteralPath $uiPath -Raw
+$gameplayText = Get-Content -LiteralPath $gameplayPath -Raw
 $dataText = Get-Content -LiteralPath $dataPath -Raw
 $packageText = Get-Content -LiteralPath $packagePath -Raw
 $nativeUnitPackageText = Get-Content -LiteralPath $nativeUnitPackagePath -Raw
@@ -339,6 +341,39 @@ Test-Condition ($registryText -match 'function M\.refresh_career_color\(\)' -and
     "career color" "Pusfume owns a distinct donor-derived color table"
 Test-Condition ($mainText -match 'registry\.refresh_career_color\(\)') `
     "career color" "registration is refreshed across game-state changes"
+Test-Condition ($registryText -match 'career\.display_name\s*=\s*"pusfume_career_name"' -and `
+    $registryText -match 'career\.activated_ability\s*=\s*ActivatedAbilitySettings\.pusfume' -and `
+    $registryText -match 'career\.passive_ability\s*=\s*PassiveAbilitySettings\.pusfume' -and `
+    $uiText -match 'mod:localize\("pusfume_character_name"\)' -and `
+    $uiText -match 'mod:localize\("pusfume_career_name"\)') `
+    "career identity" "Pusfume owns localized selector names and gameplay settings"
+Test-Condition ($mainText -match 'gameplay\.install\(\)' -and `
+    $gameplayText -match 'CareerAbilityPusfumeIngenuity' -and `
+    $gameplayText -match 'inventory_upgrades=guarded') `
+    "Skaven Ingenuity" "donor smoke bomb is replaced by an explicitly guarded station scaffold"
+Test-Condition ($preflightText -match 'add\(checks, "career kit"' -and `
+    $preflightText -match 'add\(checks, "Great Scheme network lookups"') `
+    "career-kit preflight" "live diagnostics validate custom ability and quest registration"
+Test-Condition ($gameplayText -match 'poison_damage_types' -and `
+    $gameplayText -match 'skaven_poison_wind_globadier\s*=\s*true' -and `
+    $gameplayText -match 'PlayerUnitHealthExtension, "add_damage"') `
+    "Hell Pit Native" "poison immunity is career-scoped before damage procs"
+Test-Condition ($gameplayText -match 'duration\s*=\s*3' -and `
+    $gameplayText -match 'multiplier\s*=\s*1\.2' -and `
+    $gameplayText -match 'path_to_movement_setting_to_modify\s*=\s*\{ "move_speed" \}') `
+    "Scaredy-rat" "damage grants 20 percent move speed for three seconds"
+Test-Condition ($gameplayText -match 'stat_buff\s*=\s*"power_level_skaven"' -and `
+    $gameplayText -match 'multiplier\s*=\s*0\.05' -and `
+    $gameplayText -match 'max_stacks\s*=\s*1') `
+    "Insider Knowledge" "team Skaven damage uses the stock synchronized stat at five percent"
+Test-Condition ($gameplayText -match 'append_lookup\(NetworkLookup\.challenges' -and `
+    $gameplayText -match 'append_lookup\(NetworkLookup\.challenge_rewards' -and `
+    $gameplayText -match 'append_lookup\(NetworkLookup\.challenge_categories' -and `
+    $gameplayText -match 'breed\.race == "skaven"') `
+    "The Great Scheme" "placeholder Skaven quests have deterministic peer lookups"
+Test-Condition ($nativeBuildText -match '\$Name -eq "pusfume_whiskers_df"' -and `
+    $nativeBuildText -match 'enable_cut_alpha_threshold = \$cutAlphaEnabled') `
+    "whisker alpha" "only the dedicated whisker diffuse enables the legacy 0.5 alpha cut"
 Test-Condition ($preflightText -match 'add\(checks, "career color"') `
     "career color" "runtime preflight validates the player-list contract"
 Test-Condition ($backendText -match 'mod:hook\(BackendUtils, "get_loadout_item"') `

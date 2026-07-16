@@ -12,6 +12,14 @@ request rather than in release notes.
 
 ### Added
 
+- Added Pusfume's localized `Under-Empire Reject` career identity, `The Great
+  Scheme` placeholder Skaven quests, and the first functional versions of Hell
+  Pit Native, Scaredy-rat, and Insider Knowledge.
+- Replaced the Ranger Veteran smoke-bomb adapter with a guarded Skaven
+  Ingenuity station scaffold and `/pusfume_gameplay` diagnostics. Inventory
+  conversion remains intentionally disabled until its network contract and
+  custom gas-item definitions are complete.
+
 - Registered Pusfume as Bardin's fifth synchronized career with Ranger Veteran
   backend, talent, ability, bot-takeover, and loadout adapters.
 - Added a full-size Pusfume selector card in the unused virtual row above
@@ -42,6 +50,9 @@ request rather than in release notes.
   hysteresis. `/pusfume_preflight` verifies the compiled idle/walk events.
 
 ### Changed
+
+- Enabled a 0.5 alpha cut only for the dedicated whisker diffuse texture,
+  matching the legacy Pusfume recipe without modifying Janfon's source PNG.
 
 - Rebuilt the native atlas from Janfon's original Blender material graph: ammo
   slot A now uses `generic_cloth_dirty_*`, slot B retains

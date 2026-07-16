@@ -74,8 +74,21 @@ function M.collect(registry, career_index, backend, compat, ui, native)
 
     local talent_trees = career and TalentTrees and TalentTrees[career.profile_name]
     local talent_tree = talent_trees and talent_trees[career.talent_tree_index]
-    local has_gameplay = career and career.activated_ability and career.passive_ability and talent_tree
-    add(checks, "gameplay donor", has_gameplay and "PASS" or "FAIL", "ability, passive, and talent tree")
+    local active_ability = career and career.activated_ability and career.activated_ability[1]
+    local passive_ability = career and career.passive_ability
+    local has_gameplay = active_ability and active_ability.ability_class == CareerAbilityPusfumeIngenuity
+        and passive_ability == PassiveAbilitySettings.pusfume and talent_tree
+    add(checks, "career kit", has_gameplay and "PASS" or "FAIL",
+        "Skaven Ingenuity, The Great Scheme, perks, and donor talent tree")
+
+    local challenge_lookup_ready = NetworkLookup and NetworkLookup.challenges
+        and NetworkLookup.challenges.pusfume_scheme_kill_skaven
+        and NetworkLookup.challenges.pusfume_scheme_kill_skaven_specials
+        and NetworkLookup.challenge_rewards.pusfume_scheme_reward_strength
+        and NetworkLookup.challenge_rewards.pusfume_scheme_reward_speed
+        and NetworkLookup.challenge_categories.pusfume_scheme
+    add(checks, "Great Scheme network lookups", challenge_lookup_ready and "PASS" or "FAIL",
+        "challenge, reward, and category identifiers are registered")
 
     local permissions = registry.item_permission_status()
     local permission_status = permissions.eligible > 0 and permissions.missing == 0 and "PASS" or "FAIL"
