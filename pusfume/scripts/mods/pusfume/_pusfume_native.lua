@@ -14,6 +14,7 @@ local state = {
     donor_package_error_logged = false,
     child_package_requested = false,
     child_package_loaded = false,
+    child_package_error_logged = false,
     donor_material_error_logged = false,
     donor_material_applied = false,
     donor_texture_errors = {},
@@ -99,19 +100,23 @@ local function ensure_child_package(config)
         return true
     end
 
-    if not state.donor_package_loaded or not Managers.package then
+    if not state.donor_package_loaded or not mod.load_package or not mod.package_status then
         return false
     end
 
     if not state.child_package_requested then
         state.child_package_requested = true
-        Managers.package:load(config.parent_child_package, DONOR_PACKAGE_REFERENCE)
+        mod:load_package(config.parent_child_package, nil, true)
         mod:info("[pusfume] Requested native child material package: %s", config.parent_child_package)
     end
 
-    state.child_package_loaded = Managers.package:has_loaded(
-        config.parent_child_package,
-        DONOR_PACKAGE_REFERENCE)
+    state.child_package_loaded = mod:package_status(config.parent_child_package) == "loaded"
+
+    if not state.child_package_loaded and not state.child_package_error_logged then
+        state.child_package_error_logged = true
+        mod:error("[pusfume] Native child material package did not load through the mod handle: %s",
+            config.parent_child_package)
+    end
 
     return state.child_package_loaded
 end
@@ -754,11 +759,15 @@ function M.animation_status()
 end
 
 function M.shutdown(config)
-    if state.child_package_requested and Managers.package then
-        Managers.package:unload(config.parent_child_package, DONOR_PACKAGE_REFERENCE)
+    if state.child_package_requested then
+        if mod.package_status and mod:package_status(config.parent_child_package) == "loaded" then
+            mod:unload_package(config.parent_child_package)
+            mod:info("[pusfume] Released native child material package")
+        end
+
         state.child_package_requested = false
         state.child_package_loaded = false
-        mod:info("[pusfume] Released native child material package")
+        state.child_package_error_logged = false
     end
 
     if state.donor_package_requested and Managers.package then

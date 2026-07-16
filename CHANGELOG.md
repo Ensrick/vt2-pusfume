@@ -78,9 +78,9 @@ request rather than in release notes.
   `-ParentChildMaterial` builds to strip the stub parent's bundled identity
   (`tools/strip_bundle_resource.py`) so the child's parent reference resolves
   against the game's copy instead of the shadowing stub.
-- Removed the invalid `Application.can_get` preflight for the standalone child
-  package. The game now asks `PackageManager` to open the installed hash-named
-  bundle directly, allowing the compiled child material to reach its apply step.
+- Routed the standalone child package through VMF's mod-handle package API
+  after the donor parent loads. This avoids the fatal `Application.resource_package`
+  lookup used by the global package manager for game-owned bundles.
 - Applied the donor character shader to the menu preview mesh; the preview
   spawned with skinning-incapable compiled materials, which is why the menu
   model never animated even with its controller running.

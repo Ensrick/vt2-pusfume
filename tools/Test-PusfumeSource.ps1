@@ -207,10 +207,14 @@ Test-Condition ($nativeConfigText -match 'parent_child_material\s*=\s*false' -an
     $nativeBuildText -match 'native_child\.package' -and `
     $nativeBuildText -match 'parent_material = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/mtr_outfit"' -and `
     $nativeText -match 'function ensure_child_package' -and `
-    $nativeText -match 'not state\.donor_package_loaded or not Managers\.package' -and `
+    $nativeText -match 'not state\.donor_package_loaded or not mod\.load_package or not mod\.package_status' -and `
     $nativeText -notmatch 'can_get\("package", config\.parent_child_package\)' -and `
+    $nativeText -match 'mod:load_package\(config\.parent_child_package, nil, true\)' -and `
+    $nativeText -match 'mod:package_status\(config\.parent_child_package\) == "loaded"' -and `
+    $nativeText -match 'Native child material package did not load through the mod handle' -and `
+    $nativeText -match 'mod:unload_package\(config\.parent_child_package\)' -and `
     $nativeText -match 'Unit\.set_material\(unit, slot_name, config\.parent_child_material\)') `
-    "parent-child material" "the standalone donor-shader child bundle loads directly after the donor parent"
+    "parent-child material" "VMF resolves the standalone child through the mod handle after loading the donor parent"
 Test-Condition ((Test-Path (Join-Path $repoRoot "tools\strip_bundle_resource.py")) -and `
     (Test-Path (Join-Path $repoRoot "tests\test_strip_bundle_resource.py")) -and `
     $nativeBuildText -match 'strip_bundle_resource\.py' -and `
