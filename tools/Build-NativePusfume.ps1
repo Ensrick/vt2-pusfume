@@ -2,6 +2,7 @@ param(
     [string]$InputBsi = ".build\compiler-fixture\pusfume_bsi_probe\units\pusfume_probe\pusfume_3p.bsi",
     [string]$ModelFbx = ".build\pusfume_handoff\pusfume_3p.fbx",
     [string]$AnimationFbx = ".build\pusfume_handoff\pusfume_3p_walk.fbx",
+    [string]$BlenderExe = "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe",
     [string]$TextureSource = ".build\pusfume_handoff\textures conv",
     [string]$WorkshopPath = "C:\Program Files (x86)\Steam\steamapps\workshop\content\552500\3764954245",
     [switch]$HeroPreview,
@@ -43,6 +44,25 @@ $animationFbxPath = if ([IO.Path]::IsPathRooted($AnimationFbx)) {
 if ((Get-Item -LiteralPath $animationFbxPath).Length -lt 1024) {
     throw "The native animation FBX is unexpectedly small: $animationFbxPath"
 }
+$animatedModelFbxPath = $modelFbxPath
+if ($useFbxDcc) {
+    $blenderExePath = (Resolve-Path $BlenderExe).Path
+    $animatedFbxTool = Join-Path $repoRoot "tools\prepare_animated_pusfume_fbx.py"
+    $generatedRoot = Join-Path $repoRoot ".build\generated-native"
+    $animatedModelFbxPath = Join-Path $generatedRoot "pusfume_3p_animated.fbx"
+    New-Item -ItemType Directory -Path $generatedRoot -Force | Out-Null
+
+    & $blenderExePath --background --factory-startup --disable-autoexec `
+        --python $animatedFbxTool -- `
+        $modelFbxPath $animationFbxPath $animatedModelFbxPath
+    if ($LASTEXITCODE -ne 0) {
+        throw "Animated Pusfume FBX preparation failed with exit code $LASTEXITCODE"
+    }
+    if (-not (Test-Path -LiteralPath $animatedModelFbxPath -PathType Leaf) -or `
+            (Get-Item -LiteralPath $animatedModelFbxPath).Length -lt 1024) {
+        throw "Animated Pusfume FBX preparation produced no usable output"
+    }
+}
 $stageRoot = Join-Path $repoRoot ".build\native-workshop"
 $stageMod = Join-Path $stageRoot "pusfume"
 $vmbPath = (Resolve-Path (Join-Path $repoRoot "..\vmb\vmb.js")).Path
@@ -75,7 +95,8 @@ $animationRoot = Join-Path $unitRoot "anims"
 New-Item -ItemType Directory -Path $unitRoot -Force | Out-Null
 New-Item -ItemType Directory -Path $animationRoot -Force | Out-Null
 if ($useFbxDcc) {
-    Copy-Item -LiteralPath $modelFbxPath -Destination (Join-Path $unitRoot "pusfume_3p.fbx") -Force
+    Copy-Item -LiteralPath $animatedModelFbxPath `
+        -Destination (Join-Path $unitRoot "pusfume_3p.fbx") -Force
     @'
 _data_root_version = 1
 _id = "0fb82f3d-675b-45bf-923e-b9ba33550f64"
@@ -388,7 +409,7 @@ if (-not $NoDeploy) {
     Write-Host "Removed $($staleBundles.Count) obsolete native Pusfume bundles"
 }
 
-$nativeSource = if ($useFbxDcc) { $modelFbxPath } else { $inputPath }
+$nativeSource = if ($useFbxDcc) { $animatedModelFbxPath } else { $inputPath }
 $nativeSourceKind = if ($useFbxDcc) { "FBX/DCC" } else { "BSI fallback" }
 $nativeSourceSize = (Get-Item -LiteralPath $nativeSource).Length
 $bundles = @(Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)

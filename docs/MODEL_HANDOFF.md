@@ -12,7 +12,7 @@ The third-person FBX contains:
 - 77 vertex groups with no unweighted vertices.
 - 24 vertices with five influences; `tools/prepare_pusfume_fbx.py` reduces these to the VT2 limit of four and normalizes the result.
 
-The walk FBX contains three near-duplicate actions on the same 82-bone rig. Each action covers frames 1 through 25 at 30 FPS and closes cleanly at the loop boundary. Keep one canonical action in future exports. It is not required for the first game test because the playable base unit supplies locomotion animation.
+The walk FBX contains three near-duplicate actions on the same 82-bone rig. Each action covers frames 1 through 25 at 30 FPS and closes cleanly at the loop boundary. Keep one canonical action in future exports. The native build uses the action currently assigned to the imported walk armature and merges it into the skinned model before Stingray compilation.
 
 ## Runtime architecture
 
@@ -46,15 +46,15 @@ The eye slots need a deliberate VT2 eye/emissive material rather than the import
 
 ## Compiler gate
 
-VT2's SDK does not compile the skinned FBX directly. A mesh unit needs both a text `.unit` descriptor and a skinned `.bsi` scene payload before the Stingray compiler can produce bundle resources.
+VT2's SDK batch compiler accepts a skinned FBX through a same-name `.dcc_asset` and text `.unit` descriptor. The supported DCC path is the default; the handwritten `.bsi` exporter remains an explicit diagnostic fallback.
 
 The repository now provides `tools/export_blender_bsi.py` as an account-free final hop. On the validated handoff, Blender 5.2 exports 24,318 triangles, nine material slots, 82 skeleton nodes, inverse bind matrices, and normalized four-influence streams. Fatshark's SDK compiler accepts the result and produces one native skin with 82 joint nodes, nine material bone sets, `HALF4` weights, and packed `UINT1` blend indices. The exporter also writes one rest-pose frame for every skeleton and mesh node plus a same-name `.bones` skeleton source.
 
-The `.bones` resource only identifies nodes controlled by an animation controller; it does not evaluate skin deformation by itself. The native build therefore compiles Janfon's baked `pusfume_3p_walk.fbx` through a same-name `.animation` recipe, packages a minimal same-path `.state_machine`, and points the unit at that controller. This mirrors the source dependency chain used by the original public Pusfume mod and gives VT2 an active animation mixer that can turn linked joint poses into skin matrices.
+The `.bones` resource only identifies nodes controlled by an animation controller; it does not evaluate skin deformation by itself. A static DCC model compiled 82 valid skin binds but no unit animation group, and remained rigid while Lua successfully advanced the separate clip. `tools/prepare_animated_pusfume_fbx.py` now merges Janfon's baked action onto the skinned model before DCC import and verifies deformation in Blender. The resulting unit preserves the 82 DCC binds and adds one activation group covering all 86 scene nodes. The native build still compiles `pusfume_3p_walk.fbx` through a same-name `.animation` recipe, packages a minimal same-path `.state_machine`, and points the unit at that controller.
 
 The mesh materials must also compile an embedded character-capable shader graph. In live testing, the generic `core/stingray_renderer/shader_import/standard` parent rendered all textures correctly while the 82 driven bones moved, but left the skin rigid. The native builder now generates each Pusfume material from the same embedded standard-base graph proven on Tweaker: Cosmetics' rigged Laurel plume, then substitutes only Pusfume's texture and response values. Keep this distinction covered by the source gate: a visually correct static material is not a valid character material.
 
-Use `tools/Test-BsiPipeline.ps1` to run export and SDK compilation together. Maya is no longer required for Pusfume's geometry or skin conversion. A Maya trial can still serve as a reference exporter if later animation or edge-case parity work needs an independent comparison.
+Use `tools/Build-NativePusfume.ps1 -NoDeploy` to run the animated DCC preparation and SDK compilation together. Use `tools/Test-BsiPipeline.ps1` only to reproduce the handwritten BSI fallback. Maya is no longer required for Pusfume's geometry, skin, or baked-action merge. A Maya trial can still serve as a reference exporter if later animation or edge-case parity work needs an independent comparison.
 
 Compiler success does not prove that the slave-rat rest pose matches the playable Globadier animation base. Do not ship or commit the generated placeholder until idle, locomotion, attachment, and remote-husk deformation have passed in game.
 

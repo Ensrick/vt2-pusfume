@@ -38,6 +38,7 @@ $nativeBuildPath = Join-Path $repoRoot "tools\Build-NativePusfume.ps1"
 $nativeMaterialTemplatePath = Join-Path $repoRoot "tools\material_templates\character_skinned.material"
 $nativeCutoutTemplatePath = Join-Path $repoRoot "tools\material_templates\character_skinned_cutout.material"
 $nativeExporterPath = Join-Path $repoRoot "tools\export_blender_bsi.py"
+$animatedFbxToolPath = Join-Path $repoRoot "tools\prepare_animated_pusfume_fbx.py"
 $previewPath = Join-Path $repoRoot "pusfume\textures\pusfume\pusfume_model_preview.png"
 $previewTexturePath = Join-Path $repoRoot "pusfume\textures\pusfume\pusfume_model_preview.texture"
 $previewMaterialPath = Join-Path $repoRoot "pusfume\materials\pusfume\pusfume_model_preview.material"
@@ -57,6 +58,7 @@ $nativeBuildText = Get-Content -LiteralPath $nativeBuildPath -Raw
 $nativeMaterialTemplateText = Get-Content -LiteralPath $nativeMaterialTemplatePath -Raw
 $nativeCutoutTemplateText = Get-Content -LiteralPath $nativeCutoutTemplatePath -Raw
 $nativeExporterText = Get-Content -LiteralPath $nativeExporterPath -Raw
+$animatedFbxToolText = Get-Content -LiteralPath $animatedFbxToolPath -Raw
 $mainVersion = [regex]::Match($mainText, 'MOD_VERSION\s*=\s*"([^"]+)"').Groups[1].Value
 $configVersion = [regex]::Match($configText, 'Prototype v([^";]+)').Groups[1].Value
 
@@ -113,6 +115,13 @@ Test-Condition ($nativeBuildText -match '\[switch\]\$UseBsiSkinFallback' -and `
     $nativeBuildText -match 'pusfume_3p\.dcc_asset' -and `
     $nativeBuildText -match 'extension\s*=\s*"\.fbx"') `
     "native FBX pipeline" "supported Stingray DCC import is default and BSI remains an explicit fallback"
+Test-Condition ($nativeBuildText -match 'prepare_animated_pusfume_fbx\.py' -and `
+    $nativeBuildText -match '\$modelFbxPath \$animationFbxPath \$animatedModelFbxPath' -and `
+    $nativeBuildText -match 'Copy-Item -LiteralPath \$animatedModelFbxPath' -and `
+    $animatedFbxToolText -match 'model_armature\.animation_data\.action_slot = action\.slots\[0\]' -and `
+    $animatedFbxToolText -match 'max_pose_delta < 0\.001' -and `
+    $animatedFbxToolText -match 'max_vertex_delta < 0\.001') `
+    "native animated FBX" "DCC import receives one verified deforming character FBX"
 Test-Condition ($nativeExporterText -match 'build_skin_activation_animations' -and `
     $nativeExporterText -match 'for bone in armature\.data\.bones' -and `
     $nativeExporterText -match 'document\["animations"\]\s*=\s*activation_animations' -and `
