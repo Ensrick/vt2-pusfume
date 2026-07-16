@@ -13,8 +13,11 @@ local state = {
     donor_package_loaded = false,
     donor_package_error_logged = false,
     donor_material_error_logged = false,
+    donor_material_applied = false,
     donor_texture_errors = {},
 }
+
+local installed_config
 
 local DONOR_PACKAGE_REFERENCE = "pusfume_globadier_material"
 local DONOR_TEXTURE_CHANNELS = {
@@ -144,6 +147,8 @@ local function apply_donor_material(extension, config)
     end
 
     extension._pusfume_donor_material_applied = material_slots > 0
+    state.donor_material_applied = state.donor_material_applied
+        or extension._pusfume_donor_material_applied
 
     mod:info(
         "[pusfume] Globadier donor material applied slots=%d textures=%d material=%s",
@@ -486,6 +491,7 @@ local function install_preview_package_filter(config)
 end
 
 function M.install(registry, config)
+    installed_config = config
     state.hero_preview_enabled = config.hero_preview_enabled == true
 
     if not state.cosmetic_registered then
@@ -515,6 +521,24 @@ function M.status()
     return state
 end
 
+function M.donor_status()
+    local config = installed_config
+
+    if not config or not config.donor_material_enabled then
+        return {
+            enabled = false,
+        }
+    end
+
+    return {
+        enabled = true,
+        package_ok = can_get("package", config.donor_package) == true,
+        material_ok = can_get("material", config.donor_material) == true,
+        package_loaded = state.donor_package_loaded,
+        applied = state.donor_material_applied,
+    }
+end
+
 function M.shutdown(config)
     if state.donor_package_requested and Managers.package then
         Managers.package:unload(config.donor_package, DONOR_PACKAGE_REFERENCE)
@@ -522,6 +546,7 @@ function M.shutdown(config)
         state.donor_package_loaded = false
         state.donor_package_error_logged = false
         state.donor_material_error_logged = false
+        state.donor_material_applied = false
         state.donor_texture_errors = {}
         mod:info("[pusfume] Released Globadier donor package")
     end

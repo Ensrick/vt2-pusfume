@@ -113,6 +113,25 @@ function M.collect(registry, career_index, backend, compat, ui, native)
         native_ready and "custom cosmetic resource and attachment hook are ready"
             or native_enabled and "custom cosmetic registered; attachment hook is not ready"
             or "source-only fallback active; use Build-NativePusfume.ps1 for a model test")
+    local donor_status = native.donor_status()
+
+    if donor_status.enabled then
+        local donor_content_ok = donor_status.package_ok and donor_status.material_ok
+        local donor_detail
+
+        if not donor_status.package_ok then
+            donor_detail = "Globadier donor package is missing from installed game data"
+        elseif not donor_status.material_ok then
+            donor_detail = "Globadier donor material is missing from installed game data"
+        elseif donor_status.applied then
+            donor_detail = "donor material resolved and applied to the native mesh"
+        else
+            donor_detail = "donor content resolves; spawn Pusfume to apply it"
+        end
+
+        add(checks, "donor material content", donor_content_ok and "PASS" or "FAIL", donor_detail)
+    end
+
     add(checks, "five-row grid hook", ui_status.legacy_hook_installed and "PASS" or "FAIL",
         ui_status.legacy_hook_installed and "CharacterSelectionStateCharacter hooked" or "class unavailable")
     add(checks, "five-row grid card", ui_status.legacy_card_seen and "PASS" or "WARN",

@@ -28,6 +28,10 @@ request rather than in release notes.
   testing documentation.
 - Added source preflight coverage, BSI serialization unit tests, issue and pull
   request templates, CODEOWNERS, and CI patch-hygiene checks.
+- Added a `/pusfume_preflight` donor-content check that fails before a live
+  test when the Globadier donor package or material cannot resolve, plus
+  offline hash verification and the dalokraff donor-material precedent in the
+  model handoff documentation.
 
 ### Changed
 
