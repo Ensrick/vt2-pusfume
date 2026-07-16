@@ -15,6 +15,9 @@ local state = {
     child_package_requested = false,
     child_package_loaded = false,
     child_package_error_logged = false,
+    material_probe_command_installed = false,
+    material_probe_mode = nil,
+    material_probe_units = setmetatable({}, { __mode = "k" }),
     donor_material_error_logged = false,
     donor_material_applied = false,
     donor_texture_errors = {},
@@ -47,6 +50,13 @@ local DONOR_ATLAS_TEXTURES = {
     color = "pusfume_atlas_df",
     normal = "pusfume_atlas_nm",
     response = "pusfume_atlas_s",
+}
+
+local MATERIAL_PROBE_MODES = {
+    child = true,
+    donor_atlas = true,
+    donor_raw = true,
+    split = true,
 }
 
 local PROBE_LINKS = {
@@ -152,6 +162,8 @@ local function apply_donor_material_to_unit(unit, config)
         return false
     end
 
+    state.material_probe_units[unit] = true
+
     if not can_get("material", config.donor_material) then
         if not state.donor_material_error_logged then
             state.donor_material_error_logged = true
@@ -163,13 +175,15 @@ local function apply_donor_material_to_unit(unit, config)
 
     local material_slots = 0
     local texture_assignments = 0
+    local mode = state.material_probe_mode
+        or (config.parent_child_material and "child" or "donor_atlas")
 
-    -- Runtime texture overrides never rebind on character materials (verified
-    -- twice in live testing), so the endgame is the compiled child material
-    -- that inherits the donor's character shader with the atlas maps baked in.
-    -- It stays opt-in until the stub parent stops shadowing the game resource
-    -- inside the built bundle (2026-07-16: black rigid body).
-    if config.parent_child_material then
+    if mode == "child" or mode == "split" then
+        if type(config.parent_child_material) ~= "string" then
+            mod:error("[pusfume] Material probe mode %s requires a parent-child test build", mode)
+            return false
+        end
+
         if not ensure_child_package(config) then
             return false
         end
@@ -184,49 +198,102 @@ local function apply_donor_material_to_unit(unit, config)
             return false
         end
 
-        for _, slot_name in ipairs(DONOR_MATERIAL_SLOTS) do
-            Unit.set_material(unit, slot_name, config.parent_child_material)
+        local assignments = {}
+
+        for slot_index, slot_name in ipairs(DONOR_MATERIAL_SLOTS) do
+            local material = mode == "split" and slot_index % 2 == 0
+                    and config.donor_material
+                or config.parent_child_material
+
+            Unit.set_material(unit, slot_name, material)
             material_slots = material_slots + 1
+            assignments[#assignments + 1] = string.format(
+                "%s=%s", slot_name, material == config.donor_material and "donor" or "child")
         end
 
         mod:info(
-            "[pusfume] Globadier donor material applied slots=%d textures=baked mode=parent_child material=%s",
+            "[pusfume] Material probe applied slots=%d textures=baked mode=%s material=%s assignments=%s",
             material_slots,
-            config.parent_child_material)
+            mode,
+            config.parent_child_material,
+            table.concat(assignments, ","))
 
         return material_slots > 0
     end
 
     for _, slot_name in ipairs(DONOR_MATERIAL_SLOTS) do
         Unit.set_material(unit, slot_name, config.donor_material)
+        material_slots = material_slots + 1
     end
 
-    for mesh_index = 0, Unit.num_meshes(unit) - 1 do
-        local mesh = Unit.mesh(unit, mesh_index)
+    if mode == "donor_atlas" then
+        for mesh_index = 0, Unit.num_meshes(unit) - 1 do
+            local mesh = Unit.mesh(unit, mesh_index)
 
-        for material_index = 0, Mesh.num_materials(mesh) - 1 do
-            local material = Mesh.material(mesh, material_index)
+            for material_index = 0, Mesh.num_materials(mesh) - 1 do
+                local material = Mesh.material(mesh, material_index)
 
-            material_slots = material_slots + 1
-            texture_assignments = texture_assignments +
-                (set_material_texture(material, DONOR_TEXTURE_CHANNELS.color,
-                    DONOR_ATLAS_TEXTURES.color) and 1 or 0)
-            texture_assignments = texture_assignments +
-                (set_material_texture(material, DONOR_TEXTURE_CHANNELS.normal,
-                    DONOR_ATLAS_TEXTURES.normal) and 1 or 0)
-            texture_assignments = texture_assignments +
-                (set_material_texture(material, DONOR_TEXTURE_CHANNELS.response,
-                    DONOR_ATLAS_TEXTURES.response) and 1 or 0)
+                texture_assignments = texture_assignments +
+                    (set_material_texture(material, DONOR_TEXTURE_CHANNELS.color,
+                        DONOR_ATLAS_TEXTURES.color) and 1 or 0)
+                texture_assignments = texture_assignments +
+                    (set_material_texture(material, DONOR_TEXTURE_CHANNELS.normal,
+                        DONOR_ATLAS_TEXTURES.normal) and 1 or 0)
+                texture_assignments = texture_assignments +
+                    (set_material_texture(material, DONOR_TEXTURE_CHANNELS.response,
+                        DONOR_ATLAS_TEXTURES.response) and 1 or 0)
+            end
         end
     end
 
     mod:info(
-        "[pusfume] Globadier donor material applied slots=%d textures=%d mode=per_mesh_atlas material=%s",
+        "[pusfume] Material probe applied slots=%d textures=%d mode=%s material=%s",
         material_slots,
         texture_assignments,
+        mode,
         config.donor_material)
 
     return material_slots > 0
+end
+
+local function install_material_probe_command(config)
+    if state.material_probe_command_installed then
+        return
+    end
+
+    mod:command("pusfume_material_probe",
+        "Switch live Pusfume materials: donor_raw, donor_atlas, child, or split.",
+        function(mode)
+            mode = string.lower(tostring(mode or ""))
+
+            if not MATERIAL_PROBE_MODES[mode] then
+                mod:echo("Pusfume material probe modes: donor_raw, donor_atlas, child, split")
+                return
+            end
+
+            state.material_probe_mode = mode
+
+            local applied = 0
+
+            for unit in pairs(state.material_probe_units) do
+                if ALIVE[unit] and apply_donor_material_to_unit(unit, config) then
+                    applied = applied + 1
+                    local animation_states = { Unit.animation_get_state(unit) }
+
+                    mod:info(
+                        "[pusfume] Material probe unit mode=%s meshes=%d controller_state=%s bone_mode=%s",
+                        mode,
+                        Unit.num_meshes(unit),
+                        tostring(animation_states[1]),
+                        Unit.animation_bone_mode(unit))
+                end
+            end
+
+            mod:echo("Pusfume material probe mode=%s live_units=%d", mode, applied)
+            mod:info("[pusfume] Material probe switched mode=%s live_units=%d", mode, applied)
+        end)
+
+    state.material_probe_command_installed = true
 end
 
 local function apply_donor_material(extension, config)
@@ -696,6 +763,7 @@ function M.install(registry, config)
 
     install_cosmetic_hook(registry, config)
     install_probe_hook()
+    install_material_probe_command(config)
 
     if state.hero_preview_enabled and not install_preview_package_filter(config) then
         state.hero_preview_enabled = false

@@ -81,6 +81,9 @@ request rather than in release notes.
 - Routed the standalone child package through VMF's mod-handle package API
   after the donor parent loads. This avoids the fatal `Application.resource_package`
   lookup used by the global package manager for game-owned bundles.
+- Added `/pusfume_material_probe` live A/B modes (`donor_raw`, `donor_atlas`,
+  `child`, and alternating-slot `split`) so shader deformation and texture
+  behavior can be compared without changing the mesh, controller, or session.
 - Applied the donor character shader to the menu preview mesh; the preview
   spawned with skinning-incapable compiled materials, which is why the menu
   model never animated even with its controller running.

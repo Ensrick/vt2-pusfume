@@ -213,8 +213,15 @@ Test-Condition ($nativeConfigText -match 'parent_child_material\s*=\s*false' -an
     $nativeText -match 'mod:package_status\(config\.parent_child_package\) == "loaded"' -and `
     $nativeText -match 'Native child material package did not load through the mod handle' -and `
     $nativeText -match 'mod:unload_package\(config\.parent_child_package\)' -and `
-    $nativeText -match 'Unit\.set_material\(unit, slot_name, config\.parent_child_material\)') `
+    $nativeText -match 'Unit\.set_material\(unit, slot_name, material\)') `
     "parent-child material" "VMF resolves the standalone child through the mod handle after loading the donor parent"
+Test-Condition ($nativeText -match 'pusfume_material_probe' -and `
+    $nativeText -match 'donor_raw\s*=\s*true' -and `
+    $nativeText -match 'donor_atlas\s*=\s*true' -and `
+    $nativeText -match 'child\s*=\s*true' -and `
+    $nativeText -match 'split\s*=\s*true' -and `
+    $nativeText -match 'assignments=%s') `
+    "live material A/B probe" "one session can compare donor, atlas override, child, and split-slot deformation"
 Test-Condition ((Test-Path (Join-Path $repoRoot "tools\strip_bundle_resource.py")) -and `
     (Test-Path (Join-Path $repoRoot "tests\test_strip_bundle_resource.py")) -and `
     $nativeBuildText -match 'strip_bundle_resource\.py' -and `

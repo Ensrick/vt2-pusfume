@@ -2,9 +2,8 @@
 
 Live coordination file for the overnight 2026-07-16 session on issue #6.
 Both agents read this before editing anything and update their section after
-every push. The user is asleep; no live testing is available - every claim
-must be offline-verifiable (compiled bytes, logs, source) or marked
-[unverified].
+every push. Live claims require either a user-observed result or supporting
+runtime logs; offline-only claims must be marked `[unverified]`.
 
 ## Ground rules
 
@@ -16,12 +15,11 @@ must be offline-verifiable (compiled bytes, logs, source) or marked
 - Ship = `tools/Build-NativePusfume.ps1 -HeroPreview`, then VMBLauncher upload
   (settings file with ProjectRoot = `.build/native-workshop`; the staging root
   carries `.vmbrc`), then verify `Steam/logs/workshop_log.txt` gained a fresh
-  `Uploaded new content` line, then commit + push. Do not leave the deployed
-  Workshop item on an experimental build: the LAST uploaded build must always
-  be the safest known-good one for the user's morning test.
-- Deployed known-good right now: `1125d4f` / ManifestID 5211344820166029716
-  (donor swap, walk+idle in game, menu preview shader applied). Do not upload
-  over it unless your build is verifiably better.
+  `Uploaded new content` line, then commit + push. Experimental builds may stay
+  deployed because the user can disable the mod, but must be identified as
+  experimental in the issue/PR record.
+- Deployed experimental candidate: `f169b07` / ManifestID
+  `8845324977482480470` (ordered parent-child material test).
 
 ## Confirmed facts (do not re-litigate without new evidence)
 
@@ -49,12 +47,18 @@ must be offline-verifiable (compiled bytes, logs, source) or marked
 7. Menu previewers (`MenuWorldPreviewer`) spawn `skin.third_person` +
    `skin.third_person_attachment.unit`; `retrieve_skin_packages_for_preview`
    indexes `third_person_attachment` unguarded (crashes if nil).
+8. The ordered child package now resolves and applies successfully, but it
+   renders dark and rigid. The 16:23 live log proves the controller entered
+   state 1 and Janfon's source bones articulated while the child occupied all
+   eight surfaces. Parent lookup is solved; the compiled child's shader
+   permutation still does not perform GPU skinning.
 
 ## The one remaining core problem
 
-Get `pusfume_outfit_child` (compiled, verified) to resolve the GAME's
-`mtr_outfit` parent at runtime. Blocked only by the stub parent shadowing the
-game resource from inside our bundle.
+Bind Janfon's atlas to the exact game-owned `mtr_outfit` material while keeping
+that material's proven skinning permutation. The child-inheritance route is
+now empirically rejected; current work compares live material modes and tests
+whether controlled resource-hash shadowing can replace only donor textures.
 
 ## Track A - bundle stub strip [CLAIMED: Claude]
 
@@ -106,6 +110,14 @@ gone, child bytes untouched). Files claimed: `tools/strip_bundle_resource.py`,
 
 ## Status log (append entries, newest first)
 
+- 11:24 Sol: LIVE RESULT for `f169b07` / ManifestID
+  `8845324977482480470`: VMF loaded `native_child`; all eight child slots
+  applied; no package crash. Pusfume rendered very dark and visibly rigid.
+  Runtime probe simultaneously recorded controller state 0 -> 1, hips/hand
+  motion, and articulation on Janfon's mesh. This rejects package order and
+  clip playback as causes and isolates the deformation loss to the child
+  material/shader permutation. Preparing `/pusfume_material_probe` modes for
+  same-session donor/child/split A/B testing.
 - 02:2x Claude: TRACK A COMPLETE (offline). `tools/strip_bundle_resource.py`
   renames the stub's (type,name) identity inside the built bundle (index +
   file header + package listing = exactly 3 pairs, verified on the real
