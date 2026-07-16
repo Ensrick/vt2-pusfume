@@ -14,6 +14,8 @@ return {
     manual_skin_probe = false,
     parent_child_material = false,
     parent_child_package = false,
+    whisker_child_material = false,
+    whisker_donor_package = false,
     root_animation_isolation = false,
     skin_name = "pusfume_skin",
     third_person_unit = "units/pusfume/pusfume_3p",

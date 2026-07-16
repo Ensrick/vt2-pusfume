@@ -255,7 +255,9 @@ function Write-NativeTexture {
     } else {
         "false"
     }
-    $cutAlphaEnabled = if ($Name -eq "pusfume_whiskers_df") { "true" } else { "false" }
+    # Preserve fractional coverage alpha. The native skinned-alpha material
+    # performs its own 0.5 test; preprocessing created the visible tape card.
+    $cutAlphaEnabled = "false"
 
     @"
 common = {
@@ -553,9 +555,27 @@ textures = {
 }
 '@ | Set-Content -LiteralPath (Join-Path $childMaterialRoot "pusfume_outfit_child.material") -Encoding utf8
 
+    # This source is only a compiler placeholder. -SplicedGameChild replaces
+    # its payload with the installed game's Laurel feather child, patched to
+    # Janfon's whisker textures, so the shipped binding retains skinning and
+    # the native alpha-card shader permutation.
+    $whiskerChildTemplate = Get-Content -LiteralPath (Join-Path $repoRoot `
+        "tools\material_templates\character_skinned_cutout.material") -Raw
+    $whiskerChildTemplate = $whiskerChildTemplate.Replace(
+        "__COLOR_MAP__", "textures/pusfume/pusfume_whiskers_df")
+    $whiskerChildTemplate = $whiskerChildTemplate.Replace(
+        "__NORMAL_MAP__", "textures/pusfume/pusfume_whiskers_nm")
+    $whiskerChildTemplate = $whiskerChildTemplate.Replace(
+        "__DETAIL_MAP__", "textures/pusfume/pusfume_whiskers_s")
+    $whiskerChildTemplate = $whiskerChildTemplate.Replace(
+        "__EMISSIVE_MAP__", "textures/pusfume/pusfume_whiskers_df")
+    $whiskerChildTemplate | Set-Content -LiteralPath (Join-Path $childMaterialRoot `
+        "pusfume_whiskers_child.material") -Encoding utf8
+
     @'
 material = [
 	"child_materials/pusfume/pusfume_outfit_child"
+	"child_materials/pusfume/pusfume_whiskers_child"
 ]
 '@ | Set-Content -LiteralPath (Join-Path $stageMod "resource_packages\pusfume\native_child.package") -Encoding utf8
 }
@@ -601,6 +621,11 @@ $parentChildPackageValue = if ($ParentChildMaterial) {
 } else {
     "false"
 }
+$whiskerChildMaterialValue = if ($SplicedGameChild) {
+    '"child_materials/pusfume/pusfume_whiskers_child"'
+} else {
+    "false"
+}
 
 # Donor texture shadowing: after the SDK build, the atlas textures' bundled
 # identities are renamed to the ids the game's mtr_outfit child binds (parsed
@@ -629,6 +654,8 @@ return {
     locomotion_events_enabled = true,
     parent_child_material = $parentChildMaterialValue,
     parent_child_package = $parentChildPackageValue,
+    whisker_child_material = $whiskerChildMaterialValue,
+    whisker_donor_package = "units/beings/player/empire_soldier_knight/headpiece/es_k_hat_07",
     manual_clip_length = 0.8,
     manual_clip_name = "units/pusfume/anims/pusfume_3p_walk",
     manual_clip_probe = false,
@@ -776,6 +803,7 @@ if ($SplicedGameChild) {
     & py (Join-Path $repoRoot "tools\make_spliced_child.py") `
         --extracted $gameChildPath `
         --resource hash:90BDF3BAC6F81BA8 --expect-size 768 `
+        --expect-parent 3D25339231384C80 `
         --map DD74D8319F514D96=C263ECB79A8DCEC0 `
         --map E334A8CB6BCB5E6D=A4215592F6297E57 `
         --set-variable emissive_color=0,0,0 `
@@ -809,6 +837,61 @@ if ($SplicedGameChild) {
     }
 
     Write-Host "Spliced game child payload (768 bytes, atlas texture ids) into $($splicedInto[0])"
+
+    # Laurel's compiled feather material is the proven skinned alpha-card
+    # contract. Preserve its shader parent, alpha scalar, and channel layout;
+    # patch only the three texture resources to Janfon's whisker maps.
+    $laurelGameBundle = Join-Path $GameBundleDir "95865e5dbaf202e3"
+    if (-not (Test-Path -LiteralPath $laurelGameBundle -PathType Leaf)) {
+        throw "Installed Laurel game bundle not found: $laurelGameBundle"
+    }
+
+    $laurelExtractDir = Join-Path $generatedRoot "laurel-bundle-extract"
+    New-Item -ItemType Directory -Path $laurelExtractDir -Force | Out-Null
+    & $UnpackerExe extract $laurelGameBundle $laurelExtractDir --flatten `
+        --include "*C70B1AAD3B363E24*" 2>$null | Out-Null
+    $laurelMaterialPath = Join-Path $laurelExtractDir "C70B1AAD3B363E24.material"
+    if (-not (Test-Path -LiteralPath $laurelMaterialPath -PathType Leaf)) {
+        throw "Laurel bundle extraction did not produce C70B1AAD3B363E24.material"
+    }
+
+    $whiskerPayload = Join-Path $generatedRoot "spliced_whisker_payload.bin"
+    & py (Join-Path $repoRoot "tools\make_spliced_child.py") `
+        --extracted $laurelMaterialPath `
+        --resource hash:C70B1AAD3B363E24 --expect-size 128 `
+        --expect-parent F85B289742D5D69A `
+        --map C9CF19C214612D75=7F060B4938ADCF12 `
+        --map CDA03B9B0226037A=950FC5950CCEBCD0 `
+        --map D3FD8377A3DE498A=BEB4D8D9891A6D4A `
+        --expect-texture texture_map_c0ba2942=7F060B4938ADCF12 `
+        --expect-texture texture_map_59cd86b9=950FC5950CCEBCD0 `
+        --expect-texture texture_map_b788717c=BEB4D8D9891A6D4A `
+        --out $whiskerPayload
+    if ($LASTEXITCODE -ne 0) {
+        throw "Spliced Laurel whisker payload generation failed"
+    }
+
+    $whiskerSplicedInto = @()
+    foreach ($bundleFile in (Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)) {
+        & py $spliceTool $bundleFile.FullName --type material `
+            --name "child_materials/pusfume/pusfume_whiskers_child" `
+            --payload $whiskerPayload --dry-run 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            & py $spliceTool $bundleFile.FullName --type material `
+                --name "child_materials/pusfume/pusfume_whiskers_child" `
+                --payload $whiskerPayload
+            if ($LASTEXITCODE -ne 0) {
+                throw "Whisker material splice failed on $($bundleFile.Name)"
+            }
+            $whiskerSplicedInto += $bundleFile.Name
+        }
+    }
+
+    if ($whiskerSplicedInto.Count -ne 1) {
+        throw "Expected the whisker child in exactly 1 bundle, spliced $($whiskerSplicedInto.Count)"
+    }
+
+    Write-Host "Spliced Laurel feather payload (128 bytes, Pusfume whisker maps) into $($whiskerSplicedInto[0])"
     # The locator dry-runs exit 1 on bundles without the child; do not let the
     # last probe's code leak out as the script's exit status.
     $global:LASTEXITCODE = 0

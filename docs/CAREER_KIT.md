@@ -4,13 +4,13 @@ This document records the first implementation contract for Pusfume's career
 gameplay. The mod remains Adventure-only, friends-only, and requires the same
 version on every peer.
 
-Current uploaded test build: v0.6.4-dev, Steam ManifestID
-`5314442994604280740`, uploaded 2026-07-16 at 16:04:10 local time.
+Current uploaded test build: v0.6.5-dev, Steam ManifestID
+`441804382456025179`, uploaded 2026-07-16 at 16:37:25 local time.
 
-The v0.6.3 live log confirmed selection, player spawn, native model/material
-attachment, controller startup, and weapon setup. v0.6.4 normalizes custom
-sub-buff names before Insider Knowledge applies and awaits live stability
-verification.
+The v0.6.4 live log confirmed selection, player spawn, native model/material
+attachment, controller startup, weapon setup, and session stability. v0.6.5
+adds global gameplay localization and a skinned native-alpha whisker material;
+both await live acceptance.
 
 ## Identity
 
@@ -59,6 +59,10 @@ station state, and the guarded inventory status.
 
 ## Visual Contract
 
-The whisker diffuse is the only source texture compiled with cut alpha enabled
-at threshold 0.5. This follows the direct legacy Pusfume texture recipe and
-avoids editing Janfon's fractional-alpha source image.
+The whisker diffuse preserves Janfon's fractional DXT5 coverage alpha with
+texture preprocessing thresholding disabled. At build time the canonical
+private pipeline extracts the installed game's 128-byte Laurel feather
+material, verifies its diffuse/normal/combined channel contract, patches only
+those three resource IDs to the Pusfume whisker maps, and splices it over a
+mod-owned child. This keeps native character skinning and alpha-card behavior
+without redistributing the extracted source payload in Git.

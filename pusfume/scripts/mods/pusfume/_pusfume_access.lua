@@ -1,4 +1,5 @@
 local mod = get_mod("pusfume")
+local localization = mod:dofile("scripts/mods/pusfume/pusfume_localization")
 
 local M = {}
 local pending_request
@@ -11,10 +12,15 @@ local function profile_requester()
 end
 
 function M.install(registry, career_index, ui)
-    local global_strings = {
-        pusfume = "Pusfume",
-        pusfume_description = "A devious Clan Moulder inventor testing unstable battlefield concoctions.",
-    }
+    local global_strings = {}
+
+    -- Vanilla career panels call the game-global Localize rather than
+    -- VMF's private mod:localize surface. Derive both paths from one table.
+    for key, translations in pairs(localization) do
+        if type(translations) == "table" and type(translations.en) == "string" then
+            global_strings[key] = translations.en
+        end
+    end
 
     mod:hook(_G, "Localize", function(func, key, ...)
         return global_strings[key] or func(key, ...)

@@ -32,6 +32,7 @@ $nativePath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_native.
 $nativeConfigPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_native_config.lua"
 $uiPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_ui.lua"
 $gameplayPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_gameplay.lua"
+$accessPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_access.lua"
 $localizationPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\pusfume_localization.lua"
 $dataPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\pusfume_data.lua"
 $packagePath = Join-Path $repoRoot "pusfume\resource_packages\pusfume\pusfume.package"
@@ -59,6 +60,7 @@ $nativeText = Get-Content -LiteralPath $nativePath -Raw
 $nativeConfigText = Get-Content -LiteralPath $nativeConfigPath -Raw
 $uiText = Get-Content -LiteralPath $uiPath -Raw
 $gameplayText = Get-Content -LiteralPath $gameplayPath -Raw
+$accessText = Get-Content -LiteralPath $accessPath -Raw
 $localizationText = Get-Content -LiteralPath $localizationPath -Raw
 $dataText = Get-Content -LiteralPath $dataPath -Raw
 $packageText = Get-Content -LiteralPath $packagePath -Raw
@@ -219,19 +221,26 @@ Test-Condition ($nativeText -match 'function M\.native_skin_name' -and `
     "menu preview purity" "menu previewers force the native skin, hide donor weapons, and start the mesh controller"
 Test-Condition ($nativeConfigText -match 'parent_child_material\s*=\s*false' -and `
     $nativeConfigText -match 'parent_child_package\s*=\s*false' -and `
+    $nativeConfigText -match 'whisker_child_material\s*=\s*false' -and `
+    $nativeConfigText -match 'whisker_donor_package\s*=\s*false' -and `
     $nativeBuildText -match '\[switch\]\$ParentChildMaterial' -and `
     $nativeBuildText -match '"child_materials/pusfume/pusfume_outfit_child"' -and `
+    $nativeBuildText -match '"child_materials/pusfume/pusfume_whiskers_child"' -and `
     $nativeBuildText -match 'native_child\.package' -and `
     $nativeBuildText -match 'parent_material = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/mtr_outfit"' -and `
     $nativeText -match 'function ensure_child_package' -and `
-    $nativeText -match 'not state\.donor_package_loaded or not mod\.load_package or not mod\.package_status' -and `
+    $nativeText -match 'not state\.donor_package_loaded or not state\.whisker_donor_package_loaded' -and `
     $nativeText -notmatch 'can_get\("package", config\.parent_child_package\)' -and `
     $nativeText -match 'mod:load_package\(config\.parent_child_package, nil, true\)' -and `
     $nativeText -match 'mod:package_status\(config\.parent_child_package\) == "loaded"' -and `
     $nativeText -match 'Native child material package did not load through the mod handle' -and `
     $nativeText -match 'mod:unload_package\(config\.parent_child_package\)' -and `
-    $nativeText -match 'Unit\.set_material\(unit, slot_name, material\)') `
-    "parent-child material" "VMF resolves the standalone child through the mod handle after loading the donor parent"
+    $nativeText -match 'Unit\.set_material\(unit, slot_name, material\)' -and `
+    $nativeText -match 'Unit\.set_material\(unit, WHISKER_MATERIAL_SLOT, config\.whisker_child_material\)' -and `
+    $nativeText -match 'Managers\.package:load\(config\.whisker_donor_package, WHISKER_DONOR_PACKAGE_REFERENCE\)' -and `
+    $nativeText -match 'Managers\.package:unload\(config\.whisker_donor_package, WHISKER_DONOR_PACKAGE_REFERENCE\)' -and `
+    $nativeBuildText -match 'units/beings/player/empire_soldier_knight/headpiece/es_k_hat_07') `
+    "parent-child material" "VMF resolves opaque and skinned-alpha children through one ordered mod package"
 Test-Condition ($nativeText -match 'pusfume_material_probe' -and `
     $nativeText -match 'donor_raw\s*=\s*true' -and `
     $nativeText -match 'donor_atlas\s*=\s*true' -and `
@@ -276,6 +285,9 @@ Test-Condition ((Test-Path (Join-Path $repoRoot "tools\splice_bundle_resource.py
     $nativeBuildText -match '\$NoDonorTextureShadow = \$true' -and `
     $nativeBuildText -match 'make_spliced_child\.py' -and `
     $nativeBuildText -match '--expect-size 768' -and `
+    $nativeBuildText -match '--expect-size 128' -and `
+    $nativeBuildText -match '--expect-parent 3D25339231384C80' -and `
+    $nativeBuildText -match '--expect-parent F85B289742D5D69A' -and `
     $nativeBuildText -match 'hash:F72D636600F7F598' -and `
     $nativeBuildText -match 'DD74D8319F514D96=C263ECB79A8DCEC0' -and `
     $nativeBuildText -match 'E334A8CB6BCB5E6D=A4215592F6297E57' -and `
@@ -284,9 +296,17 @@ Test-Condition ((Test-Path (Join-Path $repoRoot "tools\splice_bundle_resource.py
     $nativeBuildText -match 'texture_map_02af90f8=C263ECB79A8DCEC0' -and `
     $nativeBuildText -match 'texture_map_27b67fd2=45FFAEEF53695A86' -and `
     $nativeBuildText -match 'texture_map_8bf37d8e=A4215592F6297E57' -and `
+    $nativeBuildText -match 'hash:C70B1AAD3B363E24' -and `
+    $nativeBuildText -match 'C9CF19C214612D75=7F060B4938ADCF12' -and `
+    $nativeBuildText -match 'CDA03B9B0226037A=950FC5950CCEBCD0' -and `
+    $nativeBuildText -match 'D3FD8377A3DE498A=BEB4D8D9891A6D4A' -and `
+    $nativeBuildText -match 'texture_map_c0ba2942=7F060B4938ADCF12' -and `
+    $nativeBuildText -match 'texture_map_59cd86b9=950FC5950CCEBCD0' -and `
+    $nativeBuildText -match 'texture_map_b788717c=BEB4D8D9891A6D4A' -and `
     $nativeBuildText -match '\$splicedInto\.Count -ne 1' -and `
+    $nativeBuildText -match '\$whiskerSplicedInto\.Count -ne 1' -and `
     $nativeBuildText -notmatch 'spliced_child_payload\.bin"? *-Destination') `
-    "spliced game child" "-SplicedGameChild validates a local game binding table and embeds the patched bytes only in generated output"
+    "spliced game children" "body and Laurel whisker bindings are validated from local game data and embedded only in generated output"
 Test-Condition ($nativeText -match 'pusfume_tint' -and `
     $nativeText -match 'Material\.set_scalar\(material, "gradient_variation", variation\)' -and `
     $nativeText -match 'Material\.set_scalar\(material, "tint_columns_pair", columns_pair\)') `
@@ -382,14 +402,22 @@ Test-Condition ($gameplayText -match 'stat_buff\s*=\s*"power_level_skaven"' -and
     $gameplayText -match 'multiplier\s*=\s*0\.05' -and `
     $gameplayText -match 'max_stacks\s*=\s*1') `
     "Insider Knowledge" "team Skaven damage uses the stock synchronized stat at five percent"
+Test-Condition ($accessText -match 'mod:dofile\("scripts/mods/pusfume/pusfume_localization"\)' -and `
+    $accessText -match 'for key, translations in pairs\(localization\)' -and `
+    $accessText -match 'global_strings\[key\] = translations\.en' -and `
+    $accessText -match 'mod:hook\(_G, "Localize"' -and `
+    $preflightText -match 'add\(checks, "career localization"' -and `
+    $preflightText -match 'value == "<" \.\. key \.\. ">"') `
+    "career localization" "global Localize derives every career string from the VMF localization table"
 Test-Condition ($gameplayText -match 'append_lookup\(NetworkLookup\.challenges' -and `
     $gameplayText -match 'append_lookup\(NetworkLookup\.challenge_rewards' -and `
     $gameplayText -match 'append_lookup\(NetworkLookup\.challenge_categories' -and `
     $gameplayText -match 'breed\.race == "skaven"') `
     "The Great Scheme" "placeholder Skaven quests have deterministic peer lookups"
-Test-Condition ($nativeBuildText -match '\$Name -eq "pusfume_whiskers_df"' -and `
-    $nativeBuildText -match 'enable_cut_alpha_threshold = \$cutAlphaEnabled') `
-    "whisker alpha" "only the dedicated whisker diffuse enables the legacy 0.5 alpha cut"
+Test-Condition ($nativeBuildText -match '\$cutAlphaEnabled = "false"' -and `
+    $nativeBuildText -match 'enable_cut_alpha_threshold = \$cutAlphaEnabled' -and `
+    $nativeBuildText -notmatch '\$Name -eq "pusfume_whiskers_df"') `
+    "whisker alpha" "fractional whisker coverage survives texture compilation for the native alpha shader"
 Test-Condition ($preflightText -match 'add\(checks, "career color"') `
     "career color" "runtime preflight validates the player-list contract"
 Test-Condition ($backendText -match 'mod:hook\(BackendUtils, "get_loadout_item"') `

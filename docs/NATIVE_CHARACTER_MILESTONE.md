@@ -186,6 +186,17 @@ The atlas manifest keeps these source roles distinct:
 - Eye regions: authored color with neutral missing channels.
 - Whiskers: separate alpha-cutout material, not part of the opaque child swap.
 
+### v0.6.5 whisker follow-up
+
+The original separate cutout graph rendered rigid and produced a lit tape-like
+alpha card. The v0.6.5 private build keeps `p_whiskers` separate from the eight
+opaque slots but replaces its compiled payload with the installed game's exact
+Laurel feather child (128 bytes). The build verifies the donor size and three
+channel bindings, patches only the texture IDs to Janfon's whisker maps, and
+preserves fractional diffuse alpha by disabling texture preprocessing cuts.
+Live acceptance remains pending; the v0.6.4 body/animation milestone above is
+unchanged.
+
 The layout uses guard insets and repeated edge tiles for wrapped UV regions.
 The audit covers all 24,318 triangles and reports zero escaped UV loops. The
 opaque diffuse atlas is fully opaque; only whiskers retain diffuse alpha.

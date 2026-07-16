@@ -12,6 +12,16 @@ request rather than in release notes.
 
 ### Fixed
 
+- Fixed Pusfume ability, passive, perk, and quest labels rendering as
+  angle-bracketed internal keys by bridging the complete VMF localization
+  table into vanilla's global `Localize` path.
+- Replaced the rigid custom whisker shader with a locally verified splice of
+  the game's skinned Laurel feather binding, patched only to Janfon's diffuse,
+  normal, and packed response maps.
+- Added explicit Laurel donor-package lifetime management so the whisker shader
+  does not depend on an equipped cosmetic or another mod making it resident.
+- Preserved fractional whisker diffuse alpha during texture compilation instead
+  of destructively thresholding the source coverage into a visible tape card.
 - Fixed v0.6.3-dev omitting vanilla's generated sub-buff `name` metadata from
   runtime-registered templates, which crashed when Insider Knowledge first
   added its team stat buff after spawning Pusfume.
@@ -66,10 +76,9 @@ request rather than in release notes.
 ### Changed
 
 - Updated the README, career-kit contract, and live-test checklist to identify
-  v0.6.4-dev as the current candidate and distinguish confirmed runtime
-  milestones from pending stability and multiplayer acceptance tests.
-- Enabled a 0.5 alpha cut only for the dedicated whisker diffuse texture,
-  matching the legacy Pusfume recipe without modifying Janfon's source PNG.
+  v0.6.5-dev as the current candidate and distinguish confirmed runtime
+  milestones from pending stability, localization, whisker, and multiplayer
+  acceptance tests.
 
 - Rebuilt the native atlas from Janfon's original Blender material graph: ammo
   slot A now uses `generic_cloth_dirty_*`, slot B retains

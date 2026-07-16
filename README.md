@@ -21,13 +21,15 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current friends-only test build is **v0.6.4-dev**, Steam ManifestID
-`5314442994604280740`. Live logs have confirmed mod startup, zero-failure
+The current friends-only test build is **v0.6.5-dev**, Steam ManifestID
+`441804382456025179`. Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,
-and idle/walk playback. v0.6.4 fixes the first gameplay-frame crash caused by
-missing vanilla-generated metadata on the runtime-registered Insider Knowledge
-buff; that fix still requires live stability verification.
+and idle/walk playback through v0.6.4. The v0.6.5 candidate bridges every
+career-kit string into vanilla's global localization path and gives
+`p_whiskers` the game's skinned Laurel alpha binding while preserving Janfon's
+fractional coverage alpha. Those two changes now require live visual and UI
+verification.
 
 Skaven Ingenuity currently records a 20-second station and starts its cooldown,
 but it does not yet spawn an interactable bag or modify inventory. Potion
@@ -84,6 +86,8 @@ handoff.
 
 Active work is tracked in [native integration issue #6](https://github.com/Ensrick/vt2-pusfume/issues/6),
 [career-kit issue #15](https://github.com/Ensrick/vt2-pusfume/issues/15),
+[localization issue #17](https://github.com/Ensrick/vt2-pusfume/issues/17),
+[whisker rendering issue #18](https://github.com/Ensrick/vt2-pusfume/issues/18),
 [native integration PR #11](https://github.com/Ensrick/vt2-pusfume/pull/11),
 and [career-kit draft PR #16](https://github.com/Ensrick/vt2-pusfume/pull/16).
 
