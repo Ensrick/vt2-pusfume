@@ -201,12 +201,16 @@ Test-Condition ($nativeText -match 'function M\.native_skin_name' -and `
     $uiText -match 'Unit\.enable_animation_state_machine\(mesh_unit\)') `
     "menu preview purity" "menu previewers force the native skin, hide donor weapons, and start the mesh controller"
 Test-Condition ($nativeConfigText -match 'parent_child_material\s*=\s*false' -and `
-    $nativeBuildText -match 'parent_child_material\s*=\s*"materials/pusfume/pusfume_outfit_child"' -and `
+    $nativeBuildText -match '\[switch\]\$ParentChildMaterial' -and `
+    $nativeBuildText -match '"materials/pusfume/pusfume_outfit_child"' -and `
     $nativeBuildText -match 'pusfume_outfit_child\.material' -and `
     $nativeBuildText -match 'parent_material = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/mtr_outfit"' -and `
     $nativeText -match 'config\.parent_child_material' -and `
     $nativeText -match 'Unit\.set_material\(unit, slot_name, config\.parent_child_material\)') `
-    "parent-child material" "staged builds inherit the donor character shader with atlas maps baked at compile time"
+    "parent-child material" "the compiled donor-shader child stays opt-in until the bundled stub stops shadowing the game parent"
+Test-Condition ($nativeText -match 'function M\.apply_donor_to_unit' -and `
+    $uiText -match 'native\.apply_donor_to_unit\(mesh_unit\)') `
+    "menu preview shader" "the preview mesh receives the donor character shader so the menu idle can deform"
 Test-Condition ($nativeConfigText -match 'hide_donor_weapons\s*=\s*false' -and `
     $nativeBuildText -match 'hide_donor_weapons\s*=\s*true' -and `
     $nativeText -match 'function hide_donor_weapons' -and `

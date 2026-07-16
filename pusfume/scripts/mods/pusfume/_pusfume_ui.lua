@@ -365,6 +365,12 @@ local function install_previewer_purity_hooks(registry, native)
             Unit.animation_event(mesh_unit, "idle")
         end
 
+        -- The preview mesh spawns with the compiled standard materials, which
+        -- have no skinning permutation - the controller was running against a
+        -- rigid render path. The donor material carries the character shader,
+        -- so the menu idle only becomes visible after this swap.
+        native.apply_donor_to_unit(mesh_unit)
+
         mod:info("[pusfume] Menu previewer native controller enabled")
     end)
 

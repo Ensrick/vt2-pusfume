@@ -112,14 +112,8 @@ local function set_material_texture(material, channel, texture_name)
 end
 
 
-local function apply_donor_material(extension, config)
-    if extension._pusfume_donor_material_applied or not config.donor_material_enabled then
-        return extension._pusfume_donor_material_applied == true
-    end
-
-    local unit = extension._tp_unit_mesh
-
-    if not ALIVE[unit] or not ensure_donor_package(config) then
+local function apply_donor_material_to_unit(unit, config)
+    if not config.donor_material_enabled or not ALIVE[unit] or not ensure_donor_package(config) then
         return false
     end
 
@@ -136,10 +130,10 @@ local function apply_donor_material(extension, config)
     local texture_assignments = 0
 
     -- Runtime texture overrides never rebind on character materials (verified
-    -- twice in live testing), so the preferred path is the compiled child
-    -- material that inherits the donor's character shader with the atlas maps
-    -- baked in. The donor package still has to be resident for the parent
-    -- reference to resolve.
+    -- twice in live testing), so the endgame is the compiled child material
+    -- that inherits the donor's character shader with the atlas maps baked in.
+    -- It stays opt-in until the stub parent stops shadowing the game resource
+    -- inside the built bundle (2026-07-16: black rigid body).
     if config.parent_child_material then
         if not can_get("material", config.parent_child_material) then
             if not state.donor_material_error_logged then
@@ -156,16 +150,12 @@ local function apply_donor_material(extension, config)
             material_slots = material_slots + 1
         end
 
-        extension._pusfume_donor_material_applied = material_slots > 0
-        state.donor_material_applied = state.donor_material_applied
-            or extension._pusfume_donor_material_applied
-
         mod:info(
             "[pusfume] Globadier donor material applied slots=%d textures=baked mode=parent_child material=%s",
             material_slots,
             config.parent_child_material)
 
-        return extension._pusfume_donor_material_applied
+        return material_slots > 0
     end
 
     for _, slot_name in ipairs(DONOR_MATERIAL_SLOTS) do
@@ -191,17 +181,26 @@ local function apply_donor_material(extension, config)
         end
     end
 
-    extension._pusfume_donor_material_applied = material_slots > 0
-    state.donor_material_applied = state.donor_material_applied
-        or extension._pusfume_donor_material_applied
-
     mod:info(
         "[pusfume] Globadier donor material applied slots=%d textures=%d mode=per_mesh_atlas material=%s",
         material_slots,
         texture_assignments,
         config.donor_material)
 
-    return extension._pusfume_donor_material_applied
+    return material_slots > 0
+end
+
+local function apply_donor_material(extension, config)
+    if extension._pusfume_donor_material_applied or not config.donor_material_enabled then
+        return extension._pusfume_donor_material_applied == true
+    end
+
+    local applied = apply_donor_material_to_unit(extension._tp_unit_mesh, config)
+
+    extension._pusfume_donor_material_applied = applied
+    state.donor_material_applied = state.donor_material_applied or applied
+
+    return applied
 end
 
 -- Pusfume rides on Ranger Veteran's animated base, so Bardin's third-person
@@ -673,6 +672,14 @@ end
 
 function M.native_skin_name()
     return state.cosmetic_registered and state.native_skin_name or nil
+end
+
+function M.apply_donor_to_unit(unit)
+    if not installed_config then
+        return false
+    end
+
+    return apply_donor_material_to_unit(unit, installed_config)
 end
 
 function M.enabled()

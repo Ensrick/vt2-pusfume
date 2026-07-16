@@ -6,6 +6,7 @@ param(
     [string]$TextureSource = ".build\pusfume_handoff\textures conv",
     [string]$WorkshopPath = "C:\Program Files (x86)\Steam\steamapps\workshop\content\552500\3764954245",
     [switch]$HeroPreview,
+    [switch]$ParentChildMaterial,
     [switch]$UseBsiSkinFallback,
     [switch]$NoDeploy
 )
@@ -508,6 +509,15 @@ renderables = {
 '@ | Set-Content -LiteralPath (Join-Path $unitRoot "pusfume_3p.unit") -Encoding utf8
 
 $heroPreviewEnabled = if ($HeroPreview) { "true" } else { "false" }
+# The stub parent currently shadows the game's mtr_outfit inside the bundle
+# (2026-07-16 live test: black rigid body - child inherited the stub's
+# standard shader whose slots do not match the overrides). Keep the compiled
+# child material opt-in until the stub can be stripped from the built bundle.
+$parentChildMaterialValue = if ($ParentChildMaterial) {
+    '"materials/pusfume/pusfume_outfit_child"'
+} else {
+    "false"
+}
 
 @"
 return {
@@ -518,7 +528,7 @@ return {
     hero_preview_enabled = $heroPreviewEnabled,
     hide_donor_weapons = true,
     locomotion_events_enabled = true,
-    parent_child_material = "materials/pusfume/pusfume_outfit_child",
+    parent_child_material = $parentChildMaterialValue,
     manual_clip_length = 0.8,
     manual_clip_name = "units/pusfume/anims/pusfume_3p_walk",
     manual_clip_probe = false,

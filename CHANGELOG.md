@@ -69,8 +69,13 @@ request rather than in release notes.
   rebind on character materials at all.
 - Compiled a child material that inherits the playable Globadier's character
   shader through a hash reference with Pusfume's atlas maps baked in, matching
-  the game's own child-material structure byte for byte; staged builds now
-  assign it instead of overriding textures at runtime.
+  the game's own child-material structure byte for byte. Live testing showed
+  the compile-required stub parent shadows the game resource inside the mod
+  bundle (black rigid body), so the child path is opt-in behind
+  `-ParentChildMaterial` until the stub can be stripped from the built bundle.
+- Applied the donor character shader to the menu preview mesh; the preview
+  spawned with skinning-incapable compiled materials, which is why the menu
+  model never animated even with its controller running.
 - Entered the idle controller state explicitly at attach instead of relying on
   default-state auto-entry.
 
