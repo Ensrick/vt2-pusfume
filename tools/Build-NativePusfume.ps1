@@ -471,6 +471,13 @@ if ($ParentChildMaterial) {
     $stubTemplate = $stubTemplate.Replace("__EMISSIVE_MAP__", "textures/pusfume/pusfume_atlas_df")
     $stubTemplate | Set-Content -LiteralPath (Join-Path $donorParentSourceDir "mtr_outfit.material") -Encoding utf8
 
+    # The child lives OUTSIDE materials/pusfume/* and in its own package so
+    # its resource load can be ordered AFTER the donor package at runtime; if
+    # the engine resolves the parent reference eagerly at material load, a
+    # startup-package child would fault before Lua could load the parent.
+    $childMaterialRoot = Join-Path $stageMod "child_materials\pusfume"
+    New-Item -ItemType Directory -Path $childMaterialRoot -Force | Out-Null
+
     @'
 parent_material = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/mtr_outfit"
 material_contexts = {
@@ -481,7 +488,13 @@ textures = {
 	texture_map_27b67fd2 = "textures/pusfume/pusfume_atlas_nm"
 	texture_map_8bf37d8e = "textures/pusfume/pusfume_atlas_s"
 }
-'@ | Set-Content -LiteralPath (Join-Path $materialRoot "pusfume_outfit_child.material") -Encoding utf8
+'@ | Set-Content -LiteralPath (Join-Path $childMaterialRoot "pusfume_outfit_child.material") -Encoding utf8
+
+    @'
+material = [
+	"child_materials/pusfume/pusfume_outfit_child"
+]
+'@ | Set-Content -LiteralPath (Join-Path $stageMod "resource_packages\pusfume\native_child.package") -Encoding utf8
 }
 
 @'
@@ -516,7 +529,12 @@ $heroPreviewEnabled = if ($HeroPreview) { "true" } else { "false" }
 # standard shader whose slots do not match the overrides). Keep the compiled
 # child material opt-in until the stub can be stripped from the built bundle.
 $parentChildMaterialValue = if ($ParentChildMaterial) {
-    '"materials/pusfume/pusfume_outfit_child"'
+    '"child_materials/pusfume/pusfume_outfit_child"'
+} else {
+    "false"
+}
+$parentChildPackageValue = if ($ParentChildMaterial) {
+    '"resource_packages/pusfume/native_child"'
 } else {
     "false"
 }
@@ -531,6 +549,7 @@ return {
     hide_donor_weapons = true,
     locomotion_events_enabled = true,
     parent_child_material = $parentChildMaterialValue,
+    parent_child_package = $parentChildPackageValue,
     manual_clip_length = 0.8,
     manual_clip_name = "units/pusfume/anims/pusfume_3p_walk",
     manual_clip_probe = false,
@@ -614,8 +633,20 @@ if ($ParentChildMaterial) {
         }
     }
 
-    if ($totalStripped -ne 3) {
-        throw "Expected to strip exactly 3 stub identity pairs across bundles, stripped $totalStripped"
+    # The pair count depends on packaging layout (index + file header, plus a
+    # package listing when the owning package enumerates dependencies). The
+    # invariant that matters: at least the index/header pairs were found, and
+    # afterwards NO bundle carries the donor-path identity.
+    if ($totalStripped -lt 2) {
+        throw "Expected at least 2 stub identity pairs across bundles, stripped $totalStripped"
+    }
+
+    foreach ($bundleFile in (Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)) {
+        & py $stripTool $bundleFile.FullName --type material `
+            --old $donorParentPath --new "units/pusfume/retired_stub_parent" --expect 0 --dry-run
+        if ($LASTEXITCODE -ne 0) {
+            throw "Stub identity still present in $($bundleFile.Name) after strip"
+        }
     }
 
     Write-Host "Stub parent identity stripped: $totalStripped pair(s) renamed to units/pusfume/retired_stub_parent"

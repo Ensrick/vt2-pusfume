@@ -201,18 +201,21 @@ Test-Condition ($nativeText -match 'function M\.native_skin_name' -and `
     $uiText -match 'Unit\.enable_animation_state_machine\(mesh_unit\)') `
     "menu preview purity" "menu previewers force the native skin, hide donor weapons, and start the mesh controller"
 Test-Condition ($nativeConfigText -match 'parent_child_material\s*=\s*false' -and `
+    $nativeConfigText -match 'parent_child_package\s*=\s*false' -and `
     $nativeBuildText -match '\[switch\]\$ParentChildMaterial' -and `
-    $nativeBuildText -match '"materials/pusfume/pusfume_outfit_child"' -and `
-    $nativeBuildText -match 'pusfume_outfit_child\.material' -and `
+    $nativeBuildText -match '"child_materials/pusfume/pusfume_outfit_child"' -and `
+    $nativeBuildText -match 'native_child\.package' -and `
     $nativeBuildText -match 'parent_material = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/mtr_outfit"' -and `
-    $nativeText -match 'config\.parent_child_material' -and `
+    $nativeText -match 'function ensure_child_package' -and `
+    $nativeText -match 'not state\.donor_package_loaded or not can_get\("package", config\.parent_child_package\)' -and `
     $nativeText -match 'Unit\.set_material\(unit, slot_name, config\.parent_child_material\)') `
-    "parent-child material" "the compiled donor-shader child stays opt-in until the bundled stub stops shadowing the game parent"
+    "parent-child material" "the donor-shader child loads through its own package strictly after the donor parent"
 Test-Condition ((Test-Path (Join-Path $repoRoot "tools\strip_bundle_resource.py")) -and `
     (Test-Path (Join-Path $repoRoot "tests\test_strip_bundle_resource.py")) -and `
     $nativeBuildText -match 'strip_bundle_resource\.py' -and `
     $nativeBuildText -match 'retired_stub_parent' -and `
-    $nativeBuildText -match '\$totalStripped -ne 3') `
+    $nativeBuildText -match '\$totalStripped -lt 2' -and `
+    $nativeBuildText -match '--expect 0 --dry-run') `
     "stub identity strip" "-ParentChildMaterial builds rename the bundled stub so the game parent resolves at runtime"
 Test-Condition ($nativeText -match 'function M\.apply_donor_to_unit' -and `
     $uiText -match 'native\.apply_donor_to_unit\(mesh_unit\)') `

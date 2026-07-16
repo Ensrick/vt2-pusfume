@@ -73,6 +73,11 @@ request rather than in release notes.
   the compile-required stub parent shadows the game resource inside the mod
   bundle (black rigid body), so the child path is opt-in behind
   `-ParentChildMaterial` until the stub can be stripped from the built bundle.
+- Moved the compiled donor-shader child into its own resource package that
+  loads strictly after the donor parent package, and taught
+  `-ParentChildMaterial` builds to strip the stub parent's bundled identity
+  (`tools/strip_bundle_resource.py`) so the child's parent reference resolves
+  against the game's copy instead of the shadowing stub.
 - Applied the donor character shader to the menu preview mesh; the preview
   spawned with skinning-incapable compiled materials, which is why the menu
   model never animated even with its controller running.

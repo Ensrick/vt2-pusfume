@@ -12,6 +12,8 @@ local state = {
     donor_package_requested = false,
     donor_package_loaded = false,
     donor_package_error_logged = false,
+    child_package_requested = false,
+    child_package_loaded = false,
     donor_material_error_logged = false,
     donor_material_applied = false,
     donor_texture_errors = {},
@@ -86,6 +88,34 @@ local function ensure_donor_package(config)
     return state.donor_package_loaded
 end
 
+-- The compiled child material inherits the donor parent by hash, so its
+-- package must only ever load AFTER the donor package is resident.
+local function ensure_child_package(config)
+    if not config.parent_child_package then
+        return true
+    end
+
+    if state.child_package_loaded then
+        return true
+    end
+
+    if not state.donor_package_loaded or not can_get("package", config.parent_child_package) then
+        return false
+    end
+
+    if not state.child_package_requested then
+        state.child_package_requested = true
+        Managers.package:load(config.parent_child_package, DONOR_PACKAGE_REFERENCE)
+        mod:info("[pusfume] Requested native child material package: %s", config.parent_child_package)
+    end
+
+    state.child_package_loaded = Managers.package:has_loaded(
+        config.parent_child_package,
+        DONOR_PACKAGE_REFERENCE)
+
+    return state.child_package_loaded
+end
+
 
 -- The texture channels are Fatshark's literal generated slot names (present in
 -- the community hash dictionary as real strings). What failed in live testing
@@ -135,6 +165,10 @@ local function apply_donor_material_to_unit(unit, config)
     -- It stays opt-in until the stub parent stops shadowing the game resource
     -- inside the built bundle (2026-07-16: black rigid body).
     if config.parent_child_material then
+        if not ensure_child_package(config) then
+            return false
+        end
+
         if not can_get("material", config.parent_child_material) then
             if not state.donor_material_error_logged then
                 state.donor_material_error_logged = true
@@ -720,6 +754,13 @@ function M.animation_status()
 end
 
 function M.shutdown(config)
+    if state.child_package_requested and Managers.package then
+        Managers.package:unload(config.parent_child_package, DONOR_PACKAGE_REFERENCE)
+        state.child_package_requested = false
+        state.child_package_loaded = false
+        mod:info("[pusfume] Released native child material package")
+    end
+
     if state.donor_package_requested and Managers.package then
         Managers.package:unload(config.donor_package, DONOR_PACKAGE_REFERENCE)
         state.donor_package_requested = false

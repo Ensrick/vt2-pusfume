@@ -89,6 +89,21 @@ gone, child bytes untouched). Files claimed: `tools/strip_bundle_resource.py`,
   `_update_units_visibility`.
 - B4: First-person arms and the husk path remain untouched.
 
+## Morning test plan (for the user)
+
+1. First launch: current Workshop build (known-good donor swap). Expect:
+   walk + idle deforming in game, menu previews animated with donor maps,
+   weapons hidden in game and in menus. If menus are still rigid, that build's
+   `Menu previewer native controller enabled` + donor apply log lines tell us
+   which half failed.
+2. The FULL-WIN candidate: run
+   `.\tools\Build-NativePusfume.ps1 -HeroPreview -ParentChildMaterial`
+   then upload via VMBLauncher. Expect: Pusfume's own atlas textures on the
+   character shader, deforming, everywhere. The stub is stripped from the
+   bundle (offline-verified: fresh candidate build strips 2 identity pairs
+   from the child-package bundle, zero remain across all 6 bundles) and the
+   child package loads strictly after the donor parent package.
+
 ## Status log (append entries, newest first)
 
 - 02:2x Claude: TRACK A COMPLETE (offline). `tools/strip_bundle_resource.py`
