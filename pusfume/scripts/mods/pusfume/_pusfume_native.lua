@@ -58,12 +58,11 @@ local function sample_link_probe(extension, unit, t)
     end
 
     local details = {}
-    local layer_time, layer_length = Unit.animation_layer_info(probe.mesh, 1)
+    local animation_states = { Unit.animation_get_state(probe.mesh) }
 
     details[#details + 1] = string.format(
-        "controller_time=%.4f/%.4f bone_mode=%s",
-        layer_time,
-        layer_length,
+        "controller_state=%s bone_mode=%s",
+        tostring(animation_states[1]),
         Unit.animation_bone_mode(probe.mesh))
 
     for _, link in ipairs(PROBE_LINKS) do
