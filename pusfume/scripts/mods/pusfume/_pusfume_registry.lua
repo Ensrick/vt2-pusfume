@@ -186,7 +186,9 @@ function M.register()
 
     -- Reapply custom fields on VMF reloads, where the runtime table may survive.
     career.name = M.CAREER_NAME
-    career.display_name = "pusfume_career_name"
+    -- ProfileRequester resolves this field as an internal career token before
+    -- the UI localizes it, so it must match the registered career name.
+    career.display_name = M.CAREER_NAME
     career.description = "pusfume_description"
     career.profile_name = M.PROFILE_NAME
     career.playfab_name = nil

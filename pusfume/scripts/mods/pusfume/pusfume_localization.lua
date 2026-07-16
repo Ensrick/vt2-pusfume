@@ -3,6 +3,7 @@ return {
         en = "Adventure-only custom-career scaffold for Pusfume. All lobby members need the same version.",
     },
     pusfume_character_name = { en = "Pusfume" },
+    pusfume = { en = "Under-Empire Reject" },
     pusfume_career_name = { en = "Under-Empire Reject" },
     pusfume_description = {
         en = "A Hell Pit survivor with a scheme for every problem and an exit for every scheme.",

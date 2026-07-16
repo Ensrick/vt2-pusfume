@@ -12,6 +12,9 @@ request rather than in release notes.
 
 ### Fixed
 
+- Fixed v0.6.2-dev sending a localization key instead of Pusfume's internal
+  career token to `ProfileRequester`, which produced a nil career index when
+  confirming the hero selection.
 - Fixed v0.6.1-dev failing on VT2's strict network-lookup metatable while
   checking whether new career buff identifiers were already registered.
 - Fixed the v0.6.0-dev startup regression that aborted career and hero-selector

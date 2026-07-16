@@ -32,6 +32,7 @@ $nativePath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_native.
 $nativeConfigPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_native_config.lua"
 $uiPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_ui.lua"
 $gameplayPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_gameplay.lua"
+$localizationPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\pusfume_localization.lua"
 $dataPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\pusfume_data.lua"
 $packagePath = Join-Path $repoRoot "pusfume\resource_packages\pusfume\pusfume.package"
 $nativeUnitPackagePath = Join-Path $repoRoot "pusfume\units\pusfume\pusfume_3p.package"
@@ -58,6 +59,7 @@ $nativeText = Get-Content -LiteralPath $nativePath -Raw
 $nativeConfigText = Get-Content -LiteralPath $nativeConfigPath -Raw
 $uiText = Get-Content -LiteralPath $uiPath -Raw
 $gameplayText = Get-Content -LiteralPath $gameplayPath -Raw
+$localizationText = Get-Content -LiteralPath $localizationPath -Raw
 $dataText = Get-Content -LiteralPath $dataPath -Raw
 $packageText = Get-Content -LiteralPath $packagePath -Raw
 $nativeUnitPackageText = Get-Content -LiteralPath $nativeUnitPackagePath -Raw
@@ -341,12 +343,15 @@ Test-Condition ($registryText -match 'function M\.refresh_career_color\(\)' -and
     "career color" "Pusfume owns a distinct donor-derived color table"
 Test-Condition ($mainText -match 'registry\.refresh_career_color\(\)') `
     "career color" "registration is refreshed across game-state changes"
-Test-Condition ($registryText -match 'career\.display_name\s*=\s*"pusfume_career_name"' -and `
+Test-Condition ($registryText -match 'career\.display_name\s*=\s*M\.CAREER_NAME' -and `
+    $localizationText -match 'pusfume\s*=\s*\{\s*en\s*=\s*"Under-Empire Reject"' -and `
     $registryText -match 'career\.activated_ability\s*=\s*ActivatedAbilitySettings\.pusfume' -and `
     $registryText -match 'career\.passive_ability\s*=\s*PassiveAbilitySettings\.pusfume' -and `
     $uiText -match 'mod:localize\("pusfume_character_name"\)' -and `
     $uiText -match 'mod:localize\("pusfume_career_name"\)') `
     "career identity" "Pusfume owns localized selector names and gameplay settings"
+Test-Condition ($registryText -notmatch 'career\.display_name\s*=\s*"pusfume_career_name"') `
+    "profile request identity" "display_name remains the internal career token required by career_index_from_name"
 Test-Condition ($mainText -match 'gameplay\.install\(\)' -and `
     $gameplayText -match 'CareerAbilityPusfumeIngenuity' -and `
     $gameplayText -match 'inventory_upgrades=guarded') `
