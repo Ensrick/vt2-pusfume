@@ -53,7 +53,8 @@ def murmur64a(key: bytes, seed: int = 0) -> int:
 
 
 def read_bundle(path):
-    raw = open(path, "rb").read()
+    with open(path, "rb") as bundle_file:
+        raw = bundle_file.read()
     fmt, inflate_size = struct.unpack_from("<II", raw, 0)
     if fmt not in SUPPORTED_FORMATS:
         raise SystemExit(f"unsupported bundle format 0x{fmt:08X}")
@@ -93,7 +94,8 @@ def write_bundle(path, fmt, padding, data):
             )
         out += struct.pack("<I", len(block))
         out += block
-    open(path, "wb").write(bytes(out))
+    with open(path, "wb") as bundle_file:
+        bundle_file.write(bytes(out))
 
 
 def main():
