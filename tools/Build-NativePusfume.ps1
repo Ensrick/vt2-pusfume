@@ -13,6 +13,10 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+if ($ParentChildMaterial -and -not $NoDonorTextureShadow) {
+    throw "Parent-child and ordered texture-shadow experiments are mutually exclusive; add -NoDonorTextureShadow"
+}
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $sourceMod = Join-Path $repoRoot "pusfume"
 $useFbxDcc = -not $UseBsiSkinFallback.IsPresent
@@ -738,10 +742,11 @@ if (-not $NoDonorTextureShadow) {
             }
         }
 
-        # Minimum: bundle index + file header + package listing + at least one
-        # compiled material reference. Fewer means the atlas never compiled in.
-        if ($totalRenamed -lt 4) {
-            throw "Expected at least 4 identity occurrences for $atlasPath, renamed $totalRenamed"
+        # The isolated native_shadow layout intentionally has only the bundle
+        # index and file header. Any material/startup-package references would
+        # preload the atlas and invalidate the load-order experiment.
+        if ($totalRenamed -ne 2) {
+            throw "Expected exactly 2 isolated identity occurrences for $atlasPath, renamed $totalRenamed"
         }
 
         foreach ($bundleFile in (Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)) {
