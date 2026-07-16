@@ -108,6 +108,35 @@ gone, child bytes untouched). Files claimed: `tools/strip_bundle_resource.py`,
    from the child-package bundle, zero remain across all 6 bundles) and the
    child package loads strictly after the donor parent package.
 
+## Track C - donor texture shadowing [CLAIMED: Claude, 2026-07-16 morning]
+
+The user-requested direction: keep the proven donor material swap and make it
+sample OUR maps by shadowing the game's texture ids. Evidence base, all parsed
+from the game's own bundle `7a8e617a32277fc4` (the donor package's bundle;
+bundle filename = Murmur64 of the anchor package path):
+
+- The game's compiled `mtr_outfit` (`90BDF3BAC6F81BA8.material`, 768 bytes)
+  stores parent `3D25339231384C80` at offset 28 and a texture table of
+  12-byte `(u32 slot_key, u64 texture_id)` entries at offsets 88..127.
+- The slot keys are `IdString32("texture_map_<suffix>")` - the generated slot
+  NAMES hash back to the table keys (F9292771/909D00F3/9AD51991). Confirmed.
+- Donor texture ids: diffuse `DD74D8319F514D96`, normal `45FFAEEF53695A86`,
+  packed response `E334A8CB6BCB5E6D`.
+
+Mechanism: `strip_bundle_resource.py --bare --new-hash` renames every 8-byte
+occurrence of our atlas texture name hashes to the donor ids across all built
+bundles (index, file header, package listing, and our own compiled materials'
+references stay mutually consistent). Our main package registers those ids at
+mod boot, before the donor package loads at first spawn, so the game's
+`mtr_outfit` binds Janfon's atlas - the same first-loaded-wins precedence the
+black-rigid-body stub incident proved live. Runtime Lua texture restore is
+skipped in shadow builds (`donor_texture_shadow` config); the atlas resources
+no longer exist under their old paths, and those calls never rebound anything
+anyway. Opt-out: `-NoDonorTextureShadow`.
+
+Known tradeoff: anything else rendering the dark-pact Globadier `skin_1001`
+outfit samples Janfon's atlas with Globadier UVs (garbled). Dev-acceptable.
+
 ## Status log (append entries, newest first)
 
 - 11:24 Sol: LIVE RESULT for `f169b07` / ManifestID
