@@ -42,4 +42,3 @@ def register_handlers():
 def unregister_handlers():
     if _live_mirror_handler in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.remove(_live_mirror_handler)
-
