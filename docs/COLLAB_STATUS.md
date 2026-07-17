@@ -204,6 +204,14 @@ that itself loads mod-side.
 
 ## Status log (append entries, newest first)
 
+- 23:3x Claude: WIRE GUARD VERIFIED IN LIVE LOG (03:31 UTC session, 62 min,
+  clean): "[pusfume] Stripped unencodable loadout property from sync:
+  woc_intrinsic_crit (item=es_1h_sword)" and "...woc_power_vs_order
+  (item=es_1h_sword)" at 03:35:08 - the Blightreaper synced without a crash
+  and the guard also preempted a SECOND unencodable property that had not
+  crashed us yet. The loadout-sync wire crash class is closed with log
+  evidence; user in-game confirmation stands as the final word per policy.
+
 - 22:21 Claude: WIRE GUARD SHIPPED per the 40-minute fallback - ManifestID
   4840749073146417845, workshop_log "Uploaded new content" 22:21:42. Build
   = -HeroPreview -SplicedGameChild at ded3b58+ (includes Sol's Laurel
