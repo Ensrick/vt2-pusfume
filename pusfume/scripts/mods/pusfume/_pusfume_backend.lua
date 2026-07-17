@@ -9,6 +9,8 @@ local status = {
     runtime_guard_count = 0,
     runtime_guards_installed = false,
     used_empty_loadout_fallback = false,
+    wire_guard_installed = false,
+    stripped_sync_keys = {},
 }
 
 local function expose_donor_loadout(self, loadouts, registry)
@@ -149,6 +151,80 @@ function M.install_runtime_guards(registry)
         return func(alias_career(career_name, registry), ...)
     end)
     status.runtime_guard_count = status.runtime_guard_count + 1
+
+    -- Wire safety, never toggle-gated: the loadout-sync RPC encoder indexes
+    -- NetworkLookup.properties/traits, whose metatables RAISE on missing keys
+    -- (live crash 2026-07-17: the Blightreaper event sword's
+    -- woc_power_vs_order rode the shared Ranger Veteran loadout into
+    -- Pusfume's resync). Vanilla never syncs such items down this path; the
+    -- synthetic career does, and in coop the raise lands on every decoding
+    -- peer. Filter unencodable keys out of the encoder's input, sender-side.
+    -- rawget bypasses the raising __index, so membership probing is safe.
+    if LoadoutUtils and NetworkLookup and not status.wire_guard_installed then
+        mod:hook(LoadoutUtils, "properties_to_rpc_params", function(func, item)
+            local properties = item and item.properties
+            local traits = item and item.traits
+
+            if not properties and not traits then
+                return func(item)
+            end
+
+            local safe_properties = nil
+            local safe_traits = nil
+            local stripped = false
+
+            if properties then
+                safe_properties = {}
+
+                for property_name, property_value in pairs(properties) do
+                    if rawget(NetworkLookup.properties, property_name) then
+                        safe_properties[property_name] = property_value
+                    else
+                        stripped = true
+
+                        if not status.stripped_sync_keys[property_name] then
+                            status.stripped_sync_keys[property_name] = true
+                            mod:info("[pusfume] Stripped unencodable loadout property from sync: %s (item=%s)",
+                                property_name, tostring(item.key))
+                        end
+                    end
+                end
+            end
+
+            if traits then
+                safe_traits = {}
+
+                for i = 1, #traits do
+                    local trait_name = traits[i]
+
+                    if rawget(NetworkLookup.traits, trait_name) then
+                        safe_traits[#safe_traits + 1] = trait_name
+                    else
+                        stripped = true
+
+                        if not status.stripped_sync_keys[trait_name] then
+                            status.stripped_sync_keys[trait_name] = true
+                            mod:info("[pusfume] Stripped unencodable loadout trait from sync: %s (item=%s)",
+                                trait_name, tostring(item.key))
+                        end
+                    end
+                end
+            end
+
+            if not stripped then
+                return func(item)
+            end
+
+            -- The encoder reads only item.properties and item.traits.
+            return func({
+                properties = safe_properties,
+                traits = safe_traits,
+            })
+        end)
+
+        status.wire_guard_installed = true
+        mod:info("[pusfume] installed loadout sync wire guard")
+    end
 
     status.runtime_guards_installed = true
     registry.set_loadout_validator(function()

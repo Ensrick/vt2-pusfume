@@ -12,6 +12,13 @@ request rather than in release notes.
 
 ### Fixed
 
+- Fixed a session-ending crash when the shared Ranger Veteran loadout carries
+  an item the vanilla loadout-sync RPC cannot encode (live: the Blightreaper
+  event sword's `woc_power_vs_order` property is absent from
+  `NetworkLookup.properties`, whose metatable raises on missing keys, and the
+  synthetic career's loadout resync syncs items vanilla never would). A
+  sender-side wire guard now strips unencodable properties and traits before
+  the encoder, unconditionally, logging each stripped key once.
 - Replaced the legacy fur's per-vertex body projection with rigid connected-card
   retargeting, preventing individual triangle corners from stretching across
   unrelated body regions while preserving animated weight transfer.

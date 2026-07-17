@@ -337,6 +337,12 @@ Test-Condition ($nativeText -match 'pusfume_tint' -and `
     $nativeText -match 'Material\.set_scalar\(material, "gradient_variation", variation\)' -and `
     $nativeText -match 'Material\.set_scalar\(material, "tint_columns_pair", columns_pair\)') `
     "gradient tint probe" "live tint sweep rides the engine's own character-tint scalars to neutralize the shader-applied Globadier green"
+Test-Condition ($backendText -match 'mod:hook\(LoadoutUtils, "properties_to_rpc_params"' -and `
+    $backendText -match 'rawget\(NetworkLookup\.properties, property_name\)' -and `
+    $backendText -match 'rawget\(NetworkLookup\.traits, trait_name\)' -and `
+    $backendText -match 'Stripped unencodable loadout property from sync' -and `
+    $backendText -notmatch 'wire_guard_enabled') `
+    "loadout sync wire guard" "unencodable item properties and traits are stripped sender-side before the vanilla RPC encoder, unconditionally"
 Test-Condition ($nativeConfigText -match 'hide_donor_weapons\s*=\s*false' -and `
     $nativeBuildText -match 'hide_donor_weapons\s*=\s*true' -and `
     $nativeText -match 'function hide_donor_weapons' -and `
