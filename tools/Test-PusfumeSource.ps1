@@ -65,7 +65,7 @@ Test-Condition ((Test-Path -LiteralPath (Join-Path $addonRoot "__init__.py")) -a
     (Test-Path -LiteralPath (Join-Path $addonRoot "properties.py")) -and `
     (Test-Path -LiteralPath (Join-Path $addonRoot "ui.py")) -and `
     $addonManifestText -match 'id\s*=\s*"vt2_content_tools"' -and `
-    $addonManifestText -match 'version\s*=\s*"0\.1\.0"') `
+    $addonManifestText -match 'version\s*=\s*"0\.2\.0"') `
     "Blender content tools" "installable extension source and manifest are complete"
 Test-Condition ($addonOperatorsText -match 'axis_forward="-Y"' -and `
     $addonOperatorsText -match 'axis_up="Z"' -and `
@@ -79,6 +79,11 @@ Test-Condition ($addonValidationText -match 'too_many_influences' -and `
     $addonPackageText -match 'date_time=\(1980, 1, 1, 0, 0, 0\)' -and `
     $addonBlenderTestText -match '5\.2\.0 LTS') `
     "Blender content tools" "weight, animation, deterministic package, and Blender 5.2 acceptance gates are present"
+Test-Condition ($addonOperatorsText -match 'class VT2_OT_mirror_pose' -and `
+    $addonOperatorsText -match 'reflection @ source_pose @ reflection' -and `
+    $addonOperatorsText -match 'mirrored_rest\.inverted_safe\(\)' -and `
+    $addonBlenderTestText -match 'pose_mirror.*left-right/right-left') `
+    "Blender content tools" "VT2 j_left/j_right poses are rest-corrected and tested in both directions"
 Test-Condition (Test-Path (Join-Path $repoRoot "pusfume\resource_packages\pusfume\pusfume.package")) `
     "resource package" "package manifest exists"
 Test-Condition ($mainText -match 'assets\.install\(\)') "asset bridge" "installed at runtime"

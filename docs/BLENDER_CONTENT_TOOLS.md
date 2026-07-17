@@ -1,7 +1,7 @@
 # VT2 Content Tools for Blender 5.2
 
 VT2 Content Tools is the supported no-Maya authoring path for Janfon's Pusfume
-models and animations. Release `0.1.0` is acceptance-tested against **Blender
+models and animations. Release `0.2.0` is acceptance-tested against **Blender
 5.2.0 LTS** on Windows. Its extension manifest permits Blender 4.3 or newer,
 but 5.2.0 LTS is the project's primary tested version.
 
@@ -17,11 +17,11 @@ Build the installable package from the repository root:
 py -3 tools\package_blender_addon.py
 ```
 
-This writes `.build/dist/vt2_content_tools-0.1.0.zip`. In Blender 5.2:
+This writes `.build/dist/vt2_content_tools-0.2.0.zip`. In Blender 5.2:
 
 1. Open **Edit > Preferences > Get Extensions**.
 2. Open the menu and choose **Install from Disk**.
-3. Select `vt2_content_tools-0.1.0.zip`.
+3. Select `vt2_content_tools-0.2.0.zip`.
 4. Open the 3D Viewport and press `N` to show the sidebar.
 5. Select the **VT2** tab.
 
@@ -52,6 +52,26 @@ and normalizes the survivors. It does not alter non-bone vertex groups.
 Transforms and n-gons are warnings rather than automatic edits. Apply or
 triangulate them deliberately after confirming the rest pose; the extension
 will not destructively guess at an artist's intent.
+
+## VT2 pose mirroring
+
+In Pose Mode, the **Pose Mirroring** panel pairs VT2 names such as
+`j_leftarm`/`j_rightarm` and `j_lefthand`/`j_righthand` without renaming the
+rig. Common `.L/.R`, `_L/_R`, and `-L/-R` pairs are also recognized.
+
+Choose **Left to Right** or **Right to Left**, select source-side bones, and
+press **Mirror VT2 Pose**. The default X axis is correct for the validated
+Pusfume scene; Y and Z remain available for rigs authored in another local
+orientation. The operator reflects each source pose in armature space, removes
+the reflected source rest transform, and reapplies the result to the actual
+destination rest transform. This preserves intentional asymmetry in the rest
+rig better than copying Euler values.
+
+**Selected Source Bones Only** prevents accidental whole-rig changes. Enable
+**Insert Keyframes** when the mirrored destination should be keyed at the
+current frame. Destination constraints can override the result; the operator
+reports how many mirrored bones have constraints so the artist can inspect
+them rather than silently baking an unexpected pose.
 
 ## Animation setup
 
@@ -94,7 +114,7 @@ Run the normal tests, package validation, and the real Blender 5.2 fixture:
 py -3 -m unittest discover -s tests -v
 py -3 tools\package_blender_addon.py
 & "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" `
-  --command extension validate .build\dist\vt2_content_tools-0.1.0.zip
+  --command extension validate .build\dist\vt2_content_tools-0.2.0.zip
 & "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" `
   --background --factory-startup --disable-autoexec `
   --python tools\test_vt2_content_tools_blender.py -- `
@@ -102,8 +122,9 @@ py -3 tools\package_blender_addon.py
 ```
 
 The fixture intentionally creates five weights per vertex. A passing run must
-detect that failure, repair it to four normalized weights, reach zero errors,
-and produce both FBXs plus the handoff JSON under Blender `5.2.0 LTS`.
+detect that failure, repair it to four normalized weights, mirror a VT2 arm
+pair accurately in both directions, reach zero errors, and produce both FBXs
+plus the handoff JSON under Blender `5.2.0 LTS`.
 
 ## Provenance boundary
 

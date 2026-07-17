@@ -30,7 +30,8 @@ The repository includes an installable **VT2 Content Tools** extension for
 Blender **5.2.0 LTS**. It validates character rigs, UVs, material slots,
 four-influence skin weights, and active animation clips, then exports the model,
 active clip, referenced textures, and a hash-verified handoff report with the
-FBX settings confirmed by Pusfume. This removes Maya and Autodesk accounts from
+FBX settings confirmed by Pusfume. It also mirrors `j_left*` and `j_right*`
+bones directly in Pose Mode without renaming the VT2 rig. This removes Maya and Autodesk accounts from
 Janfon's authoring/export path; VT2's SDK/VMB compiler is still required for
 the final runtime resources.
 

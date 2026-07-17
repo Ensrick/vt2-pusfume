@@ -39,6 +39,15 @@ class VT2_PT_content_tools(bpy.types.Panel):
         material.prop(settings, "material_surface")
         material.operator("vt2.tag_material", icon="BOOKMARKS")
 
+        mirror = layout.box()
+        mirror.label(text="Pose Mirroring", icon="ARROW_LEFTRIGHT")
+        mirror.prop(settings, "mirror_direction", expand=True)
+        row = mirror.row(align=True)
+        row.prop(settings, "mirror_axis", expand=True)
+        mirror.prop(settings, "mirror_selected_only")
+        mirror.prop(settings, "mirror_insert_keyframes")
+        mirror.operator("vt2.mirror_pose", icon="MOD_MIRROR")
+
         export = layout.box()
         export.label(text="Export", icon="EXPORT")
         export.prop(settings, "export_mode")

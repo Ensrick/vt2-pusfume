@@ -5,12 +5,19 @@ from __future__ import annotations
 import re
 
 
-VERSION = (0, 1, 0)
+VERSION = (0, 2, 0)
 VERSION_STRING = ".".join(str(part) for part in VERSION)
 SAFE_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 POSE_PATH_PATTERN = re.compile(
     r'^pose\.bones\["(?P<bone>(?:\\.|[^"\\])+)"\]\.'
     r"(?P<channel>location|rotation_euler|rotation_quaternion|scale)$"
+)
+MIRROR_MARKERS = (
+    ("j_left", "j_right"),
+    ("_left", "_right"),
+    (".L", ".R"),
+    ("_L", "_R"),
+    ("-L", "-R"),
 )
 
 
@@ -35,6 +42,33 @@ def export_filename(asset_name, kind, clip_name=None):
     if kind == "animation":
         return f"{asset}_{safe_name(clip_name, 'clip')}.fbx"
     raise ValueError(f"Unsupported VT2 export kind: {kind}")
+
+
+def mirrored_bone_name(name, direction):
+    if direction not in {"LEFT_TO_RIGHT", "RIGHT_TO_LEFT"}:
+        raise ValueError(f"Unsupported mirror direction: {direction}")
+    for left_marker, right_marker in MIRROR_MARKERS:
+        source, target = (
+            (left_marker, right_marker)
+            if direction == "LEFT_TO_RIGHT"
+            else (right_marker, left_marker)
+        )
+        if source in name:
+            return name.replace(source, target, 1)
+    return None
+
+
+def mirrored_bone_pairs(bone_names, direction, selected_names=None):
+    names = set(bone_names)
+    selected = set(selected_names) if selected_names is not None else None
+    pairs = []
+    for source in sorted(names):
+        if selected is not None and source not in selected:
+            continue
+        target = mirrored_bone_name(source, direction)
+        if target in names and target != source:
+            pairs.append((source, target))
+    return pairs
 
 
 def analyze_weight_rows(

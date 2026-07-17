@@ -44,6 +44,33 @@ class Vt2ContentToolsCoreTests(unittest.TestCase):
         self.assertEqual(result["unknown_bones"], ["missing"])
         self.assertEqual(result["other"], ["custom.property"])
 
+    def test_vt2_left_right_bone_pairs_preserve_names(self):
+        names = {
+            "j_leftarm",
+            "j_rightarm",
+            "j_lefthand",
+            "j_righthand",
+            "weapon_socket.L",
+            "weapon_socket.R",
+            "j_spine",
+        }
+        self.assertEqual(
+            core.mirrored_bone_pairs(
+                names,
+                "LEFT_TO_RIGHT",
+                selected_names={"j_leftarm", "weapon_socket.L"},
+            ),
+            [
+                ("j_leftarm", "j_rightarm"),
+                ("weapon_socket.L", "weapon_socket.R"),
+            ],
+        )
+        self.assertEqual(
+            core.mirrored_bone_name("j_righthand", "RIGHT_TO_LEFT"),
+            "j_lefthand",
+        )
+        self.assertIsNone(core.mirrored_bone_name("j_spine", "LEFT_TO_RIGHT"))
+
 
 if __name__ == "__main__":
     unittest.main()

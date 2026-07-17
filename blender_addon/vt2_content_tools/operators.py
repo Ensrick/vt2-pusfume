@@ -10,6 +10,7 @@ from pathlib import Path
 import shutil
 
 import bpy
+from mathutils import Matrix
 
 from . import core
 from . import validation
@@ -177,6 +178,31 @@ def _repair_mesh_weights(mesh, armature, maximum_influences):
     return repaired_vertices, removed_influences
 
 
+def _reflection_matrix(axis):
+    matrix = Matrix.Identity(4)
+    index = {"X": 0, "Y": 1, "Z": 2}[axis]
+    matrix[index][index] = -1.0
+    return matrix
+
+
+def _mirrored_pose_matrix(source_pose, source_rest, target_rest, axis):
+    reflection = _reflection_matrix(axis)
+    mirrored_pose = reflection @ source_pose @ reflection
+    mirrored_rest = reflection @ source_rest @ reflection
+    return mirrored_pose @ mirrored_rest.inverted_safe() @ target_rest
+
+
+def _insert_pose_keys(pose_bone):
+    pose_bone.keyframe_insert(data_path="location")
+    if pose_bone.rotation_mode == "QUATERNION":
+        pose_bone.keyframe_insert(data_path="rotation_quaternion")
+    elif pose_bone.rotation_mode == "AXIS_ANGLE":
+        pose_bone.keyframe_insert(data_path="rotation_axis_angle")
+    else:
+        pose_bone.keyframe_insert(data_path="rotation_euler")
+    pose_bone.keyframe_insert(data_path="scale")
+
+
 class VT2_OT_validate(bpy.types.Operator):
     bl_idname = "vt2.validate"
     bl_label = "Validate VT2 Handoff"
@@ -258,6 +284,73 @@ class VT2_OT_tag_material(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class VT2_OT_mirror_pose(bpy.types.Operator):
+    bl_idname = "vt2.mirror_pose"
+    bl_label = "Mirror VT2 Pose"
+    bl_description = "Mirror j_left/j_right pose pairs without renaming VT2 bones"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        return (
+            context.mode == "POSE"
+            and context.object is not None
+            and context.object.type == "ARMATURE"
+        )
+
+    def execute(self, context):
+        settings = context.scene.vt2_content_tools
+        armature = context.object
+        selected = (
+            {bone.name for bone in context.selected_pose_bones or ()}
+            if settings.mirror_selected_only
+            else None
+        )
+        pairs = core.mirrored_bone_pairs(
+            {bone.name for bone in armature.pose.bones},
+            settings.mirror_direction,
+            selected_names=selected,
+        )
+        if not pairs:
+            side = "j_left" if settings.mirror_direction == "LEFT_TO_RIGHT" else "j_right"
+            self.report(
+                {"ERROR"},
+                f"No {side} source bones with matching partners were found",
+            )
+            return {"CANCELLED"}
+
+        snapshots = {
+            source_name: armature.pose.bones[source_name].matrix.copy()
+            for source_name, _ in pairs
+        }
+        pairs.sort(
+            key=lambda pair: len(armature.pose.bones[pair[0]].parent_recursive)
+        )
+        constrained = 0
+        for source_name, target_name in pairs:
+            source = armature.pose.bones[source_name]
+            target = armature.pose.bones[target_name]
+            target.matrix = _mirrored_pose_matrix(
+                snapshots[source_name],
+                source.bone.matrix_local,
+                target.bone.matrix_local,
+                settings.mirror_axis,
+            )
+            context.view_layer.update()
+            if target.constraints:
+                constrained += 1
+            if settings.mirror_insert_keyframes:
+                _insert_pose_keys(target)
+
+        message = f"Mirrored {len(pairs)} VT2 bone pair(s)"
+        if constrained:
+            message += f"; {constrained} destination bone(s) have constraints"
+            self.report({"WARNING"}, message)
+        else:
+            self.report({"INFO"}, message)
+        return {"FINISHED"}
+
+
 class VT2_OT_export_handoff(bpy.types.Operator):
     bl_idname = "vt2.export_handoff"
     bl_label = "Export VT2 Handoff"
@@ -334,5 +427,6 @@ CLASSES = (
     VT2_OT_validate,
     VT2_OT_repair_weights,
     VT2_OT_tag_material,
+    VT2_OT_mirror_pose,
     VT2_OT_export_handoff,
 )

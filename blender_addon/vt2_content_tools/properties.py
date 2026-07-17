@@ -69,6 +69,34 @@ class VT2ContentToolsSettings(bpy.types.PropertyGroup):
         ),
         default="OPAQUE",
     )
+    mirror_direction: bpy.props.EnumProperty(
+        name="Direction",
+        items=(
+            ("LEFT_TO_RIGHT", "Left to Right", "Copy j_left poses onto j_right partners"),
+            ("RIGHT_TO_LEFT", "Right to Left", "Copy j_right poses onto j_left partners"),
+        ),
+        default="LEFT_TO_RIGHT",
+    )
+    mirror_axis: bpy.props.EnumProperty(
+        name="Mirror Axis",
+        description="Armature-local axis separating left and right",
+        items=(
+            ("X", "X", "Mirror across the armature-local X axis"),
+            ("Y", "Y", "Mirror across the armature-local Y axis"),
+            ("Z", "Z", "Mirror across the armature-local Z axis"),
+        ),
+        default="X",
+    )
+    mirror_selected_only: bpy.props.BoolProperty(
+        name="Selected Source Bones Only",
+        description="Mirror only selected bones on the source side",
+        default=True,
+    )
+    mirror_insert_keyframes: bpy.props.BoolProperty(
+        name="Insert Keyframes",
+        description="Key mirrored destination pose channels at the current frame",
+        default=False,
+    )
     last_errors: bpy.props.IntProperty(default=0, options={"HIDDEN"})
     last_warnings: bpy.props.IntProperty(default=0, options={"HIDDEN"})
     last_report: bpy.props.StringProperty(default="Not validated", options={"HIDDEN"})

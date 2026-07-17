@@ -9,6 +9,7 @@ from pathlib import Path
 import sys
 
 import bpy
+from mathutils import Matrix, Quaternion
 
 
 def create_fixture(texture_path, reset_factory=True):
@@ -27,10 +28,16 @@ def create_fixture(texture_path, reset_factory=True):
     root = armature_data.edit_bones.new("j_root")
     root.head = (0.0, 0.0, 0.0)
     root.tail = (0.0, 0.0, 0.5)
-    for index in range(1, 5):
-        bone = armature_data.edit_bones.new(f"j_test{index}")
-        bone.head = (0.0, 0.0, 0.5)
-        bone.tail = (0.1 * index, 0.0, 1.0)
+    child_specs = (
+        ("j_leftarm", (0.2, 0.0, 0.5), (0.7, 0.0, 0.8)),
+        ("j_rightarm", (-0.2, 0.0, 0.5), (-0.7, 0.0, 0.8)),
+        ("j_test1", (0.0, 0.0, 0.5), (0.0, 0.2, 1.0)),
+        ("j_test2", (0.0, 0.0, 0.5), (0.0, -0.2, 1.0)),
+    )
+    for name, head, tail in child_specs:
+        bone = armature_data.edit_bones.new(name)
+        bone.head = head
+        bone.tail = tail
         bone.parent = root
     bpy.ops.object.mode_set(mode="OBJECT")
 
@@ -80,6 +87,67 @@ def create_fixture(texture_path, reset_factory=True):
     return armature, mesh
 
 
+def matrix_error(first, second):
+    return max(
+        abs(first[row][column] - second[row][column])
+        for row in range(4)
+        for column in range(4)
+    )
+
+
+def expected_mirror(source, target, axis="X"):
+    reflection = Matrix.Identity(4)
+    index = {"X": 0, "Y": 1, "Z": 2}[axis]
+    reflection[index][index] = -1.0
+    mirrored_pose = reflection @ source.matrix @ reflection
+    mirrored_rest = reflection @ source.bone.matrix_local @ reflection
+    return mirrored_pose @ mirrored_rest.inverted_safe() @ target.bone.matrix_local
+
+
+def test_pose_mirroring(armature, settings):
+    bpy.ops.object.select_all(action="DESELECT")
+    armature.select_set(True)
+    bpy.context.view_layer.objects.active = armature
+    bpy.ops.object.mode_set(mode="POSE")
+    left = armature.pose.bones["j_leftarm"]
+    right = armature.pose.bones["j_rightarm"]
+    for pose_bone in armature.pose.bones:
+        pose_bone.select = False
+
+    left.select = True
+    armature.data.bones.active = left.bone
+    left.rotation_mode = "QUATERNION"
+    left.rotation_quaternion = Quaternion((0.0, 1.0, 0.0), 0.35)
+    bpy.context.view_layer.update()
+    expected_right = expected_mirror(left, right)
+    settings.mirror_direction = "LEFT_TO_RIGHT"
+    settings.mirror_axis = "X"
+    settings.mirror_selected_only = True
+    if bpy.ops.vt2.mirror_pose() != {"FINISHED"}:
+        raise RuntimeError("Left-to-right VT2 pose mirror failed")
+    if matrix_error(right.matrix, expected_right) > 1e-5:
+        raise RuntimeError("Left-to-right VT2 pose mirror produced the wrong matrix")
+
+    left.select = False
+    right.select = True
+    armature.data.bones.active = right.bone
+    right.rotation_mode = "QUATERNION"
+    right.rotation_quaternion = Quaternion((1.0, 0.0, 0.0), -0.2)
+    bpy.context.view_layer.update()
+    expected_left = expected_mirror(right, left)
+    settings.mirror_direction = "RIGHT_TO_LEFT"
+    if bpy.ops.vt2.mirror_pose() != {"FINISHED"}:
+        raise RuntimeError("Right-to-left VT2 pose mirror failed")
+    if matrix_error(left.matrix, expected_left) > 1e-5:
+        raise RuntimeError("Right-to-left VT2 pose mirror produced the wrong matrix")
+
+    for pose_bone in armature.pose.bones:
+        pose_bone.matrix_basis.identity()
+        pose_bone.select = True
+    bpy.context.view_layer.update()
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+
 def main(repo_root, output_root, installed=False):
     if installed:
         vt2_content_tools = importlib.import_module(
@@ -105,6 +173,7 @@ def main(repo_root, output_root, installed=False):
     settings.export_mode = "BOTH"
     settings.scope = "ALL"
     settings.include_textures = True
+    test_pose_mirroring(bpy.data.objects["fixture_rig"], settings)
 
     before = validation.validate(bpy.context, settings)
     if not any(issue["code"] == "too_many_influences" for issue in before["issues"]):
@@ -146,6 +215,7 @@ def main(repo_root, output_root, installed=False):
                 "blender": bpy.app.version_string,
                 "files": sorted(expected),
                 "pre_repair_errors": before["summary"]["errors"],
+                "pose_mirror": "left-right/right-left",
                 "warnings": after["summary"]["warnings"],
             },
             sort_keys=True,
