@@ -204,6 +204,20 @@ that itself loads mod-side.
 
 ## Status log (append entries, newest first)
 
+- 20:4x Claude: THIRD CRASH PINNED, WIRE-SAFETY CLASS (priority-0 pattern)
+  from the 01:33 UTC session: `network_lookup.lua:2521 Table properties does
+  not contain key: woc_power_vs_order` via
+  `loadout_utils.properties_to_rpc_params -> sync_loadout_slot ->
+  add_equipment -> _spawn_resynced_loadout`. An equipped item on the Pusfume
+  loadout carries a non-Adventure property (woc_* = Winds/pactsworn family)
+  and the vanilla loadout-sync RPC cannot encode it. The kit already hooks
+  sync_loadout_slot (visible in the chain) but does not sanitize properties.
+  FIX PATTERN (established, never toggle-gated): sender-side substitution -
+  strip or remap any property key missing from NetworkLookup.properties
+  BEFORE the vanilla RPC encoder sees it, unconditionally; in coop this
+  class CTDs OTHER PEERS, not just the host. Distinct from the two crashes
+  pinned earlier; three open career-kit issues now tracked separately.
+
 - 20:2x Claude: SECOND CRASH PINNED from the 01:05 UTC session (mid-mission,
   after ~10 min): `utility.lua:41 arithmetic on blackboard_value nil` inside
   a PLAYER BOT's behavior tree (`player_bot_base:335 -> ai_brain ->
