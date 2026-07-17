@@ -74,8 +74,85 @@ function M.collect(registry, career_index, backend, compat, ui, native)
 
     local talent_trees = career and TalentTrees and TalentTrees[career.profile_name]
     local talent_tree = talent_trees and talent_trees[career.talent_tree_index]
-    local has_gameplay = career and career.activated_ability and career.passive_ability and talent_tree
-    add(checks, "gameplay donor", has_gameplay and "PASS" or "FAIL", "ability, passive, and talent tree")
+    local active_ability = career and career.activated_ability and career.activated_ability[1]
+    local passive_ability = career and career.passive_ability
+    local has_gameplay = active_ability and active_ability.ability_class == CareerAbilityPusfumeIngenuity
+        and passive_ability == PassiveAbilitySettings.pusfume and talent_tree
+    add(checks, "career kit", has_gameplay and "PASS" or "FAIL",
+        "Skaven Ingenuity, The Great Scheme, perks, and donor talent tree")
+
+    local localization_keys = {
+        "pusfume_character_name",
+        "pusfume_career_name",
+        "pusfume_passive_name",
+        "pusfume_passive_description",
+        "pusfume_active_name",
+        "pusfume_active_description",
+        "pusfume_hell_pit_native_name",
+        "pusfume_hell_pit_native_description",
+        "pusfume_scaredy_rat_name",
+        "pusfume_scaredy_rat_description",
+        "pusfume_insider_knowledge_name",
+        "pusfume_insider_knowledge_description",
+        "pusfume_scheme_kill_skaven",
+        "pusfume_scheme_kill_skaven_description",
+        "pusfume_scheme_kill_skaven_specials",
+        "pusfume_scheme_kill_specials_description",
+        "pusfume_scheme_reward_strength",
+        "pusfume_scheme_reward_speed",
+    }
+    local unresolved_localization
+
+    for _, key in ipairs(localization_keys) do
+        local value = Localize(key)
+
+        if type(value) ~= "string" or value == "<" .. key .. ">" then
+            unresolved_localization = key
+            break
+        end
+    end
+
+    add(checks, "career localization", not unresolved_localization and "PASS" or "FAIL",
+        unresolved_localization and "global Localize missed " .. unresolved_localization
+            or "identity, abilities, perks, and quests resolve through global Localize")
+
+    local scaredy_rat_proc_ready = ProcFunctions
+        and type(ProcFunctions.pusfume_scaredy_rat_proc) == "function"
+    add(checks, "Scaredy-rat proc", scaredy_rat_proc_ready and "PASS" or "FAIL",
+        scaredy_rat_proc_ready and "native ProcFunctions callback is registered"
+            or "damage callback is missing from the engine proc registry")
+
+    local custom_buffs = {
+        "pusfume_scaredy_rat_listener",
+        "pusfume_scaredy_rat_speed",
+        "pusfume_insider_knowledge_aura",
+        "pusfume_insider_knowledge_team",
+    }
+    local custom_buffs_ready = true
+
+    for _, buff_name in ipairs(custom_buffs) do
+        local template = BuffTemplates and BuffTemplates[buff_name]
+
+        if not template or type(template.buffs) ~= "table" or not template.buffs[1]
+                or template.buffs[1].name ~= buff_name
+                or not NetworkLookup or not rawget(NetworkLookup.buff_templates, buff_name) then
+            custom_buffs_ready = false
+            break
+        end
+    end
+
+    add(checks, "career buff registry", custom_buffs_ready and "PASS" or "FAIL",
+        custom_buffs_ready and "four normalized templates have synchronized native lookup IDs"
+            or "a custom template name or network lookup is missing")
+
+    local challenge_lookup_ready = NetworkLookup and NetworkLookup.challenges
+        and NetworkLookup.challenges.pusfume_scheme_kill_skaven
+        and NetworkLookup.challenges.pusfume_scheme_kill_skaven_specials
+        and NetworkLookup.challenge_rewards.pusfume_scheme_reward_strength
+        and NetworkLookup.challenge_rewards.pusfume_scheme_reward_speed
+        and NetworkLookup.challenge_categories.pusfume_scheme
+    add(checks, "Great Scheme network lookups", challenge_lookup_ready and "PASS" or "FAIL",
+        "challenge, reward, and category identifiers are registered")
 
     local permissions = registry.item_permission_status()
     local permission_status = permissions.eligible > 0 and permissions.missing == 0 and "PASS" or "FAIL"
@@ -124,6 +201,9 @@ function M.collect(registry, career_index, backend, compat, ui, native)
         if not donor_status.package_ok then
             donor_state = "FAIL"
             donor_detail = "Globadier donor package is missing from installed game data"
+        elseif not donor_status.whisker_package_ok then
+            donor_state = "FAIL"
+            donor_detail = "Laurel whisker donor package is missing from installed game data"
         elseif donor_status.package_loaded and not donor_status.material_ok then
             donor_state = "FAIL"
             donor_detail = "donor package is loaded but its outfit material did not resolve"
@@ -139,6 +219,13 @@ function M.collect(registry, career_index, backend, compat, ui, native)
         end
 
         add(checks, "donor material content", donor_state, donor_detail)
+
+        if donor_status.applied then
+            add(checks, "whisker material", donor_status.whisker_applied and "PASS" or "FAIL",
+                donor_status.whisker_applied
+                    and "native skinned-alpha child is applied to p_whiskers"
+                    or "native whisker child did not apply")
+        end
     end
 
     local animation_status = native.animation_status()

@@ -63,6 +63,18 @@ def read_texture_bindings(payload):
     return bindings
 
 
+def read_parent_binding(payload):
+    """Return the compiled material's parent resource id."""
+    if len(payload) < 36:
+        raise ValueError("payload is too short for a VT2 material header")
+
+    version, is_single, material_offset = struct.unpack_from("<III", payload, 0)
+    if version != 43 or is_single != 1 or material_offset + 12 > len(payload):
+        raise ValueError("expected a VT2 single material version 43")
+
+    return struct.unpack_from("<Q", payload, material_offset + 4)[0]
+
+
 def read_variable_bindings(payload):
     """Return short hash -> (component count, absolute value offset)."""
     if len(payload) < 40:
@@ -127,6 +139,8 @@ def main():
     parser.add_argument("--expect-size", type=int, default=None,
                         help="require the extracted payload to be exactly "
                              "this many bytes")
+    parser.add_argument("--expect-parent", default=None,
+                        help="require the compiled parent resource id")
     parser.add_argument("--expect-texture", action="append", default=[],
                         metavar="CHANNEL=ID",
                         help="require a compiled texture channel to reference "
@@ -164,6 +178,19 @@ def main():
               f"{args.expect_size}; the game data layout may have changed",
               file=sys.stderr)
         return 1
+
+    if args.expect_parent is not None:
+        try:
+            actual_parent = read_parent_binding(payload)
+            expected_parent = int(args.expect_parent, 16)
+        except ValueError as error:
+            print(f"cannot verify material parent: {error}", file=sys.stderr)
+            return 1
+        if actual_parent != expected_parent:
+            print(f"material parent is {actual_parent:016X}, expected "
+                  f"{expected_parent:016X}", file=sys.stderr)
+            return 1
+        print(f"verified material parent -> {expected_parent:016X}")
 
     for mapping in args.map:
         old_hex, _, new_hex = mapping.partition("=")

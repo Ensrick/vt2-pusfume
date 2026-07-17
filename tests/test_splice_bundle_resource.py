@@ -43,12 +43,13 @@ def build_structured_bundle(path, resources):
     return bytes(image)
 
 
-def build_material_payload(bindings, variables=(), size=768):
+def build_material_payload(bindings, variables=(), size=768,
+                           parent=0x3D25339231384C80):
     payload = bytearray(size)
     struct.pack_into("<IIIIII", payload, 0, 43, 1, 24, size - 24,
                      0xFFFFFFFF, 0)
     position = 24
-    struct.pack_into("<IQI", payload, position, 0, 0x3D25339231384C80,
+    struct.pack_into("<IQI", payload, position, 0, parent,
                      len(bindings))
     position += 16
     for channel, resource in bindings:
@@ -172,6 +173,56 @@ class SpliceBundleResourceTests(unittest.TestCase):
                          0x45FFAEEF53695A86)
         self.assertEqual(bindings[make_child._short_hash("texture_map_8bf37d8e")],
                          0xA4215592F6297E57)
+
+    def test_make_spliced_laurel_whisker_child_preserves_contract(self):
+        laurel_child = build_material_payload([
+            ("texture_map_59cd86b9", 0xCDA03B9B0226037A),
+            ("texture_map_b788717c", 0xD3FD8377A3DE498A),
+            ("texture_map_c0ba2942", 0xC9CF19C214612D75),
+        ], variables=[("alpha_threshold", (0.5,))], size=128,
+            parent=0xF85B289742D5D69A)
+        extracted = self.dir / "laurel.material"
+        extracted.write_bytes(bytes(laurel_child))
+        out = self.dir / "whisker.bin"
+
+        rc = self.run_main(make_child, [
+            "make_spliced_child.py", "--extracted", str(extracted),
+            "--resource", "hash:C70B1AAD3B363E24", "--expect-size", "128",
+            "--expect-parent", "F85B289742D5D69A",
+            "--map", "C9CF19C214612D75=7F060B4938ADCF12",
+            "--map", "CDA03B9B0226037A=950FC5950CCEBCD0",
+            "--map", "D3FD8377A3DE498A=BEB4D8D9891A6D4A",
+            "--expect-texture", "texture_map_c0ba2942=7F060B4938ADCF12",
+            "--expect-texture", "texture_map_59cd86b9=950FC5950CCEBCD0",
+            "--expect-texture", "texture_map_b788717c=BEB4D8D9891A6D4A",
+            "--out", str(out),
+        ])
+
+        self.assertEqual(rc, 0)
+        patched = out.read_bytes()
+        self.assertEqual(len(patched), 128)
+        self.assertEqual(struct.unpack_from("<Q", patched, 28)[0],
+                         0xF85B289742D5D69A)
+        alpha_offset = make_child.read_variable_bindings(patched)[
+            make_child._short_hash("alpha_threshold")][1]
+        self.assertAlmostEqual(struct.unpack_from("<f", patched, alpha_offset)[0],
+                               0.5)
+
+    def test_make_spliced_child_rejects_wrong_parent(self):
+        child = build_material_payload([
+            ("texture_map_c0ba2942", 0xC9CF19C214612D75),
+        ], size=128, parent=0xF85B289742D5D69A)
+        extracted = self.dir / "child.material"
+        extracted.write_bytes(bytes(child))
+
+        rc = self.run_main(make_child, [
+            "make_spliced_child.py", "--extracted", str(extracted),
+            "--resource", "hash:C70B1AAD3B363E24",
+            "--expect-parent", "0000000000000001",
+            "--map", "C9CF19C214612D75=7F060B4938ADCF12",
+            "--out", str(self.dir / "payload.bin"),
+        ])
+        self.assertEqual(rc, 1)
 
     def test_make_spliced_child_rejects_wrong_channel_binding(self):
         game_child = build_material_payload([

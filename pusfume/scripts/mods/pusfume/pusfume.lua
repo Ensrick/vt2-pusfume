@@ -1,10 +1,11 @@
 local mod = get_mod("pusfume")
 
-local MOD_VERSION = "0.5.0-dev"
+local MOD_VERSION = "0.6.5-dev"
 
 mod:info("[pusfume] loading v%s", MOD_VERSION)
 
 local registry = mod:dofile("scripts/mods/pusfume/_pusfume_registry")
+local gameplay = mod:dofile("scripts/mods/pusfume/_pusfume_gameplay")
 local assets = mod:dofile("scripts/mods/pusfume/_pusfume_assets")
 local native_config = mod:dofile("scripts/mods/pusfume/_pusfume_native_config")
 local native = mod:dofile("scripts/mods/pusfume/_pusfume_native")
@@ -14,6 +15,7 @@ local compat = mod:dofile("scripts/mods/pusfume/_pusfume_compat")
 local preflight = mod:dofile("scripts/mods/pusfume/_pusfume_preflight")
 local ui = mod:dofile("scripts/mods/pusfume/_pusfume_ui")
 assets.install()
+gameplay.install()
 native.install(registry, native_config)
 local career_index = registry.register()
 backend.install(registry)
@@ -40,6 +42,10 @@ end
 
 mod.on_game_state_changed = function()
     refresh_runtime_integrations()
+end
+
+mod.update = function()
+    gameplay.update()
 end
 
 mod.on_unload = function()

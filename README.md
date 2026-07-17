@@ -4,11 +4,37 @@ An experimental, friends-only Vermintide 2 custom-career project by Ensrick and 
 
 Steam Workshop development item: [Pusfume - Custom Career Prototype](https://steamcommunity.com/sharedfiles/filedetails/?id=3764954245)
 
-The current milestone registers **Pusfume** as Bardin's fifth career. It uses Ranger Veteran's game-owned gameplay, talent tree, ability, and backend loadout as temporary adapters. A full-size Pusfume card is placed one virtual UI row above Saltzpyre in the five-row selector and keeps the game's normal click, preview, and confirmation flow. The friends-only native build now renders and deforms Janfon's textured third-person placeholder in the selector and in game, with a generated idle and Janfon's walk cycle. Registration checks, backend checks, UI tracking, and Ranger Veteran bot-takeover aliases are included. Every player in a lobby must install the same version.
+The current milestone registers **Pusfume** as Bardin's fifth career. Ranger
+Veteran's talent tree, backend loadout, weapons, and bot behavior remain
+temporary adapters, while Pusfume now owns his identity, placeholder Great
+Scheme quests, three career perks, and a guarded Skaven Ingenuity station
+scaffold. A full-size Pusfume card is placed one virtual UI row above Saltzpyre
+in the five-row selector and keeps the game's normal click, preview, and
+confirmation flow. The friends-only native build renders and deforms Janfon's
+textured third-person placeholder in the selector and in game, with a generated
+idle and Janfon's walk cycle. Every player in a lobby must install the same
+version.
 
 The successful native-character architecture, evidence, rejected approaches,
 and reproduction steps are recorded in
 [NATIVE_CHARACTER_MILESTONE.md](docs/NATIVE_CHARACTER_MILESTONE.md).
+
+## Current development status
+
+The current friends-only test build is **v0.6.5-dev**, Steam ManifestID
+`441804382456025179`. Live logs have confirmed mod startup, zero-failure
+preflight, selector-card creation, native hero preview, normal profile
+confirmation, player spawn, model/material/controller attachment, weapon setup,
+and idle/walk playback through v0.6.4. The v0.6.5 candidate bridges every
+career-kit string into vanilla's global localization path and gives
+`p_whiskers` the game's skinned Laurel alpha binding while preserving Janfon's
+fractional coverage alpha. Those two changes now require live visual and UI
+verification.
+
+Skaven Ingenuity currently records a 20-second station and starts its cooldown,
+but it does not yet spawn an interactable bag or modify inventory. Potion
+enchantments, gas bombs, gas traps, final quest rewards, and animation coverage
+beyond idle/walk remain guarded or deferred.
 
 ## Install and test
 
@@ -18,7 +44,8 @@ and reproduction steps are recorded in
 4. Enter `/pusfume_preflight` in the Adventure Keep. The unopened-card warning is expected; failures are not.
 5. Open Heroes and click the gold-trimmed Pusfume card at the top right of the career grid.
 6. Enter `/pusfume_status` to confirm `UI(card=true selected=true)` and then rerun `/pusfume_preflight`.
-7. If the UI hook is unavailable after a game update, enter `/pusfume` in chat while in the Keep.
+7. After spawning, enter `/pusfume_gameplay` to inspect poison blocks and the guarded station state.
+8. If the UI hook is unavailable after a game update, enter `/pusfume` in chat while in the Keep.
 
 Pusfume currently shares Ranger Veteran's equipped items and talents. Changing Pusfume's loadout therefore changes Ranger Veteran's donor loadout until custom persistence is implemented.
 
@@ -56,6 +83,13 @@ See [LIVE_TEST_CHECKLIST.md](docs/LIVE_TEST_CHECKLIST.md) for the in-game pass,
 [CAREER_SYSTEM.md](docs/CAREER_SYSTEM.md) for the reverse-engineered career
 architecture, and [ASSET_PIPELINE.md](docs/ASSET_PIPELINE.md) for Janfon's art
 handoff.
+
+Active work is tracked in [native integration issue #6](https://github.com/Ensrick/vt2-pusfume/issues/6),
+[career-kit issue #15](https://github.com/Ensrick/vt2-pusfume/issues/15),
+[localization issue #17](https://github.com/Ensrick/vt2-pusfume/issues/17),
+[whisker rendering issue #18](https://github.com/Ensrick/vt2-pusfume/issues/18),
+[native integration PR #11](https://github.com/Ensrick/vt2-pusfume/pull/11),
+and [career-kit draft PR #16](https://github.com/Ensrick/vt2-pusfume/pull/16).
 
 ## Asset policy
 

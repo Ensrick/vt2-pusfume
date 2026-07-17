@@ -204,6 +204,78 @@ that itself loads mod-side.
 
 ## Status log (append entries, newest first)
 
+- 23:3x Claude: WIRE GUARD VERIFIED IN LIVE LOG (03:31 UTC session, 62 min,
+  clean): "[pusfume] Stripped unencodable loadout property from sync:
+  woc_intrinsic_crit (item=es_1h_sword)" and "...woc_power_vs_order
+  (item=es_1h_sword)" at 03:35:08 - the Blightreaper synced without a crash
+  and the guard also preempted a SECOND unencodable property that had not
+  crashed us yet. The loadout-sync wire crash class is closed with log
+  evidence; user in-game confirmation stands as the final word per policy.
+
+- 22:21 Claude: WIRE GUARD SHIPPED per the 40-minute fallback - ManifestID
+  4840749073146417845, workshop_log "Uploaded new content" 22:21:42. Build
+  = -HeroPreview -SplicedGameChild at ded3b58+ (includes Sol's Laurel
+  whisker splice, 128-byte feather payload verified in-build). The
+  Blightreaper loadout crash class is closed sender-side; stripped keys log
+  once per session as "[pusfume] Stripped unencodable loadout property".
+  NOTE: my background builds were killed three times (~21:20-21:50, died in
+  the SDK phase); the foreground run built clean - if that was deliberate
+  process management by another session, coordinate here instead.
+
+- 21:3x Claude: WIRE GUARD LANDED in ded3b58 (LoadoutUtils.
+  properties_to_rpc_params sender-side filter via rawget membership probes;
+  gate + changelog included; all gates green, 25/25 tests). My two build
+  attempts were killed by concurrent activity - Sol, if you are building,
+  your next ship carries the fix automatically; please upload when ready.
+  If nothing ships within ~40 minutes I will build and upload it myself.
+  The Blightreaper can stay equipped once this is live.
+
+- 20:4x Claude: THIRD CRASH PINNED, WIRE-SAFETY CLASS (priority-0 pattern)
+  from the 01:33 UTC session: `network_lookup.lua:2521 Table properties does
+  not contain key: woc_power_vs_order` via
+  `loadout_utils.properties_to_rpc_params -> sync_loadout_slot ->
+  add_equipment -> _spawn_resynced_loadout`. An equipped item on the Pusfume
+  loadout carries a non-Adventure property (woc_* = Winds/pactsworn family)
+  and the vanilla loadout-sync RPC cannot encode it. The kit already hooks
+  sync_loadout_slot (visible in the chain) but does not sanitize properties.
+  FIX PATTERN (established, never toggle-gated): sender-side substitution -
+  strip or remap any property key missing from NetworkLookup.properties
+  BEFORE the vanilla RPC encoder sees it, unconditionally; in coop this
+  class CTDs OTHER PEERS, not just the host. Distinct from the two crashes
+  pinned earlier; three open career-kit issues now tracked separately.
+  ATTRIBUTION CORRECTED (20:5x, 01:42 repeat session): the property comes
+  from the GAME'S OWN `woc_blightreaper_001` (Blightreaper event sword),
+  equipped at dr_ranger slot_melee idx 4 and inherited by Pusfume's shared
+  RV loadout (gut NATIVE_LOADOUTS resolves it into the slot). Official
+  event items carry properties absent from NetworkLookup.properties because
+  vanilla never syncs them down this path; the synthetic career's
+  `_spawn_resynced_loadout` does. Fix unchanged (sanitize before encode);
+  reproduces every session with that sword equipped - currently BLOCKING
+  the test loop.
+
+- 20:2x Claude: SECOND CRASH PINNED from the 01:05 UTC session (mid-mission,
+  after ~10 min): `utility.lua:41 arithmetic on blackboard_value nil` inside
+  a PLAYER BOT's behavior tree (`player_bot_base:335 -> ai_brain ->
+  bt_utility_node.randomize_actions -> get_action_utility`). gt_dev hooks
+  get_action_utility (hook chain visible in frame 1-2) but the arithmetic
+  is vanilla; the new variable is the Pusfume BOT - a utility consideration
+  reads a blackboard key that Ranger Veteran bots populate and the Pusfume
+  bot's blackboard does not (career-kit bot integration lane). Repro likely
+  needs a bot running the Pusfume/donor career mid-mission. Distinct from
+  the item_tooltip crash pinned earlier - track separately.
+
+- 20:1x Claude: CRASH PINNED from the 00:05 UTC session (career-kit lane,
+  uncommitted as of Sol's 16:40): hero view loadout inventory,
+  `hero_window_loadout_inventory_console.lua:512` draw ->
+  `ui_passes.lua:3263 pass_data nil`. Locals: scenegraph_id="item_grid",
+  pass index 12, pass_type="item_tooltip", pass_data=nil while the pass
+  definition exists. That signature = widget content/element mutated after
+  init without re-running UIWidget.init, so pass_datas no longer matches
+  passes (same class as the OptionsView cb_ takeover lesson). Likely the
+  Pusfume loadout entry injected into the console item grid. The follow-up
+  01:05 session ran clean (crash needs the inventory item grid open with
+  the Pusfume entry present, probably on tooltip hover).
+
 - 13:53 Sol: NATIVE CHARACTER MILESTONE CONFIRMED. User verdict on Track D-E:
   "Very good." Latest session records `last_updated` 18:45:43 UTC, matching
   ManifestID 2405082174877027150; preflight 15 pass / 6 expected warnings /

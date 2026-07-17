@@ -31,6 +31,9 @@ $assetsPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_assets.
 $nativePath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_native.lua"
 $nativeConfigPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_native_config.lua"
 $uiPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_ui.lua"
+$gameplayPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_gameplay.lua"
+$accessPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_access.lua"
+$localizationPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\pusfume_localization.lua"
 $dataPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\pusfume_data.lua"
 $packagePath = Join-Path $repoRoot "pusfume\resource_packages\pusfume\pusfume.package"
 $nativeUnitPackagePath = Join-Path $repoRoot "pusfume\units\pusfume\pusfume_3p.package"
@@ -56,6 +59,9 @@ $assetsText = Get-Content -LiteralPath $assetsPath -Raw
 $nativeText = Get-Content -LiteralPath $nativePath -Raw
 $nativeConfigText = Get-Content -LiteralPath $nativeConfigPath -Raw
 $uiText = Get-Content -LiteralPath $uiPath -Raw
+$gameplayText = Get-Content -LiteralPath $gameplayPath -Raw
+$accessText = Get-Content -LiteralPath $accessPath -Raw
+$localizationText = Get-Content -LiteralPath $localizationPath -Raw
 $dataText = Get-Content -LiteralPath $dataPath -Raw
 $packageText = Get-Content -LiteralPath $packagePath -Raw
 $nativeUnitPackageText = Get-Content -LiteralPath $nativeUnitPackagePath -Raw
@@ -205,6 +211,29 @@ Test-Condition ($nativeText -match 'Material\.set_texture\(material, channel, te
     $animatedFbxToolText -match 'remap_material_uvs_to_atlas' -and `
     $animatedFbxToolText -match 'shift_u = int\(anchor\.x // 1\)') `
     "per-mesh donor atlas" "atlas channels are set on every material by index so swapped donor instances are reached"
+Test-Condition ($nativeBuildText -match '\[switch\]\$LegacyFur' -and `
+    $nativeBuildText -match 'dalokraff legacy fur license/provenance contract is missing' -and `
+    $animatedFbxToolText -match 'def add_legacy_fur\(' -and `
+    $animatedFbxToolText -match 'def retarget_fur_surface\(' -and `
+    $animatedFbxToolText -match 'def connected_vertex_islands\(' -and `
+    $animatedFbxToolText -match 'Rigid fur-island retarget changed authored card geometry' -and `
+    $animatedFbxToolText -match 'after\["mean"\] >= before\["mean"\] \* 0\.65' -and `
+    $animatedFbxToolText -match 'Legacy fur weight transfer left' -and `
+    $animatedFbxToolText -match 'Transferred action did not deform legacy fur' -and `
+    $nativeBuildText -match '\[double\]\$BodyDiffuseGain = 1\.2' -and `
+    $nativeBuildText -match '\[double\]\$FurDiffuseGain = 0\.55' -and `
+    $nativeBuildText -match '\$furMaterialEntry = if \(\$LegacyFur\)' -and `
+    $nativeBuildText -match 'p_fur = "materials/pusfume/pusfume_fur"' -and `
+    $nativeBuildText -match '\$furRenderableEntry = if \(\$LegacyFur\)' -and `
+    $nativeBuildText -match 'child_materials/pusfume/pusfume_fur_child' -and `
+    $nativeBuildText -match '20A7120B25F414F7' -and `
+    $nativeConfigText -match 'fur_child_material\s*=\s*false' -and `
+    $nativeText -match 'Unit\.set_material\(unit, FUR_MATERIAL_SLOT, config\.fur_child_material\)' -and `
+    $nativeBuildText.IndexOf('function Write-LegacyFurTexture') -gt `
+        $nativeBuildText.IndexOf('function Write-NativeTextureRecipe') -and `
+    $nativeBuildText.IndexOf('function Write-LegacyFurTexture') -gt `
+        $nativeBuildText.IndexOf('"@ | Set-Content -LiteralPath (Join-Path $textureRoot "$Name.texture")')) `
+    "dalokraff fur integration" "licensed fur is weight-transferred, deformation-checked, and packaged by a callable texture helper"
 Test-Condition ($nativeText -match 'function M\.native_skin_name' -and `
     $nativeText -notmatch 'third_person_attachment = nil' -and `
     $uiText -match 'MenuWorldPreviewer, "request_spawn_hero_unit"' -and `
@@ -215,19 +244,26 @@ Test-Condition ($nativeText -match 'function M\.native_skin_name' -and `
     "menu preview purity" "menu previewers force the native skin, hide donor weapons, and start the mesh controller"
 Test-Condition ($nativeConfigText -match 'parent_child_material\s*=\s*false' -and `
     $nativeConfigText -match 'parent_child_package\s*=\s*false' -and `
+    $nativeConfigText -match 'whisker_child_material\s*=\s*false' -and `
+    $nativeConfigText -match 'whisker_donor_package\s*=\s*false' -and `
     $nativeBuildText -match '\[switch\]\$ParentChildMaterial' -and `
     $nativeBuildText -match '"child_materials/pusfume/pusfume_outfit_child"' -and `
+    $nativeBuildText -match '"child_materials/pusfume/pusfume_whiskers_child"' -and `
     $nativeBuildText -match 'native_child\.package' -and `
     $nativeBuildText -match 'parent_material = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/mtr_outfit"' -and `
     $nativeText -match 'function ensure_child_package' -and `
-    $nativeText -match 'not state\.donor_package_loaded or not mod\.load_package or not mod\.package_status' -and `
+    $nativeText -match 'not state\.donor_package_loaded or not state\.whisker_donor_package_loaded' -and `
     $nativeText -notmatch 'can_get\("package", config\.parent_child_package\)' -and `
     $nativeText -match 'mod:load_package\(config\.parent_child_package, nil, true\)' -and `
     $nativeText -match 'mod:package_status\(config\.parent_child_package\) == "loaded"' -and `
     $nativeText -match 'Native child material package did not load through the mod handle' -and `
     $nativeText -match 'mod:unload_package\(config\.parent_child_package\)' -and `
-    $nativeText -match 'Unit\.set_material\(unit, slot_name, material\)') `
-    "parent-child material" "VMF resolves the standalone child through the mod handle after loading the donor parent"
+    $nativeText -match 'Unit\.set_material\(unit, slot_name, material\)' -and `
+    $nativeText -match 'Unit\.set_material\(unit, WHISKER_MATERIAL_SLOT, config\.whisker_child_material\)' -and `
+    $nativeText -match 'Managers\.package:load\(config\.whisker_donor_package, WHISKER_DONOR_PACKAGE_REFERENCE\)' -and `
+    $nativeText -match 'Managers\.package:unload\(config\.whisker_donor_package, WHISKER_DONOR_PACKAGE_REFERENCE\)' -and `
+    $nativeBuildText -match 'units/beings/player/empire_soldier_knight/headpiece/es_k_hat_07') `
+    "parent-child material" "VMF resolves opaque and skinned-alpha children through one ordered mod package"
 Test-Condition ($nativeText -match 'pusfume_material_probe' -and `
     $nativeText -match 'donor_raw\s*=\s*true' -and `
     $nativeText -match 'donor_atlas\s*=\s*true' -and `
@@ -243,8 +279,11 @@ Test-Condition ((Test-Path (Join-Path $repoRoot "tools\strip_bundle_resource.py"
     $nativeBuildText -match '--expect 0 --dry-run') `
     "stub identity strip" "-ParentChildMaterial builds rename the bundled stub so the game parent resolves at runtime"
 Test-Condition ($nativeText -match 'function M\.apply_donor_to_unit' -and `
-    $uiText -match 'native\.apply_donor_to_unit\(mesh_unit\)') `
-    "menu preview shader" "the preview mesh receives the donor character shader so the menu idle can deform"
+    $nativeText -match 'not unit or not Unit\.alive\(unit\)' -and `
+    $uiText -match 'local function initialize_native_preview\(previewer\)' -and `
+    $uiText -match 'if not native\.apply_donor_to_unit\(mesh_unit\) then' -and `
+    $uiText -match 'initialize_native_preview\(previewer\)') `
+    "menu preview shader" "preview-world units retry the donor character shader before starting the native idle"
 Test-Condition ($nativeConfigText -match 'donor_texture_shadow\s*=\s*false' -and `
     $nativeConfigText -match 'donor_texture_shadow_package\s*=\s*false' -and `
     $nativeBuildText -match '\[switch\]\$NoDonorTextureShadow' -and `
@@ -272,6 +311,9 @@ Test-Condition ((Test-Path (Join-Path $repoRoot "tools\splice_bundle_resource.py
     $nativeBuildText -match '\$NoDonorTextureShadow = \$true' -and `
     $nativeBuildText -match 'make_spliced_child\.py' -and `
     $nativeBuildText -match '--expect-size 768' -and `
+    $nativeBuildText -match '--expect-size 128' -and `
+    $nativeBuildText -match '--expect-parent 3D25339231384C80' -and `
+    $nativeBuildText -match '--expect-parent F85B289742D5D69A' -and `
     $nativeBuildText -match 'hash:F72D636600F7F598' -and `
     $nativeBuildText -match 'DD74D8319F514D96=C263ECB79A8DCEC0' -and `
     $nativeBuildText -match 'E334A8CB6BCB5E6D=A4215592F6297E57' -and `
@@ -280,13 +322,27 @@ Test-Condition ((Test-Path (Join-Path $repoRoot "tools\splice_bundle_resource.py
     $nativeBuildText -match 'texture_map_02af90f8=C263ECB79A8DCEC0' -and `
     $nativeBuildText -match 'texture_map_27b67fd2=45FFAEEF53695A86' -and `
     $nativeBuildText -match 'texture_map_8bf37d8e=A4215592F6297E57' -and `
+    $nativeBuildText -match 'hash:C70B1AAD3B363E24' -and `
+    $nativeBuildText -match 'C9CF19C214612D75=7F060B4938ADCF12' -and `
+    $nativeBuildText -match 'CDA03B9B0226037A=950FC5950CCEBCD0' -and `
+    $nativeBuildText -match 'D3FD8377A3DE498A=BEB4D8D9891A6D4A' -and `
+    $nativeBuildText -match 'texture_map_c0ba2942=7F060B4938ADCF12' -and `
+    $nativeBuildText -match 'texture_map_59cd86b9=950FC5950CCEBCD0' -and `
+    $nativeBuildText -match 'texture_map_b788717c=BEB4D8D9891A6D4A' -and `
     $nativeBuildText -match '\$splicedInto\.Count -ne 1' -and `
+    $nativeBuildText -match '\$whiskerSplicedInto\.Count -ne 1' -and `
     $nativeBuildText -notmatch 'spliced_child_payload\.bin"? *-Destination') `
-    "spliced game child" "-SplicedGameChild validates a local game binding table and embeds the patched bytes only in generated output"
+    "spliced game children" "body and Laurel whisker bindings are validated from local game data and embedded only in generated output"
 Test-Condition ($nativeText -match 'pusfume_tint' -and `
     $nativeText -match 'Material\.set_scalar\(material, "gradient_variation", variation\)' -and `
     $nativeText -match 'Material\.set_scalar\(material, "tint_columns_pair", columns_pair\)') `
     "gradient tint probe" "live tint sweep rides the engine's own character-tint scalars to neutralize the shader-applied Globadier green"
+Test-Condition ($backendText -match 'mod:hook\(LoadoutUtils, "properties_to_rpc_params"' -and `
+    $backendText -match 'rawget\(NetworkLookup\.properties, property_name\)' -and `
+    $backendText -match 'rawget\(NetworkLookup\.traits, trait_name\)' -and `
+    $backendText -match 'Stripped unencodable loadout property from sync' -and `
+    $backendText -notmatch 'wire_guard_enabled') `
+    "loadout sync wire guard" "unencodable item properties and traits are stripped sender-side before the vanilla RPC encoder, unconditionally"
 Test-Condition ($nativeConfigText -match 'hide_donor_weapons\s*=\s*false' -and `
     $nativeBuildText -match 'hide_donor_weapons\s*=\s*true' -and `
     $nativeText -match 'function hide_donor_weapons' -and `
@@ -339,6 +395,61 @@ Test-Condition ($registryText -match 'function M\.refresh_career_color\(\)' -and
     "career color" "Pusfume owns a distinct donor-derived color table"
 Test-Condition ($mainText -match 'registry\.refresh_career_color\(\)') `
     "career color" "registration is refreshed across game-state changes"
+Test-Condition ($registryText -match 'career\.display_name\s*=\s*M\.CAREER_NAME' -and `
+    $localizationText -match 'pusfume\s*=\s*\{\s*en\s*=\s*"Under-Empire Reject"' -and `
+    $registryText -match 'career\.activated_ability\s*=\s*ActivatedAbilitySettings\.pusfume' -and `
+    $registryText -match 'career\.passive_ability\s*=\s*PassiveAbilitySettings\.pusfume' -and `
+    $uiText -match 'mod:localize\("pusfume_character_name"\)' -and `
+    $uiText -match 'mod:localize\("pusfume_career_name"\)') `
+    "career identity" "Pusfume owns localized selector names and gameplay settings"
+Test-Condition ($registryText -notmatch 'career\.display_name\s*=\s*"pusfume_career_name"') `
+    "profile request identity" "display_name remains the internal career token required by career_index_from_name"
+Test-Condition ($mainText -match 'gameplay\.install\(\)' -and `
+    $gameplayText -match 'CareerAbilityPusfumeIngenuity' -and `
+    $gameplayText -match 'inventory_upgrades=guarded') `
+    "Skaven Ingenuity" "donor smoke bomb is replaced by an explicitly guarded station scaffold"
+Test-Condition ($preflightText -match 'add\(checks, "career kit"' -and `
+    $preflightText -match 'add\(checks, "Great Scheme network lookups"') `
+    "career-kit preflight" "live diagnostics validate custom ability and quest registration"
+Test-Condition ($gameplayText -match 'poison_damage_types' -and `
+    $gameplayText -match 'skaven_poison_wind_globadier\s*=\s*true' -and `
+    $gameplayText -match 'PlayerUnitHealthExtension, "add_damage"') `
+    "Hell Pit Native" "poison immunity is career-scoped before damage procs"
+Test-Condition ($gameplayText -match 'duration\s*=\s*3' -and `
+    $gameplayText -match 'multiplier\s*=\s*1\.2' -and `
+    $gameplayText -match 'path_to_movement_setting_to_modify\s*=\s*\{ "move_speed" \}') `
+    "Scaredy-rat" "damage grants 20 percent move speed for three seconds"
+Test-Condition ($gameplayText -notmatch 'mod:add_proc_function' -and `
+    $gameplayText -notmatch 'mod:add_buff_template' -and `
+    $gameplayText -match 'ProcFunctions\.pusfume_scaredy_rat_proc\s*=\s*function' -and `
+    $gameplayText -match 'BuffTemplates\[name\]\s*=\s*\{' -and `
+    $gameplayText -match 'definition\.name\s*=\s*name' -and `
+    $gameplayText -match 'append_lookup\(NetworkLookup\.buff_templates, name\)' -and `
+    $gameplayText -match 'rawget\(lookup, name\)' -and `
+    $gameplayText -match 'rawset\(lookup, name, index\)' -and `
+    $preflightText -match 'add\(checks, "Scaredy-rat proc"' -and `
+    $preflightText -match 'add\(checks, "career buff registry"') `
+    "career buff APIs" "normalizes late templates and uses synchronized VT2 registries"
+Test-Condition ($gameplayText -match 'stat_buff\s*=\s*"power_level_skaven"' -and `
+    $gameplayText -match 'multiplier\s*=\s*0\.05' -and `
+    $gameplayText -match 'max_stacks\s*=\s*1') `
+    "Insider Knowledge" "team Skaven damage uses the stock synchronized stat at five percent"
+Test-Condition ($accessText -match 'mod:dofile\("scripts/mods/pusfume/pusfume_localization"\)' -and `
+    $accessText -match 'for key, translations in pairs\(localization\)' -and `
+    $accessText -match 'global_strings\[key\] = translations\.en' -and `
+    $accessText -match 'mod:hook\(_G, "Localize"' -and `
+    $preflightText -match 'add\(checks, "career localization"' -and `
+    $preflightText -match 'value == "<" \.\. key \.\. ">"') `
+    "career localization" "global Localize derives every career string from the VMF localization table"
+Test-Condition ($gameplayText -match 'append_lookup\(NetworkLookup\.challenges' -and `
+    $gameplayText -match 'append_lookup\(NetworkLookup\.challenge_rewards' -and `
+    $gameplayText -match 'append_lookup\(NetworkLookup\.challenge_categories' -and `
+    $gameplayText -match 'breed\.race == "skaven"') `
+    "The Great Scheme" "placeholder Skaven quests have deterministic peer lookups"
+Test-Condition ($nativeBuildText -match '\$cutAlphaEnabled = "false"' -and `
+    $nativeBuildText -match 'enable_cut_alpha_threshold = \$cutAlphaEnabled' -and `
+    $nativeBuildText -notmatch '\$Name -eq "pusfume_whiskers_df"') `
+    "whisker alpha" "fractional whisker coverage survives texture compilation for the native alpha shader"
 Test-Condition ($preflightText -match 'add\(checks, "career color"') `
     "career color" "runtime preflight validates the player-list contract"
 Test-Condition ($backendText -match 'mod:hook\(BackendUtils, "get_loadout_item"') `

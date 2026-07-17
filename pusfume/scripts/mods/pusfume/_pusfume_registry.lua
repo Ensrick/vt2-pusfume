@@ -186,6 +186,8 @@ function M.register()
 
     -- Reapply custom fields on VMF reloads, where the runtime table may survive.
     career.name = M.CAREER_NAME
+    -- ProfileRequester resolves this field as an internal career token before
+    -- the UI localizes it, so it must match the registered career name.
     career.display_name = M.CAREER_NAME
     career.description = "pusfume_description"
     career.profile_name = M.PROFILE_NAME
@@ -198,6 +200,8 @@ function M.register()
     career.character_state_list = build_state_list(profile.base_character_states, career.additional_character_states_list)
     career.camera_state_list = build_state_list(profile.base_camera_states, career.additional_camera_states_list)
     career.base_skin = M.NATIVE_SKIN_NAME or CareerSettings[M.DONOR_CAREER_NAME].base_skin
+    career.activated_ability = ActivatedAbilitySettings.pusfume
+    career.passive_ability = PassiveAbilitySettings.pusfume
 
     CareerSettingsOriginal[M.CAREER_NAME] = deep_clone(career)
 

@@ -7,6 +7,10 @@ param(
     [string]$WorkshopPath = "C:\Program Files (x86)\Steam\steamapps\workshop\content\552500\3764954245",
     [string]$GameBundleDir = "C:\Program Files (x86)\Steam\steamapps\common\Warhammer Vermintide 2\bundle",
     [string]$UnpackerExe = "C:\Tools\vt2_bundle_unpacker\target\release\unpacker.exe",
+    [switch]$LegacyFur,
+    [string]$LegacyFurRoot = ".build\reference_legacy_pusfume",
+    [double]$BodyDiffuseGain = 1.2,
+    [double]$FurDiffuseGain = 0.55,
     [switch]$HeroPreview,
     [switch]$ParentChildMaterial,
     [switch]$NoDonorTextureShadow,
@@ -16,6 +20,16 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+if ($BodyDiffuseGain -lt 0.5 -or $BodyDiffuseGain -gt 2.0) {
+    throw "BodyDiffuseGain must be between 0.5 and 2.0"
+}
+if ($FurDiffuseGain -lt 0.25 -or $FurDiffuseGain -gt 1.5) {
+    throw "FurDiffuseGain must be between 0.25 and 1.5"
+}
+# Legacy fur uses the same proven Laurel skinned-cutout contract as whiskers.
+if ($LegacyFur) {
+    $SplicedGameChild = $true
+}
 # Track D: ship the -ParentChildMaterial staging, then replace the compiled
 # child's payload with the GAME's own mtr_outfit child (texture ids patched to
 # the atlas). Uses the parent-child runtime path; the ordered texture shadow
@@ -30,6 +44,31 @@ if ($ParentChildMaterial -and -not $NoDonorTextureShadow) {
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $sourceMod = Join-Path $repoRoot "pusfume"
+$legacyFurPath = $null
+$legacyBodyPath = $null
+$legacyFurTextureRoot = $null
+if ($LegacyFur) {
+    $legacyFurRootPath = if ([IO.Path]::IsPathRooted($LegacyFurRoot)) {
+        (Resolve-Path $LegacyFurRoot).Path
+    } else {
+        (Resolve-Path (Join-Path $repoRoot $LegacyFurRoot)).Path
+    }
+    $legacyFurPath = Join-Path $legacyFurRootPath "units\pusfume\pusfume_inn_fur.fbx"
+    $legacyBodyPath = Join-Path $legacyFurRootPath "units\pusfume\pusfume_inn.fbx"
+    $legacyFurTextureRoot = Join-Path $legacyFurRootPath "textures\pusfume\inn"
+    $legacyLicense = Join-Path $legacyFurRootPath "LICENSE"
+    if (-not (Test-Path -LiteralPath $legacyFurPath -PathType Leaf)) {
+        throw "Dalokraff legacy fur FBX is missing: $legacyFurPath"
+    }
+    if (-not (Test-Path -LiteralPath $legacyBodyPath -PathType Leaf)) {
+        throw "Dalokraff legacy body FBX is missing: $legacyBodyPath"
+    }
+    if (-not (Test-Path -LiteralPath $legacyLicense -PathType Leaf) -or
+            (Get-Content -LiteralPath $legacyLicense -Raw) -notmatch
+                'MIT License[\s\S]*Copyright \(c\) 2022 dalokraff') {
+        throw "Dalokraff legacy fur license/provenance contract is missing"
+    }
+}
 $useFbxDcc = -not $UseBsiSkinFallback.IsPresent
 $inputPath = if ([IO.Path]::IsPathRooted($InputBsi)) {
     (Resolve-Path $InputBsi).Path
@@ -84,9 +123,16 @@ if ($useFbxDcc) {
     $animatedFbxTool = Join-Path $repoRoot "tools\prepare_animated_pusfume_fbx.py"
     $animatedModelFbxPath = Join-Path $generatedRoot "pusfume_3p_animated.fbx"
 
-    & $blenderExePath --background --factory-startup --disable-autoexec `
-        --python $animatedFbxTool -- `
-        $modelFbxPath $animationFbxPath $animatedModelFbxPath
+    if ($LegacyFur) {
+        & $blenderExePath --background --factory-startup --disable-autoexec `
+            --python $animatedFbxTool -- `
+            $modelFbxPath $animationFbxPath $animatedModelFbxPath `
+            $legacyFurPath $legacyBodyPath
+    } else {
+        & $blenderExePath --background --factory-startup --disable-autoexec `
+            --python $animatedFbxTool -- `
+            $modelFbxPath $animationFbxPath $animatedModelFbxPath
+    }
     if ($LASTEXITCODE -ne 0) {
         throw "Animated Pusfume FBX preparation failed with exit code $LASTEXITCODE"
     }
@@ -255,6 +301,9 @@ function Write-NativeTexture {
     } else {
         "false"
     }
+    # Preserve fractional coverage alpha. The native skinned-alpha material
+    # performs its own 0.5 test; preprocessing created the visible tape card.
+    $cutAlphaEnabled = "false"
 
     @"
 common = {
@@ -265,7 +314,7 @@ common = {
         apply_processing = true
         category = ""
         cut_alpha_threshold = 0.5
-        enable_cut_alpha_threshold = false
+        enable_cut_alpha_threshold = $cutAlphaEnabled
         format = "DXT5"
         mipmap_filter = "kaiser"
         mipmap_filter_wrap_mode = "mirror"
@@ -309,6 +358,54 @@ common = {
 "@ | Set-Content -LiteralPath (Join-Path $textureRoot "$Name.texture") -Encoding utf8
 }
 
+function Write-LegacyFurTexture {
+    param(
+        [string]$Name,
+        [string]$SourceName,
+        [bool]$Srgb,
+        [double]$Gain = 1.0
+    )
+
+    $source = Join-Path $legacyFurTextureRoot $SourceName
+    if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+        throw "Required dalokraff fur texture is missing: $source"
+    }
+    $extension = [IO.Path]::GetExtension($source)
+    $destination = Join-Path $textureRoot "$Name$extension"
+    if ([Math]::Abs($Gain - 1.0) -lt 0.0001) {
+        Copy-Item -LiteralPath $source -Destination $destination -Force
+    } elseif ($extension -ieq ".png") {
+        Add-Type -AssemblyName System.Drawing
+        $inputImage = [Drawing.Image]::FromFile($source)
+        $outputImage = [Drawing.Bitmap]::new(
+            $inputImage.Width, $inputImage.Height,
+            [Drawing.Imaging.PixelFormat]::Format32bppArgb)
+        $graphics = [Drawing.Graphics]::FromImage($outputImage)
+        $attributes = New-Object Drawing.Imaging.ImageAttributes
+        $matrix = New-Object Drawing.Imaging.ColorMatrix
+        $matrix.Matrix00 = $Gain
+        $matrix.Matrix11 = $Gain
+        $matrix.Matrix22 = $Gain
+        $attributes.SetColorMatrix($matrix)
+        try {
+            $rectangle = [Drawing.Rectangle]::new(
+                0, 0, $inputImage.Width, $inputImage.Height)
+            $graphics.DrawImage(
+                $inputImage, $rectangle, 0, 0, $inputImage.Width, $inputImage.Height,
+                [Drawing.GraphicsUnit]::Pixel, $attributes)
+            $outputImage.Save($destination, [Drawing.Imaging.ImageFormat]::Png)
+        } finally {
+            $attributes.Dispose()
+            $graphics.Dispose()
+            $outputImage.Dispose()
+            $inputImage.Dispose()
+        }
+    } else {
+        throw "Texture gain requires a PNG source: $source"
+    }
+    Write-NativeTextureRecipe $Name $Srgb
+}
+
 function Write-PusfumeAtlas {
     param(
         [string]$Name,
@@ -335,6 +432,11 @@ function Write-PusfumeAtlas {
     if ($forceOpaque) {
         $opaqueAttributes = New-Object Drawing.Imaging.ImageAttributes
         $opaqueMatrix = New-Object Drawing.Imaging.ColorMatrix
+        if ($Suffix -eq "df") {
+            $opaqueMatrix.Matrix00 = $BodyDiffuseGain
+            $opaqueMatrix.Matrix11 = $BodyDiffuseGain
+            $opaqueMatrix.Matrix22 = $BodyDiffuseGain
+        }
         $opaqueMatrix.Matrix33 = 0
         $opaqueMatrix.Matrix43 = 1
         $opaqueAttributes.SetColorMatrix($opaqueMatrix)
@@ -471,6 +573,12 @@ function Write-NativeMaterial {
 foreach ($textureName in $textureNames) {
     Write-NativeTexture $textureName
 }
+if ($LegacyFur) {
+    Write-LegacyFurTexture "pusfume_fur_df" "psf_fur_d_rein.png" $true $FurDiffuseGain
+    Write-LegacyFurTexture "pusfume_fur_nm" "psf_fur_n.tga" $false
+    Write-LegacyFurTexture "pusfume_fur_s" "psf_fur_s.tga" $false
+    $textureNames += @("pusfume_fur_df", "pusfume_fur_nm", "pusfume_fur_s")
+}
 
 Write-PusfumeAtlas "pusfume_atlas_df" "df" ([Drawing.Color]::Black)
 Write-PusfumeAtlas "pusfume_atlas_nm" "nm" ([Drawing.Color]::FromArgb(255, 128, 128, 255))
@@ -498,6 +606,9 @@ if (-not $NoDonorTextureShadow) {
     Write-NativeMaterial "pusfume_ammo_box" "pusfume_atlas_df" "pusfume_atlas_nm" "pusfume_atlas_s" 0.62
 }
 Write-NativeMaterial "pusfume_whiskers" "pusfume_whiskers_df" "pusfume_whiskers_nm" "pusfume_whiskers_s" 0.74 -Opacity
+if ($LegacyFur) {
+    Write-NativeMaterial "pusfume_fur" "pusfume_fur_df" "pusfume_fur_nm" "pusfume_fur_s" 0.78 -Opacity
+}
 
 if (-not $NoDonorTextureShadow) {
     @'
@@ -552,14 +663,75 @@ textures = {
 }
 '@ | Set-Content -LiteralPath (Join-Path $childMaterialRoot "pusfume_outfit_child.material") -Encoding utf8
 
-    @'
+    # This source is only a compiler placeholder. -SplicedGameChild replaces
+    # its payload with the installed game's Laurel feather child, patched to
+    # Janfon's whisker textures, so the shipped binding retains skinning and
+    # the native alpha-card shader permutation.
+    $whiskerChildTemplate = Get-Content -LiteralPath (Join-Path $repoRoot `
+        "tools\material_templates\character_skinned_cutout.material") -Raw
+    $whiskerChildTemplate = $whiskerChildTemplate.Replace(
+        "__COLOR_MAP__", "textures/pusfume/pusfume_whiskers_df")
+    $whiskerChildTemplate = $whiskerChildTemplate.Replace(
+        "__NORMAL_MAP__", "textures/pusfume/pusfume_whiskers_nm")
+    $whiskerChildTemplate = $whiskerChildTemplate.Replace(
+        "__DETAIL_MAP__", "textures/pusfume/pusfume_whiskers_s")
+    $whiskerChildTemplate = $whiskerChildTemplate.Replace(
+        "__EMISSIVE_MAP__", "textures/pusfume/pusfume_whiskers_df")
+    $whiskerChildTemplate | Set-Content -LiteralPath (Join-Path $childMaterialRoot `
+        "pusfume_whiskers_child.material") -Encoding utf8
+
+    if ($LegacyFur) {
+        $furChildTemplate = Get-Content -LiteralPath (Join-Path $repoRoot `
+            "tools\material_templates\character_skinned_cutout.material") -Raw
+        $furChildTemplate = $furChildTemplate.Replace(
+            "__COLOR_MAP__", "textures/pusfume/pusfume_fur_df")
+        $furChildTemplate = $furChildTemplate.Replace(
+            "__NORMAL_MAP__", "textures/pusfume/pusfume_fur_nm")
+        $furChildTemplate = $furChildTemplate.Replace(
+            "__DETAIL_MAP__", "textures/pusfume/pusfume_fur_s")
+        $furChildTemplate = $furChildTemplate.Replace(
+            "__EMISSIVE_MAP__", "textures/pusfume/pusfume_fur_df")
+        $furChildTemplate | Set-Content -LiteralPath (Join-Path $childMaterialRoot `
+            "pusfume_fur_child.material") -Encoding utf8
+    }
+
+    $nativeChildMaterialEntries = @(
+        '    "child_materials/pusfume/pusfume_outfit_child"',
+        '    "child_materials/pusfume/pusfume_whiskers_child"'
+    )
+    if ($LegacyFur) {
+        $nativeChildMaterialEntries += '    "child_materials/pusfume/pusfume_fur_child"'
+    }
+
+    @"
 material = [
-	"child_materials/pusfume/pusfume_outfit_child"
+$($nativeChildMaterialEntries -join "`n")
 ]
-'@ | Set-Content -LiteralPath (Join-Path $stageMod "resource_packages\pusfume\native_child.package") -Encoding utf8
+"@ | Set-Content -LiteralPath (Join-Path $stageMod "resource_packages\pusfume\native_child.package") -Encoding utf8
 }
 
+$furMaterialEntry = if ($LegacyFur) {
+    '    p_fur = "materials/pusfume/pusfume_fur"'
+} else {
+    ""
+}
+$furRenderableEntry = if ($LegacyFur) {
 @'
+    p_fur = {
+        always_keep = false
+        culling = "bounding_volume"
+        generate_uv_unwrap = false
+        occluder = false
+        shadow_caster = true
+        surface_queries = false
+        viewport_visible = true
+    }
+'@
+} else {
+    ""
+}
+
+@"
 animation_state_machine = "units/pusfume/pusfume_3p"
 materials = {
     p_main = "materials/pusfume/pusfume_body"
@@ -571,6 +743,7 @@ materials = {
     p_ammo_box_limited_a = "materials/pusfume/pusfume_ammo_box"
     p_ammo_box_limited_b = "materials/pusfume/pusfume_ammo_box"
     p_whiskers = "materials/pusfume/pusfume_whiskers"
+$furMaterialEntry
 }
 renderables = {
     p_mainbody = {
@@ -582,8 +755,9 @@ renderables = {
         surface_queries = false
         viewport_visible = true
     }
+$furRenderableEntry
 }
-'@ | Set-Content -LiteralPath (Join-Path $unitRoot "pusfume_3p.unit") -Encoding utf8
+"@ | Set-Content -LiteralPath (Join-Path $unitRoot "pusfume_3p.unit") -Encoding utf8
 
 $heroPreviewEnabled = if ($HeroPreview) { "true" } else { "false" }
 # The stub parent currently shadows the game's mtr_outfit inside the bundle
@@ -597,6 +771,16 @@ $parentChildMaterialValue = if ($ParentChildMaterial) {
 }
 $parentChildPackageValue = if ($ParentChildMaterial) {
     '"resource_packages/pusfume/native_child"'
+} else {
+    "false"
+}
+$whiskerChildMaterialValue = if ($SplicedGameChild) {
+    '"child_materials/pusfume/pusfume_whiskers_child"'
+} else {
+    "false"
+}
+$furChildMaterialValue = if ($SplicedGameChild -and $LegacyFur) {
+    '"child_materials/pusfume/pusfume_fur_child"'
 } else {
     "false"
 }
@@ -628,6 +812,9 @@ return {
     locomotion_events_enabled = true,
     parent_child_material = $parentChildMaterialValue,
     parent_child_package = $parentChildPackageValue,
+    fur_child_material = $furChildMaterialValue,
+    whisker_child_material = $whiskerChildMaterialValue,
+    whisker_donor_package = "units/beings/player/empire_soldier_knight/headpiece/es_k_hat_07",
     manual_clip_length = 0.8,
     manual_clip_name = "units/pusfume/anims/pusfume_3p_walk",
     manual_clip_probe = false,
@@ -775,6 +962,7 @@ if ($SplicedGameChild) {
     & py (Join-Path $repoRoot "tools\make_spliced_child.py") `
         --extracted $gameChildPath `
         --resource hash:90BDF3BAC6F81BA8 --expect-size 768 `
+        --expect-parent 3D25339231384C80 `
         --map DD74D8319F514D96=C263ECB79A8DCEC0 `
         --map E334A8CB6BCB5E6D=A4215592F6297E57 `
         --set-variable emissive_color=0,0,0 `
@@ -808,6 +996,102 @@ if ($SplicedGameChild) {
     }
 
     Write-Host "Spliced game child payload (768 bytes, atlas texture ids) into $($splicedInto[0])"
+
+    # Laurel's compiled feather material is the proven skinned alpha-card
+    # contract. Preserve its shader parent, alpha scalar, and channel layout;
+    # patch only the three texture resources to Janfon's whisker maps.
+    $laurelGameBundle = Join-Path $GameBundleDir "95865e5dbaf202e3"
+    if (-not (Test-Path -LiteralPath $laurelGameBundle -PathType Leaf)) {
+        throw "Installed Laurel game bundle not found: $laurelGameBundle"
+    }
+
+    $laurelExtractDir = Join-Path $generatedRoot "laurel-bundle-extract"
+    New-Item -ItemType Directory -Path $laurelExtractDir -Force | Out-Null
+    & $UnpackerExe extract $laurelGameBundle $laurelExtractDir --flatten `
+        --include "*C70B1AAD3B363E24*" 2>$null | Out-Null
+    $laurelMaterialPath = Join-Path $laurelExtractDir "C70B1AAD3B363E24.material"
+    if (-not (Test-Path -LiteralPath $laurelMaterialPath -PathType Leaf)) {
+        throw "Laurel bundle extraction did not produce C70B1AAD3B363E24.material"
+    }
+
+    $whiskerPayload = Join-Path $generatedRoot "spliced_whisker_payload.bin"
+    & py (Join-Path $repoRoot "tools\make_spliced_child.py") `
+        --extracted $laurelMaterialPath `
+        --resource hash:C70B1AAD3B363E24 --expect-size 128 `
+        --expect-parent F85B289742D5D69A `
+        --map C9CF19C214612D75=7F060B4938ADCF12 `
+        --map CDA03B9B0226037A=950FC5950CCEBCD0 `
+        --map D3FD8377A3DE498A=BEB4D8D9891A6D4A `
+        --expect-texture texture_map_c0ba2942=7F060B4938ADCF12 `
+        --expect-texture texture_map_59cd86b9=950FC5950CCEBCD0 `
+        --expect-texture texture_map_b788717c=BEB4D8D9891A6D4A `
+        --out $whiskerPayload
+    if ($LASTEXITCODE -ne 0) {
+        throw "Spliced Laurel whisker payload generation failed"
+    }
+
+    $whiskerSplicedInto = @()
+    foreach ($bundleFile in (Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)) {
+        & py $spliceTool $bundleFile.FullName --type material `
+            --name "child_materials/pusfume/pusfume_whiskers_child" `
+            --payload $whiskerPayload --dry-run 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            & py $spliceTool $bundleFile.FullName --type material `
+                --name "child_materials/pusfume/pusfume_whiskers_child" `
+                --payload $whiskerPayload
+            if ($LASTEXITCODE -ne 0) {
+                throw "Whisker material splice failed on $($bundleFile.Name)"
+            }
+            $whiskerSplicedInto += $bundleFile.Name
+        }
+    }
+
+    if ($whiskerSplicedInto.Count -ne 1) {
+        throw "Expected the whisker child in exactly 1 bundle, spliced $($whiskerSplicedInto.Count)"
+    }
+
+    Write-Host "Spliced Laurel feather payload (128 bytes, Pusfume whisker maps) into $($whiskerSplicedInto[0])"
+    if ($LegacyFur) {
+        # Reuse the same proven skinned alpha-card binding for fur, but patch
+        # all three channels to the licensed dalokraff texture set.
+        $furPayload = Join-Path $generatedRoot "spliced_fur_payload.bin"
+        & py (Join-Path $repoRoot "tools\make_spliced_child.py") `
+            --extracted $laurelMaterialPath `
+            --resource hash:C70B1AAD3B363E24 --expect-size 128 `
+            --expect-parent F85B289742D5D69A `
+            --map C9CF19C214612D75=20A7120B25F414F7 `
+            --map CDA03B9B0226037A=57505EBDF932A68B `
+            --map D3FD8377A3DE498A=D7B1C45DEFA31C39 `
+            --expect-texture texture_map_c0ba2942=20A7120B25F414F7 `
+            --expect-texture texture_map_59cd86b9=57505EBDF932A68B `
+            --expect-texture texture_map_b788717c=D7B1C45DEFA31C39 `
+            --out $furPayload
+        if ($LASTEXITCODE -ne 0) {
+            throw "Spliced Laurel fur payload generation failed"
+        }
+
+        $furSplicedInto = @()
+        foreach ($bundleFile in (Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)) {
+            & py $spliceTool $bundleFile.FullName --type material `
+                --name "child_materials/pusfume/pusfume_fur_child" `
+                --payload $furPayload --dry-run 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                & py $spliceTool $bundleFile.FullName --type material `
+                    --name "child_materials/pusfume/pusfume_fur_child" `
+                    --payload $furPayload
+                if ($LASTEXITCODE -ne 0) {
+                    throw "Fur material splice failed on $($bundleFile.Name)"
+                }
+                $furSplicedInto += $bundleFile.Name
+            }
+        }
+
+        if ($furSplicedInto.Count -ne 1) {
+            throw "Expected the fur child in exactly 1 bundle, spliced $($furSplicedInto.Count)"
+        }
+
+        Write-Host "Spliced Laurel feather payload (128 bytes, dalokraff fur maps) into $($furSplicedInto[0])"
+    }
     # The locator dry-runs exit 1 on bundles without the child; do not let the
     # last probe's code leak out as the script's exit status.
     $global:LASTEXITCODE = 0
@@ -921,7 +1205,8 @@ $nativeSource = if ($useFbxDcc) { $animatedModelFbxPath } else { $inputPath }
 $nativeSourceKind = if ($useFbxDcc) { "FBX/DCC" } else { "BSI fallback" }
 $nativeSourceSize = (Get-Item -LiteralPath $nativeSource).Length
 $bundles = @(Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)
+$materialCount = if ($LegacyFur) { 8 } else { 7 }
 Write-Host "Native Pusfume build passed: source=$nativeSourceKind bytes=$nativeSourceSize bundles=$($bundles.Count)"
-Write-Host "Native Pusfume materials passed: textures=$($textureNames.Count) materials=7"
+Write-Host "Native Pusfume materials passed: textures=$($textureNames.Count) materials=$materialCount"
 Write-Host "Native Pusfume animation package passed: controller=pusfume_3p clips=pusfume_3p_idle,pusfume_3p_walk"
 Write-Host "Native Pusfume hero preview enabled: $($HeroPreview.IsPresent)"

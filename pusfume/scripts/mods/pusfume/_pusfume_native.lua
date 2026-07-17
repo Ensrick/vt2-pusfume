@@ -12,6 +12,9 @@ local state = {
     donor_package_requested = false,
     donor_package_loaded = false,
     donor_package_error_logged = false,
+    whisker_donor_package_requested = false,
+    whisker_donor_package_loaded = false,
+    whisker_donor_package_error_logged = false,
     child_package_requested = false,
     child_package_loaded = false,
     child_package_error_logged = false,
@@ -23,6 +26,8 @@ local state = {
     material_probe_units = setmetatable({}, { __mode = "k" }),
     donor_material_error_logged = false,
     donor_material_applied = false,
+    whisker_material_applied = false,
+    fur_material_applied = false,
     donor_texture_errors = {},
     donor_weapons_hidden = false,
     locomotion_events_available = false,
@@ -34,6 +39,7 @@ local IDLE_ENTER_SPEED = 0.2
 local installed_config
 
 local DONOR_PACKAGE_REFERENCE = "pusfume_globadier_material"
+local WHISKER_DONOR_PACKAGE_REFERENCE = "pusfume_laurel_material"
 local DONOR_TEXTURE_CHANNELS = {
     color = "texture_map_02af90f8",
     normal = "texture_map_27b67fd2",
@@ -49,6 +55,8 @@ local DONOR_MATERIAL_SLOTS = {
     "p_ammo_box_limited_a",
     "p_ammo_box_limited_b",
 }
+local WHISKER_MATERIAL_SLOT = "p_whiskers"
+local FUR_MATERIAL_SLOT = "p_fur"
 local DONOR_ATLAS_TEXTURES = {
     color = "pusfume_atlas_df",
     normal = "pusfume_atlas_nm",
@@ -102,6 +110,39 @@ local function ensure_donor_package(config)
     return state.donor_package_loaded
 end
 
+local function ensure_whisker_donor_package(config)
+    if type(config.whisker_child_material) ~= "string" then
+        return true
+    end
+
+    if state.whisker_donor_package_loaded then
+        return true
+    end
+
+    if not Managers.package or not can_get("package", config.whisker_donor_package) then
+        if not state.whisker_donor_package_error_logged then
+            state.whisker_donor_package_error_logged = true
+            mod:error("[pusfume] Laurel whisker donor package is unavailable: %s",
+                tostring(config.whisker_donor_package))
+        end
+
+        return false
+    end
+
+    if not state.whisker_donor_package_requested then
+        state.whisker_donor_package_requested = true
+        Managers.package:load(config.whisker_donor_package, WHISKER_DONOR_PACKAGE_REFERENCE)
+        mod:info("[pusfume] Requested Laurel whisker donor package: %s",
+            config.whisker_donor_package)
+    end
+
+    state.whisker_donor_package_loaded = Managers.package:has_loaded(
+        config.whisker_donor_package,
+        WHISKER_DONOR_PACKAGE_REFERENCE)
+
+    return state.whisker_donor_package_loaded
+end
+
 -- The compiled child material inherits the donor parent by hash, so its
 -- package must only ever load AFTER the donor package is resident.
 local function ensure_child_package(config)
@@ -113,7 +154,8 @@ local function ensure_child_package(config)
         return true
     end
 
-    if not state.donor_package_loaded or not mod.load_package or not mod.package_status then
+    if not state.donor_package_loaded or not state.whisker_donor_package_loaded
+            or not mod.load_package or not mod.package_status then
         return false
     end
 
@@ -197,7 +239,11 @@ end
 
 
 local function apply_donor_material_to_unit(unit, config)
-    if not config.donor_material_enabled or not ALIVE[unit] or not ensure_donor_package(config) then
+    -- Menu preview units live outside the gameplay ALIVE registry. Unit.alive
+    -- is the shared validity check for both preview-world and gameplay units.
+    if not config.donor_material_enabled or not unit or not Unit.alive(unit)
+            or not ensure_donor_package(config)
+            or not ensure_whisker_donor_package(config) then
         return false
     end
 
@@ -252,6 +298,32 @@ local function apply_donor_material_to_unit(unit, config)
             material_slots = material_slots + 1
             assignments[#assignments + 1] = string.format(
                 "%s=%s", slot_name, material == config.donor_material and "donor" or "child")
+        end
+
+        if type(config.whisker_child_material) == "string" then
+            if can_get("material", config.whisker_child_material) then
+                Unit.set_material(unit, WHISKER_MATERIAL_SLOT, config.whisker_child_material)
+                state.whisker_material_applied = true
+                material_slots = material_slots + 1
+                assignments[#assignments + 1] = WHISKER_MATERIAL_SLOT .. "=pusfume_whiskers_child"
+            else
+                state.whisker_material_applied = false
+                mod:error("[pusfume] Native whisker child material is unavailable: %s",
+                    config.whisker_child_material)
+            end
+        end
+
+        if type(config.fur_child_material) == "string" then
+            if can_get("material", config.fur_child_material) then
+                Unit.set_material(unit, FUR_MATERIAL_SLOT, config.fur_child_material)
+                state.fur_material_applied = true
+                material_slots = material_slots + 1
+                assignments[#assignments + 1] = FUR_MATERIAL_SLOT .. "=pusfume_fur_child"
+            else
+                state.fur_material_applied = false
+                mod:error("[pusfume] Native fur child material is unavailable: %s",
+                    config.fur_child_material)
+            end
         end
 
         mod:info(
@@ -906,6 +978,15 @@ function M.donor_status()
         material_ok = can_get("material", config.donor_material) == true,
         package_loaded = state.donor_package_loaded,
         applied = state.donor_material_applied,
+        fur_material_ok = type(config.fur_child_material) == "string"
+            and can_get("material", config.fur_child_material) == true,
+        fur_applied = state.fur_material_applied,
+        whisker_material_ok = type(config.whisker_child_material) == "string"
+            and can_get("material", config.whisker_child_material) == true,
+        whisker_applied = state.whisker_material_applied,
+        whisker_package_ok = type(config.whisker_donor_package) == "string"
+            and can_get("package", config.whisker_donor_package) == true,
+        whisker_package_loaded = state.whisker_donor_package_loaded,
     }
 end
 
@@ -944,6 +1025,14 @@ function M.shutdown(config)
         state.child_package_error_logged = false
     end
 
+    if state.whisker_donor_package_requested and Managers.package then
+        Managers.package:unload(config.whisker_donor_package, WHISKER_DONOR_PACKAGE_REFERENCE)
+        state.whisker_donor_package_requested = false
+        state.whisker_donor_package_loaded = false
+        state.whisker_donor_package_error_logged = false
+        mod:info("[pusfume] Released Laurel whisker donor package")
+    end
+
     if state.donor_package_requested and Managers.package then
         Managers.package:unload(config.donor_package, DONOR_PACKAGE_REFERENCE)
         state.donor_package_requested = false
@@ -951,6 +1040,7 @@ function M.shutdown(config)
         state.donor_package_error_logged = false
         state.donor_material_error_logged = false
         state.donor_material_applied = false
+        state.whisker_material_applied = false
         state.donor_texture_errors = {}
         mod:info("[pusfume] Released Globadier donor package")
     end

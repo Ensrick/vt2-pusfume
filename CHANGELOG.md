@@ -10,7 +10,51 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed a session-ending crash when the shared Ranger Veteran loadout carries
+  an item the vanilla loadout-sync RPC cannot encode (live: the Blightreaper
+  event sword's `woc_power_vs_order` property is absent from
+  `NetworkLookup.properties`, whose metatable raises on missing keys, and the
+  synthetic career's loadout resync syncs items vanilla never would). A
+  sender-side wire guard now strips unencodable properties and traits before
+  the encoder, unconditionally, logging each stripped key once.
+- Replaced the legacy fur's per-vertex body projection with rigid connected-card
+  retargeting, preventing individual triangle corners from stretching across
+  unrelated body regions while preserving animated weight transfer.
+- Added build-time fur fit and edge-preservation assertions so detached or
+  destructively warped fur fails before native bundle compilation.
+- Fixed Pusfume ability, passive, perk, and quest labels rendering as
+  angle-bracketed internal keys by bridging the complete VMF localization
+  table into vanilla's global `Localize` path.
+- Replaced the rigid custom whisker shader with a locally verified splice of
+  the game's skinned Laurel feather binding, patched only to Janfon's diffuse,
+  normal, and packed response maps.
+- Added explicit Laurel donor-package lifetime management so the whisker shader
+  does not depend on an equipped cosmetic or another mod making it resident.
+- Preserved fractional whisker diffuse alpha during texture compilation instead
+  of destructively thresholding the source coverage into a visible tape card.
+- Fixed v0.6.3-dev omitting vanilla's generated sub-buff `name` metadata from
+  runtime-registered templates, which crashed when Insider Knowledge first
+  added its team stat buff after spawning Pusfume.
+- Fixed v0.6.2-dev sending a localization key instead of Pusfume's internal
+  career token to `ProfileRequester`, which produced a nil career index when
+  confirming the hero selection.
+- Fixed v0.6.1-dev failing on VT2's strict network-lookup metatable while
+  checking whether new career buff identifiers were already registered.
+- Fixed the v0.6.0-dev startup regression that aborted career and hero-selector
+  registration by replacing unsupported VMF proc and buff helpers with VT2's
+  synchronized native registries.
+
 ### Added
+
+- Added Pusfume's localized `Under-Empire Reject` career identity, `The Great
+  Scheme` placeholder Skaven quests, and the first functional versions of Hell
+  Pit Native, Scaredy-rat, and Insider Knowledge.
+- Replaced the Ranger Veteran smoke-bomb adapter with a guarded Skaven
+  Ingenuity station scaffold and `/pusfume_gameplay` diagnostics. Inventory
+  conversion remains intentionally disabled until its network contract and
+  custom gas-item definitions are complete.
 
 - Registered Pusfume as Bardin's fifth synchronized career with Ranger Veteran
   backend, talent, ability, bot-takeover, and loadout adapters.
@@ -42,6 +86,11 @@ request rather than in release notes.
   hysteresis. `/pusfume_preflight` verifies the compiled idle/walk events.
 
 ### Changed
+
+- Updated the README, career-kit contract, and live-test checklist to identify
+  v0.6.5-dev as the current candidate and distinguish confirmed runtime
+  milestones from pending stability, localization, whisker, and multiplayer
+  acceptance tests.
 
 - Rebuilt the native atlas from Janfon's original Blender material graph: ammo
   slot A now uses `generic_cloth_dirty_*`, slot B retains
