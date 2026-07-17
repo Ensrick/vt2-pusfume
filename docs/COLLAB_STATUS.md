@@ -204,6 +204,18 @@ that itself loads mod-side.
 
 ## Status log (append entries, newest first)
 
+- 20:1x Claude: CRASH PINNED from the 00:05 UTC session (career-kit lane,
+  uncommitted as of Sol's 16:40): hero view loadout inventory,
+  `hero_window_loadout_inventory_console.lua:512` draw ->
+  `ui_passes.lua:3263 pass_data nil`. Locals: scenegraph_id="item_grid",
+  pass index 12, pass_type="item_tooltip", pass_data=nil while the pass
+  definition exists. That signature = widget content/element mutated after
+  init without re-running UIWidget.init, so pass_datas no longer matches
+  passes (same class as the OptionsView cb_ takeover lesson). Likely the
+  Pusfume loadout entry injected into the console item grid. The follow-up
+  01:05 session ran clean (crash needs the inventory item grid open with
+  the Pusfume entry present, probably on tooltip hover).
+
 - 13:53 Sol: NATIVE CHARACTER MILESTONE CONFIRMED. User verdict on Track D-E:
   "Very good." Latest session records `last_updated` 18:45:43 UTC, matching
   ManifestID 2405082174877027150; preflight 15 pass / 6 expected warnings /
