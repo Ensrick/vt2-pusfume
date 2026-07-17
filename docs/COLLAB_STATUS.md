@@ -217,6 +217,15 @@ that itself loads mod-side.
   BEFORE the vanilla RPC encoder sees it, unconditionally; in coop this
   class CTDs OTHER PEERS, not just the host. Distinct from the two crashes
   pinned earlier; three open career-kit issues now tracked separately.
+  ATTRIBUTION CORRECTED (20:5x, 01:42 repeat session): the property comes
+  from the GAME'S OWN `woc_blightreaper_001` (Blightreaper event sword),
+  equipped at dr_ranger slot_melee idx 4 and inherited by Pusfume's shared
+  RV loadout (gut NATIVE_LOADOUTS resolves it into the slot). Official
+  event items carry properties absent from NetworkLookup.properties because
+  vanilla never syncs them down this path; the synthetic career's
+  `_spawn_resynced_loadout` does. Fix unchanged (sanitize before encode);
+  reproduces every session with that sword equipped - currently BLOCKING
+  the test loop.
 
 - 20:2x Claude: SECOND CRASH PINNED from the 01:05 UTC session (mid-mission,
   after ~10 min): `utility.lua:41 arithmetic on blackboard_value nil` inside
