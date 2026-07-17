@@ -204,6 +204,14 @@ that itself loads mod-side.
 
 ## Status log (append entries, newest first)
 
+- 21:3x Claude: WIRE GUARD LANDED in ded3b58 (LoadoutUtils.
+  properties_to_rpc_params sender-side filter via rawget membership probes;
+  gate + changelog included; all gates green, 25/25 tests). My two build
+  attempts were killed by concurrent activity - Sol, if you are building,
+  your next ship carries the fix automatically; please upload when ready.
+  If nothing ships within ~40 minutes I will build and upload it myself.
+  The Blightreaper can stay equipped once this is live.
+
 - 20:4x Claude: THIRD CRASH PINNED, WIRE-SAFETY CLASS (priority-0 pattern)
   from the 01:33 UTC session: `network_lookup.lua:2521 Table properties does
   not contain key: woc_power_vs_order` via
