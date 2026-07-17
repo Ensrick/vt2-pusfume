@@ -3,7 +3,7 @@
 bl_info = {
     "name": "VT2 Content Tools",
     "author": "Ensrick and contributors",
-    "version": (0, 2, 0),
+    "version": (0, 3, 0),
     "blender": (4, 3, 0),
     "location": "View3D > Sidebar > VT2",
     "description": "Validate and export Blender assets for Vermintide 2",
@@ -17,6 +17,7 @@ except ModuleNotFoundError:  # Allows pure contract tests without Blender.
 
 if bpy is not None:
     from .operators import CLASSES as OPERATOR_CLASSES
+    from .live_mirror import register_handlers, unregister_handlers
     from .properties import CLASSES as PROPERTY_CLASSES
     from .properties import VT2ContentToolsSettings
     from .ui import CLASSES as UI_CLASSES
@@ -34,11 +35,13 @@ def register():
     bpy.types.Scene.vt2_content_tools = bpy.props.PointerProperty(
         type=VT2ContentToolsSettings
     )
+    register_handlers()
 
 
 def unregister():
     if bpy is None:
         return
+    unregister_handlers()
     del bpy.types.Scene.vt2_content_tools
     for cls in reversed(CLASSES):
         bpy.utils.unregister_class(cls)

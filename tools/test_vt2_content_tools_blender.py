@@ -104,7 +104,7 @@ def expected_mirror(source, target, axis="X"):
     return mirrored_pose @ mirrored_rest.inverted_safe() @ target.bone.matrix_local
 
 
-def test_pose_mirroring(armature, settings):
+def test_pose_mirroring(armature, settings, operators):
     bpy.ops.object.select_all(action="DESELECT")
     armature.select_set(True)
     bpy.context.view_layer.objects.active = armature
@@ -143,6 +143,21 @@ def test_pose_mirroring(armature, settings):
 
     for pose_bone in armature.pose.bones:
         pose_bone.matrix_basis.identity()
+        pose_bone.select = False
+    right.select = True
+    armature.data.bones.active = right.bone
+    right.rotation_mode = "QUATERNION"
+    right.rotation_quaternion = Quaternion((0.0, 0.0, 1.0), 0.27)
+    bpy.context.view_layer.update()
+    expected_left = expected_mirror(right, left)
+    settings.live_mirror_enabled = True
+    live = operators.apply_pose_mirror(bpy.context, settings, changed_only=True)
+    if live["changed"] != 1 or matrix_error(left.matrix, expected_left) > 1e-5:
+        raise RuntimeError("Live j_right-to-j_left VT2 pose mirror failed")
+    settings.live_mirror_enabled = False
+
+    for pose_bone in armature.pose.bones:
+        pose_bone.matrix_basis.identity()
         pose_bone.select = True
     bpy.context.view_layer.update()
     bpy.ops.object.mode_set(mode="OBJECT")
@@ -156,10 +171,14 @@ def main(repo_root, output_root, installed=False):
         validation = importlib.import_module(
             "bl_ext.user_default.vt2_content_tools.validation"
         )
+        operators = importlib.import_module(
+            "bl_ext.user_default.vt2_content_tools.operators"
+        )
     else:
         sys.path.insert(0, str(Path(repo_root) / "blender_addon"))
         vt2_content_tools = importlib.import_module("vt2_content_tools")
         validation = importlib.import_module("vt2_content_tools.validation")
+        operators = importlib.import_module("vt2_content_tools.operators")
 
     output_root = Path(output_root)
     texture_path = output_root.parent / f"{output_root.name}-source" / "fixture_df.png"
@@ -173,7 +192,7 @@ def main(repo_root, output_root, installed=False):
     settings.export_mode = "BOTH"
     settings.scope = "ALL"
     settings.include_textures = True
-    test_pose_mirroring(bpy.data.objects["fixture_rig"], settings)
+    test_pose_mirroring(bpy.data.objects["fixture_rig"], settings, operators)
 
     before = validation.validate(bpy.context, settings)
     if not any(issue["code"] == "too_many_influences" for issue in before["issues"]):
@@ -215,7 +234,7 @@ def main(repo_root, output_root, installed=False):
                 "blender": bpy.app.version_string,
                 "files": sorted(expected),
                 "pre_repair_errors": before["summary"]["errors"],
-                "pose_mirror": "left-right/right-left",
+                "pose_mirror": "one-shot and live left-right/right-left",
                 "warnings": after["summary"]["warnings"],
             },
             sort_keys=True,

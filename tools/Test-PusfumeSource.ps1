@@ -65,7 +65,7 @@ Test-Condition ((Test-Path -LiteralPath (Join-Path $addonRoot "__init__.py")) -a
     (Test-Path -LiteralPath (Join-Path $addonRoot "properties.py")) -and `
     (Test-Path -LiteralPath (Join-Path $addonRoot "ui.py")) -and `
     $addonManifestText -match 'id\s*=\s*"vt2_content_tools"' -and `
-    $addonManifestText -match 'version\s*=\s*"0\.2\.0"') `
+    $addonManifestText -match 'version\s*=\s*"0\.3\.0"') `
     "Blender content tools" "installable extension source and manifest are complete"
 Test-Condition ($addonOperatorsText -match 'axis_forward="-Y"' -and `
     $addonOperatorsText -match 'axis_up="Z"' -and `
@@ -84,6 +84,10 @@ Test-Condition ($addonOperatorsText -match 'class VT2_OT_mirror_pose' -and `
     $addonOperatorsText -match 'mirrored_rest\.inverted_safe\(\)' -and `
     $addonBlenderTestText -match 'pose_mirror.*left-right/right-left') `
     "Blender content tools" "VT2 j_left/j_right poses are rest-corrected and tested in both directions"
+Test-Condition ((Test-Path -LiteralPath (Join-Path $addonRoot "live_mirror.py")) -and `
+    $addonOperatorsText -match 'def apply_pose_mirror' -and `
+    $addonBlenderTestText -match 'Live j_right-to-j_left VT2 pose mirror failed') `
+    "Blender content tools" "live j_left/j_right Pose Mode mirroring is tested"
 Test-Condition (Test-Path (Join-Path $repoRoot "pusfume\resource_packages\pusfume\pusfume.package")) `
     "resource package" "package manifest exists"
 Test-Condition ($mainText -match 'assets\.install\(\)') "asset bridge" "installed at runtime"

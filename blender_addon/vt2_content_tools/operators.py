@@ -203,6 +203,56 @@ def _insert_pose_keys(pose_bone):
     pose_bone.keyframe_insert(data_path="scale")
 
 
+def _matrix_error(first, second):
+    return max(
+        abs(first[row][column] - second[row][column])
+        for row in range(4)
+        for column in range(4)
+    )
+
+
+def apply_pose_mirror(context, settings, *, insert_keyframes=False, changed_only=False):
+    """Apply configured VT2 bone-pair mirroring and return operation statistics."""
+    armature = context.object
+    selected = (
+        {bone.name for bone in armature.pose.bones if bone.select}
+        if settings.mirror_selected_only
+        else None
+    )
+    pairs = core.mirrored_bone_pairs(
+        {bone.name for bone in armature.pose.bones},
+        settings.mirror_direction,
+        selected_names=selected,
+    )
+    snapshots = {
+        source_name: armature.pose.bones[source_name].matrix.copy()
+        for source_name, _ in pairs
+    }
+    pairs.sort(key=lambda pair: len(armature.pose.bones[pair[0]].parent_recursive))
+
+    changed = 0
+    constrained = 0
+    for source_name, target_name in pairs:
+        source = armature.pose.bones[source_name]
+        target = armature.pose.bones[target_name]
+        mirrored = _mirrored_pose_matrix(
+            snapshots[source_name],
+            source.bone.matrix_local,
+            target.bone.matrix_local,
+            settings.mirror_axis,
+        )
+        if changed_only and _matrix_error(target.matrix, mirrored) <= 1e-6:
+            continue
+        target.matrix = mirrored
+        context.view_layer.update()
+        changed += 1
+        if target.constraints:
+            constrained += 1
+        if insert_keyframes:
+            _insert_pose_keys(target)
+    return {"pairs": len(pairs), "changed": changed, "constrained": constrained}
+
+
 class VT2_OT_validate(bpy.types.Operator):
     bl_idname = "vt2.validate"
     bl_label = "Validate VT2 Handoff"
@@ -300,18 +350,12 @@ class VT2_OT_mirror_pose(bpy.types.Operator):
 
     def execute(self, context):
         settings = context.scene.vt2_content_tools
-        armature = context.object
-        selected = (
-            {bone.name for bone in context.selected_pose_bones or ()}
-            if settings.mirror_selected_only
-            else None
+        result = apply_pose_mirror(
+            context,
+            settings,
+            insert_keyframes=settings.mirror_insert_keyframes,
         )
-        pairs = core.mirrored_bone_pairs(
-            {bone.name for bone in armature.pose.bones},
-            settings.mirror_direction,
-            selected_names=selected,
-        )
-        if not pairs:
+        if not result["pairs"]:
             side = "j_left" if settings.mirror_direction == "LEFT_TO_RIGHT" else "j_right"
             self.report(
                 {"ERROR"},
@@ -319,32 +363,9 @@ class VT2_OT_mirror_pose(bpy.types.Operator):
             )
             return {"CANCELLED"}
 
-        snapshots = {
-            source_name: armature.pose.bones[source_name].matrix.copy()
-            for source_name, _ in pairs
-        }
-        pairs.sort(
-            key=lambda pair: len(armature.pose.bones[pair[0]].parent_recursive)
-        )
-        constrained = 0
-        for source_name, target_name in pairs:
-            source = armature.pose.bones[source_name]
-            target = armature.pose.bones[target_name]
-            target.matrix = _mirrored_pose_matrix(
-                snapshots[source_name],
-                source.bone.matrix_local,
-                target.bone.matrix_local,
-                settings.mirror_axis,
-            )
-            context.view_layer.update()
-            if target.constraints:
-                constrained += 1
-            if settings.mirror_insert_keyframes:
-                _insert_pose_keys(target)
-
-        message = f"Mirrored {len(pairs)} VT2 bone pair(s)"
-        if constrained:
-            message += f"; {constrained} destination bone(s) have constraints"
+        message = f"Mirrored {result['changed']} VT2 bone pair(s)"
+        if result["constrained"]:
+            message += f"; {result['constrained']} destination bone(s) have constraints"
             self.report({"WARNING"}, message)
         else:
             self.report({"INFO"}, message)

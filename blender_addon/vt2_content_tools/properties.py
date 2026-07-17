@@ -97,6 +97,14 @@ class VT2ContentToolsSettings(bpy.types.PropertyGroup):
         description="Key mirrored destination pose channels at the current frame",
         default=False,
     )
+    live_mirror_enabled: bpy.props.BoolProperty(
+        name="Live VT2 Mirror",
+        description=(
+            "Continuously mirror selected j_left/j_right source bones in Pose Mode "
+            "without renaming the VT2 skeleton"
+        ),
+        default=False,
+    )
     last_errors: bpy.props.IntProperty(default=0, options={"HIDDEN"})
     last_warnings: bpy.props.IntProperty(default=0, options={"HIDDEN"})
     last_report: bpy.props.StringProperty(default="Not validated", options={"HIDDEN"})

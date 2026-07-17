@@ -1,7 +1,7 @@
 # VT2 Content Tools for Blender 5.2
 
 VT2 Content Tools is the supported no-Maya authoring path for Janfon's Pusfume
-models and animations. Release `0.2.0` is acceptance-tested against **Blender
+models and animations. Release `0.3.0` is acceptance-tested against **Blender
 5.2.0 LTS** on Windows. Its extension manifest permits Blender 4.3 or newer,
 but 5.2.0 LTS is the project's primary tested version.
 
@@ -17,11 +17,11 @@ Build the installable package from the repository root:
 py -3 tools\package_blender_addon.py
 ```
 
-This writes `.build/dist/vt2_content_tools-0.2.0.zip`. In Blender 5.2:
+This writes `.build/dist/vt2_content_tools-0.3.0.zip`. In Blender 5.2:
 
 1. Open **Edit > Preferences > Get Extensions**.
 2. Open the menu and choose **Install from Disk**.
-3. Select `vt2_content_tools-0.2.0.zip`.
+3. Select `vt2_content_tools-0.3.0.zip`.
 4. Open the 3D Viewport and press `N` to show the sidebar.
 5. Select the **VT2** tab.
 
@@ -66,6 +66,14 @@ orientation. The operator reflects each source pose in armature space, removes
 the reflected source rest transform, and reapplies the result to the actual
 destination rest transform. This preserves intentional asymmetry in the rest
 rig better than copying Euler values.
+
+Blender's native **X-Axis Mirror** does not pair names such as `j_leftarm` and
+`j_rightarm`. Enable **Live VT2 Mirror** in the VT2 sidebar instead. Choose the
+source direction and X axis, keep **Selected Source Bones Only** enabled, then
+transform a selected source bone in Pose Mode. The partner updates continuously
+without renaming the skeleton. Disable the toggle before intentionally editing
+the destination side. Live mirroring does not insert keys automatically; use
+**Mirror VT2 Pose** with **Insert Keyframes** for deliberate keyed poses.
 
 **Selected Source Bones Only** prevents accidental whole-rig changes. Enable
 **Insert Keyframes** when the mirrored destination should be keyed at the
@@ -114,7 +122,7 @@ Run the normal tests, package validation, and the real Blender 5.2 fixture:
 py -3 -m unittest discover -s tests -v
 py -3 tools\package_blender_addon.py
 & "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" `
-  --command extension validate .build\dist\vt2_content_tools-0.2.0.zip
+  --command extension validate .build\dist\vt2_content_tools-0.3.0.zip
 & "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" `
   --background --factory-startup --disable-autoexec `
   --python tools\test_vt2_content_tools_blender.py -- `
