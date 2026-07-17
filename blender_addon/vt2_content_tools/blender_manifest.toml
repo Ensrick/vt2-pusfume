@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "vt2_content_tools"
-version = "0.3.0"
+version = "0.3.1"
 name = "VT2 Content Tools"
 tagline = "Validate and export Blender assets for Vermintide 2"
 maintainer = "Ensrick and contributors"

@@ -67,6 +67,9 @@ def create_fixture(texture_path, reset_factory=True):
     bpy.context.scene.collection.objects.link(mesh)
     modifier = mesh.modifiers.new("fixture_armature", "ARMATURE")
     modifier.object = armature
+    # Extracted VT2 scenes can retain an unresolved Armature modifier. It must
+    # not inject None into the validator's referenced-object collection.
+    mesh.modifiers.new("unbound_armature_reference", "ARMATURE")
     for bone in armature.data.bones:
         group = mesh.vertex_groups.new(name=bone.name)
         group.add([0, 1, 2], 0.2, "REPLACE")
@@ -182,7 +185,7 @@ def main(repo_root, output_root, installed=False):
 
     output_root = Path(output_root)
     texture_path = output_root.parent / f"{output_root.name}-source" / "fixture_df.png"
-    create_fixture(texture_path, reset_factory=not installed)
+    armature, mesh = create_fixture(texture_path, reset_factory=not installed)
     if not installed:
         vt2_content_tools.register()
     settings = bpy.context.scene.vt2_content_tools
@@ -192,6 +195,10 @@ def main(repo_root, output_root, installed=False):
     settings.export_mode = "BOTH"
     settings.scope = "ALL"
     settings.include_textures = True
+    collected = validation.export_objects(bpy.context, settings.scope)
+    if None in collected:
+        raise RuntimeError("Unbound Armature modifier injected None into export scope")
+    mesh.modifiers.remove(mesh.modifiers["unbound_armature_reference"])
     test_pose_mirroring(bpy.data.objects["fixture_rig"], settings, operators)
 
     before = validation.validate(bpy.context, settings)

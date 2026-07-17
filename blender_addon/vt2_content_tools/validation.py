@@ -13,22 +13,31 @@ EPSILON = 1e-6
 
 
 def _add_referenced_armatures(objects):
-    result = list(objects)
+    result = [obj for obj in objects if obj is not None]
     known = set(result)
     for obj in list(result):
         if obj.type != "MESH":
             continue
         for modifier in obj.modifiers:
-            if modifier.type == "ARMATURE" and modifier.object not in known:
-                known.add(modifier.object)
-                result.append(modifier.object)
+            armature = modifier.object
+            if (
+                modifier.type == "ARMATURE"
+                and armature is not None
+                and armature not in known
+            ):
+                known.add(armature)
+                result.append(armature)
     return result
 
 
 def export_objects(context, scope):
     supported = {"ARMATURE", "EMPTY", "MESH"}
     if scope == "SELECTED":
-        objects = [obj for obj in context.selected_objects if obj.type in supported]
+        objects = [
+            obj
+            for obj in context.selected_objects
+            if obj is not None and obj.type in supported
+        ]
     elif scope == "ACTIVE":
         active = context.view_layer.objects.active
         if active is None or active.type not in supported:
@@ -45,7 +54,11 @@ def export_objects(context, scope):
                 )
             )
     else:
-        objects = [obj for obj in context.scene.objects if obj.type in supported]
+        objects = [
+            obj
+            for obj in context.scene.objects
+            if obj is not None and obj.type in supported
+        ]
     return _add_referenced_armatures(objects)
 
 
