@@ -1,0 +1,17 @@
+schema_version = "1.0.0"
+
+id = "vt2_content_tools"
+version = "0.1.0"
+name = "VT2 Content Tools"
+tagline = "Validate and export Blender assets for Vermintide 2"
+maintainer = "Ensrick and contributors"
+type = "add-on"
+
+website = "https://github.com/Ensrick/vt2-pusfume"
+tags = ["Import-Export", "Rigging", "Animation"]
+blender_version_min = "4.3.0"
+license = ["SPDX:GPL-3.0-or-later"]
+copyright = ["2026 Ensrick and contributors"]
+
+[permissions]
+files = "Export FBX handoffs and copy explicitly referenced texture files"

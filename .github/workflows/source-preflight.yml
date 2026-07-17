@@ -25,6 +25,26 @@ jobs:
           repository: Aussiemon/Vermintide-2-Source-Code
           path: Vermintide-2-Source-Code
 
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Run Python unit tests
+        shell: pwsh
+        run: python -m unittest discover -s tests -v
+
+      - name: Package Blender extension
+        shell: pwsh
+        run: python tools/package_blender_addon.py
+
+      - name: Upload Blender extension
+        uses: actions/upload-artifact@v4
+        with:
+          name: vt2-content-tools
+          path: .build/dist/vt2_content_tools-*.zip
+          if-no-files-found: error
+
       - name: Run source preflight
         shell: pwsh
         run: ./tools/Test-PusfumeSource.ps1 -SourceRoot ./Vermintide-2-Source-Code

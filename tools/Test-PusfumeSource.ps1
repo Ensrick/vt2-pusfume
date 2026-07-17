@@ -34,6 +34,12 @@ $packagePath = Join-Path $repoRoot "pusfume\resource_packages\pusfume\pusfume.pa
 $previewPath = Join-Path $repoRoot "pusfume\textures\pusfume\pusfume_model_preview.png"
 $previewTexturePath = Join-Path $repoRoot "pusfume\textures\pusfume\pusfume_model_preview.texture"
 $previewMaterialPath = Join-Path $repoRoot "pusfume\materials\pusfume\pusfume_model_preview.material"
+$addonRoot = Join-Path $repoRoot "blender_addon\vt2_content_tools"
+$addonManifestPath = Join-Path $addonRoot "blender_manifest.toml"
+$addonOperatorsPath = Join-Path $addonRoot "operators.py"
+$addonValidationPath = Join-Path $addonRoot "validation.py"
+$addonPackagePath = Join-Path $repoRoot "tools\package_blender_addon.py"
+$addonBlenderTestPath = Join-Path $repoRoot "tools\test_vt2_content_tools_blender.py"
 $mainText = Get-Content -LiteralPath $mainPath -Raw
 $configText = Get-Content -LiteralPath $configPath -Raw
 $backendText = Get-Content -LiteralPath $backendPath -Raw
@@ -43,12 +49,36 @@ $assetsText = Get-Content -LiteralPath $assetsPath -Raw
 $uiText = Get-Content -LiteralPath $uiPath -Raw
 $dataText = Get-Content -LiteralPath $dataPath -Raw
 $packageText = Get-Content -LiteralPath $packagePath -Raw
+$addonManifestText = Get-Content -LiteralPath $addonManifestPath -Raw
+$addonOperatorsText = Get-Content -LiteralPath $addonOperatorsPath -Raw
+$addonValidationText = Get-Content -LiteralPath $addonValidationPath -Raw
+$addonPackageText = Get-Content -LiteralPath $addonPackagePath -Raw
+$addonBlenderTestText = Get-Content -LiteralPath $addonBlenderTestPath -Raw
 $mainVersion = [regex]::Match($mainText, 'MOD_VERSION\s*=\s*"([^"]+)"').Groups[1].Value
 $configVersion = [regex]::Match($configText, 'Prototype v([^";]+)').Groups[1].Value
 
 Test-Condition ($mainVersion -and $mainVersion -eq $configVersion) "version" "$mainVersion"
 Test-Condition ($configText -match 'visibility\s*=\s*"friends"') "Workshop visibility" "friends only"
 Test-Condition ($configText -match 'published_id\s*=\s*3764954245L') "Workshop identity" "3764954245"
+Test-Condition ((Test-Path -LiteralPath (Join-Path $addonRoot "__init__.py")) -and `
+    (Test-Path -LiteralPath (Join-Path $addonRoot "core.py")) -and `
+    (Test-Path -LiteralPath (Join-Path $addonRoot "properties.py")) -and `
+    (Test-Path -LiteralPath (Join-Path $addonRoot "ui.py")) -and `
+    $addonManifestText -match 'id\s*=\s*"vt2_content_tools"' -and `
+    $addonManifestText -match 'version\s*=\s*"0\.1\.0"') `
+    "Blender content tools" "installable extension source and manifest are complete"
+Test-Condition ($addonOperatorsText -match 'axis_forward="-Y"' -and `
+    $addonOperatorsText -match 'axis_up="Z"' -and `
+    $addonOperatorsText -match 'add_leaf_bones=False' -and `
+    $addonOperatorsText -match 'bake_anim_simplify_factor=0\.0' -and `
+    $addonOperatorsText -match 'source_blend.*Path\(bpy\.data\.filepath\)\.name') `
+    "Blender content tools" "FBX export uses the verified VT2 contract without leaking source paths"
+Test-Condition ($addonValidationText -match 'too_many_influences' -and `
+    $addonValidationText -match 'unknown_action_bones' -and `
+    $addonValidationText -match 'non_root_translation' -and `
+    $addonPackageText -match 'date_time=\(1980, 1, 1, 0, 0, 0\)' -and `
+    $addonBlenderTestText -match '5\.2\.0 LTS') `
+    "Blender content tools" "weight, animation, deterministic package, and Blender 5.2 acceptance gates are present"
 Test-Condition (Test-Path (Join-Path $repoRoot "pusfume\resource_packages\pusfume\pusfume.package")) `
     "resource package" "package manifest exists"
 Test-Condition ($mainText -match 'assets\.install\(\)') "asset bridge" "installed at runtime"
