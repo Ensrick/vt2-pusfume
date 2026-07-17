@@ -12,4 +12,7 @@ lua = [
 
 material = [
 	"materials/pusfume/*"
+	"materials/ui/portrait_pusfume"
+	"materials/ui/medium_portrait_pusfume"
+	"materials/ui/small_portrait_pusfume"
 ]

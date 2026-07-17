@@ -190,6 +190,26 @@ function M.collect(registry, career_index, backend, compat, ui, native)
         native_ready and "custom cosmetic resource and attachment hook are ready"
             or native_enabled and "custom cosmetic registered; attachment hook is not ready"
             or "source-only fallback active; use Build-NativePusfume.ps1 for a model test")
+    local first_person_status = native.first_person_status()
+
+    if first_person_status.enabled then
+        local first_person_ready = first_person_status.resource_available
+            and first_person_status.hook_installed
+        local first_person_state = not first_person_ready and "FAIL"
+            or first_person_status.materials_applied and "PASS"
+            or "WARN"
+        local first_person_detail = not first_person_status.resource_available
+            and "compiled first-person arms unit is unavailable"
+            or not first_person_status.hook_installed
+                and "PlayerUnitFirstPerson hook is unavailable"
+            or first_person_status.materials_applied
+                and "Janfon arms are attached and their direct-UV material is applied"
+            or first_person_status.package_loaded
+                and "material package is loaded; spawn Pusfume to apply it"
+            or "unit and hook are ready; spawn Pusfume to load and apply the material"
+
+        add(checks, "native first-person arms", first_person_state, first_person_detail)
+    end
     local donor_status = native.donor_status()
 
     if donor_status.enabled then

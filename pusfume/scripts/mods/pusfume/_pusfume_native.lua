@@ -8,6 +8,13 @@ local state = {
     preview_package_filter_installed = false,
     preview_package_filtered = false,
     resource_available = false,
+    first_person_resource_available = false,
+    first_person_hook_installed = false,
+    first_person_material_package_requested = false,
+    first_person_material_package_loaded = false,
+    first_person_material_package_error_logged = false,
+    first_person_material_error_logged = false,
+    first_person_materials_applied = false,
     hero_preview_enabled = false,
     donor_package_requested = false,
     donor_package_loaded = false,
@@ -141,6 +148,38 @@ local function ensure_whisker_donor_package(config)
         WHISKER_DONOR_PACKAGE_REFERENCE)
 
     return state.whisker_donor_package_loaded
+end
+
+local function ensure_first_person_material_package(config)
+    if type(config.first_person_material_package) ~= "string" then
+        return false
+    end
+
+    if state.first_person_material_package_loaded then
+        return true
+    end
+
+    if not ensure_donor_package(config) or not mod.load_package or not mod.package_status then
+        if not state.first_person_material_package_error_logged then
+            state.first_person_material_package_error_logged = true
+            mod:error("[pusfume] First-person material package loader is unavailable: %s",
+                tostring(config.first_person_material_package))
+        end
+
+        return false
+    end
+
+    if not state.first_person_material_package_requested then
+        state.first_person_material_package_requested = true
+        mod:load_package(config.first_person_material_package, nil, true)
+        mod:info("[pusfume] Requested first-person material package: %s",
+            config.first_person_material_package)
+    end
+
+    state.first_person_material_package_loaded =
+        mod:package_status(config.first_person_material_package) == "loaded"
+
+    return state.first_person_material_package_loaded
 end
 
 -- The compiled child material inherits the donor parent by hash, so its
@@ -797,6 +836,16 @@ local function register_cosmetic(registry, config)
         return false
     end
 
+    local first_person_unit = config.first_person_unit
+    if first_person_unit then
+        state.first_person_resource_available = Application.can_get("unit", first_person_unit)
+
+        if not state.first_person_resource_available then
+            mod:error("[pusfume] First-person build enabled but unit is unavailable: %s", first_person_unit)
+            return false
+        end
+    end
+
     local donor_career = CareerSettings[registry.DONOR_CAREER_NAME]
     local donor_skin = donor_career and Cosmetics[donor_career.base_skin]
 
@@ -819,16 +868,91 @@ local function register_cosmetic(registry, config)
         unit = config.third_person_unit,
         attachment_node_linking = attachment_node_linking,
     }
+    if first_person_unit then
+        skin.first_person_attachment = {
+            unit = first_person_unit,
+            attachment_node_linking = AttachmentNodeLinking.pusfume_first_person_attachment,
+        }
+    end
     Cosmetics[config.skin_name] = skin
     state.native_skin_name = config.skin_name
     registry.set_native_skin(config.skin_name)
     state.cosmetic_registered = true
 
     mod:info("[pusfume] Native third-person cosmetic registered: %s", config.third_person_unit)
+    if first_person_unit then
+        mod:info("[pusfume] Native first-person cosmetic registered: %s", first_person_unit)
+    end
 
     if config.root_animation_isolation then
         mod:warning("[pusfume] Root-only animation isolation is active")
     end
+
+    return true
+end
+
+local function apply_first_person_materials(extension, config)
+    if extension._pusfume_first_person_materials_applied then
+        return true
+    end
+
+    local unit = extension.first_person_attachment_unit
+    local materials = config.first_person_materials
+    if type(materials) ~= "table" or not unit or not Unit.alive(unit)
+            or not ensure_first_person_material_package(config) then
+        return false
+    end
+
+    for slot_name, material_name in pairs(materials) do
+        if not can_get("material", material_name) then
+            if not state.first_person_material_error_logged then
+                state.first_person_material_error_logged = true
+                mod:error("[pusfume] First-person material is unavailable: %s", material_name)
+            end
+
+            return false
+        end
+
+        Unit.set_material(unit, slot_name, material_name)
+    end
+
+    extension._pusfume_first_person_materials_applied = true
+    state.first_person_materials_applied = true
+    mod:info("[pusfume] Native first-person materials applied")
+
+    return true
+end
+
+local function install_first_person_hook(config)
+    if not config.first_person_unit then
+        return true
+    end
+
+    if state.first_person_hook_installed then
+        return true
+    end
+
+    if not PlayerUnitFirstPerson then
+        return false
+    end
+
+    mod:hook(PlayerUnitFirstPerson, "init", function(func, extension,
+            extension_init_context, unit, extension_init_data)
+        local result = func(extension, extension_init_context, unit, extension_init_data)
+
+        if extension_init_data.skin_name == config.skin_name then
+            extension._pusfume_first_person = true
+            apply_first_person_materials(extension, config)
+        end
+
+        return result
+    end)
+    mod:hook_safe(PlayerUnitFirstPerson, "update", function(extension)
+        if extension._pusfume_first_person then
+            apply_first_person_materials(extension, config)
+        end
+    end)
+    state.first_person_hook_installed = true
 
     return true
 end
@@ -928,6 +1052,7 @@ function M.install(registry, config)
     end
 
     install_cosmetic_hook(registry, config)
+    local first_person_hook_ready = install_first_person_hook(config)
     install_probe_hook()
     install_material_probe_command(config)
 
@@ -937,6 +1062,7 @@ function M.install(registry, config)
     end
 
     return state.cosmetic_registered and state.hook_installed and state.probe_hook_installed
+        and first_person_hook_ready
 end
 
 function M.preview_enabled()
@@ -990,6 +1116,19 @@ function M.donor_status()
     }
 end
 
+function M.first_person_status()
+    local config = installed_config
+
+    return {
+        enabled = type(config and config.first_person_unit) == "string",
+        resource_available = state.first_person_resource_available,
+        hook_installed = state.first_person_hook_installed,
+        package_requested = state.first_person_material_package_requested,
+        package_loaded = state.first_person_material_package_loaded,
+        materials_applied = state.first_person_materials_applied,
+    }
+end
+
 function M.animation_status()
     local config = installed_config
 
@@ -1002,6 +1141,19 @@ function M.animation_status()
 end
 
 function M.shutdown(config)
+    if state.first_person_material_package_requested then
+        if mod.package_status and
+                mod:package_status(config.first_person_material_package) == "loaded" then
+            mod:unload_package(config.first_person_material_package)
+        end
+        state.first_person_material_package_requested = false
+        state.first_person_material_package_loaded = false
+        state.first_person_material_package_error_logged = false
+        state.first_person_material_error_logged = false
+        state.first_person_materials_applied = false
+        mod:info("[pusfume] Released first-person material package")
+    end
+
     if state.shadow_package_requested then
         if mod.package_status and
                 mod:package_status(config.donor_texture_shadow_package) == "loaded" then

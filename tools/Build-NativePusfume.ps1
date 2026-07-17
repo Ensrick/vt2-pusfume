@@ -3,6 +3,7 @@ param(
     [string]$ModelFbx = ".build\pusfume_handoff\pusfume_3p.fbx",
     [string]$AnimationFbx = ".build\pusfume_handoff\pusfume_3p_walk.fbx",
     [string]$BlenderExe = "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe",
+    [string]$FirstPersonBlend = "",
     [string]$TextureSource = ".build\pusfume_handoff\textures conv",
     [string]$WorkshopPath = "C:\Program Files (x86)\Steam\steamapps\workshop\content\552500\3764954245",
     [string]$GameBundleDir = "C:\Program Files (x86)\Steam\steamapps\common\Warhammer Vermintide 2\bundle",
@@ -44,6 +45,21 @@ if ($ParentChildMaterial -and -not $NoDonorTextureShadow) {
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $sourceMod = Join-Path $repoRoot "pusfume"
+$firstPersonEnabled = -not [string]::IsNullOrWhiteSpace($FirstPersonBlend)
+if ($firstPersonEnabled -and -not $SplicedGameChild) {
+    throw "FirstPersonBlend requires -SplicedGameChild for the proven skinned material binding"
+}
+$firstPersonBlendPath = $null
+if ($firstPersonEnabled) {
+    $firstPersonBlendPath = if ([IO.Path]::IsPathRooted($FirstPersonBlend)) {
+        (Resolve-Path $FirstPersonBlend).Path
+    } else {
+        (Resolve-Path (Join-Path $repoRoot $FirstPersonBlend)).Path
+    }
+    if ([IO.Path]::GetExtension($firstPersonBlendPath) -ine ".blend") {
+        throw "FirstPersonBlend must be a Blender source file: $firstPersonBlendPath"
+    }
+}
 $legacyFurPath = $null
 $legacyBodyPath = $null
 $legacyFurTextureRoot = $null
@@ -103,6 +119,27 @@ if ((Get-Item -LiteralPath $animationFbxPath).Length -lt 1024) {
 $blenderExePath = (Resolve-Path $BlenderExe).Path
 $generatedRoot = Join-Path $repoRoot ".build\generated-native"
 New-Item -ItemType Directory -Path $generatedRoot -Force | Out-Null
+
+$firstPersonFbxPath = $null
+if ($firstPersonEnabled) {
+    $firstPersonFbxPath = Join-Path $generatedRoot "pusfume_1p_arms.fbx"
+    $firstPersonTool = Join-Path $repoRoot "tools\prepare_pusfume_1p_blend.py"
+    $sourceBlendHash = (Get-FileHash -LiteralPath $firstPersonBlendPath -Algorithm SHA256).Hash
+
+    & $blenderExePath --background --factory-startup --disable-autoexec `
+        --python $firstPersonTool -- `
+        $firstPersonBlendPath $firstPersonFbxPath
+    if ($LASTEXITCODE -ne 0) {
+        throw "First-person Pusfume FBX preparation failed with exit code $LASTEXITCODE"
+    }
+    if ((Get-FileHash -LiteralPath $firstPersonBlendPath -Algorithm SHA256).Hash -ne $sourceBlendHash) {
+        throw "First-person preparation modified its source blend: $firstPersonBlendPath"
+    }
+    if (-not (Test-Path -LiteralPath $firstPersonFbxPath -PathType Leaf) -or `
+            (Get-Item -LiteralPath $firstPersonFbxPath).Length -lt 1024) {
+        throw "First-person Pusfume FBX preparation produced no usable output"
+    }
+}
 
 $idleFbxTool = Join-Path $repoRoot "tools\generate_idle_pusfume_fbx.py"
 $idleFbxPath = Join-Path $generatedRoot "pusfume_3p_idle.fbx"
@@ -188,6 +225,17 @@ extension = ".fbx"
 '@ | Set-Content -LiteralPath (Join-Path $unitRoot "pusfume_3p.dcc_asset") -Encoding utf8
 } else {
     Copy-Item -LiteralPath $inputPath -Destination (Join-Path $unitRoot "pusfume_3p.bsi") -Force
+}
+if ($firstPersonEnabled) {
+    Copy-Item -LiteralPath $firstPersonFbxPath `
+        -Destination (Join-Path $unitRoot "pusfume_1p_arms.fbx") -Force
+    @'
+_data_root_version = 1
+_id = "9eb2b5d6-ad5e-4a6c-9fb9-19e75c35ebd0"
+_name = "units/pusfume/pusfume_1p_arms"
+asset = "units/pusfume/pusfume_1p_arms"
+extension = ".fbx"
+'@ | Set-Content -LiteralPath (Join-Path $unitRoot "pusfume_1p_arms.dcc_asset") -Encoding utf8
 }
 Copy-Item -LiteralPath $inputBonesPath -Destination (Join-Path $unitRoot "pusfume_3p.bones") -Force
 Copy-Item -LiteralPath $animationFbxPath `
@@ -680,6 +728,28 @@ textures = {
     $whiskerChildTemplate | Set-Content -LiteralPath (Join-Path $childMaterialRoot `
         "pusfume_whiskers_child.material") -Encoding utf8
 
+    if ($firstPersonEnabled) {
+        $firstPersonChildTemplate = Get-Content -LiteralPath (Join-Path $repoRoot `
+            "tools\material_templates\character_skinned.material") -Raw
+        $firstPersonChildTemplate = $firstPersonChildTemplate.Replace(
+            "__COLOR_MAP__", "textures/pusfume/pusfume_body_new_df")
+        $firstPersonChildTemplate = $firstPersonChildTemplate.Replace(
+            "__NORMAL_MAP__", "textures/pusfume/skaven_body_nm")
+        $firstPersonChildTemplate = $firstPersonChildTemplate.Replace(
+            "__DETAIL_MAP__", "textures/pusfume/skaven_body_s")
+        $firstPersonChildTemplate = $firstPersonChildTemplate.Replace(
+            "__EMISSIVE_MAP__", "textures/pusfume/pusfume_body_new_df")
+        $firstPersonChildTemplate | Set-Content -LiteralPath (Join-Path $childMaterialRoot `
+            "pusfume_1p_body_child.material") -Encoding utf8
+
+        @'
+material = [
+    "child_materials/pusfume/pusfume_1p_body_child"
+]
+'@ | Set-Content -LiteralPath (Join-Path $stageMod `
+            "resource_packages\pusfume\native_1p_child.package") -Encoding utf8
+    }
+
     if ($LegacyFur) {
         $furChildTemplate = Get-Content -LiteralPath (Join-Path $repoRoot `
             "tools\material_templates\character_skinned_cutout.material") -Raw
@@ -759,6 +829,25 @@ $furRenderableEntry
 }
 "@ | Set-Content -LiteralPath (Join-Path $unitRoot "pusfume_3p.unit") -Encoding utf8
 
+if ($firstPersonEnabled) {
+    @'
+materials = {
+    p_main = "materials/pusfume/pusfume_body"
+}
+renderables = {
+    pusfume_1p_arms = {
+        always_keep = false
+        culling = "bounding_volume"
+        generate_uv_unwrap = false
+        occluder = false
+        shadow_caster = false
+        surface_queries = false
+        viewport_visible = true
+    }
+}
+'@ | Set-Content -LiteralPath (Join-Path $unitRoot "pusfume_1p_arms.unit") -Encoding utf8
+}
+
 $heroPreviewEnabled = if ($HeroPreview) { "true" } else { "false" }
 # The stub parent currently shadows the game's mtr_outfit inside the bundle
 # (2026-07-16 live test: black rigid body - child inherited the stub's
@@ -781,6 +870,25 @@ $whiskerChildMaterialValue = if ($SplicedGameChild) {
 }
 $furChildMaterialValue = if ($SplicedGameChild -and $LegacyFur) {
     '"child_materials/pusfume/pusfume_fur_child"'
+} else {
+    "false"
+}
+$firstPersonUnitValue = if ($firstPersonEnabled) {
+    '"units/pusfume/pusfume_1p_arms"'
+} else {
+    "false"
+}
+$firstPersonMaterialPackageValue = if ($firstPersonEnabled) {
+    '"resource_packages/pusfume/native_1p_child"'
+} else {
+    "false"
+}
+$firstPersonMaterialsValue = if ($firstPersonEnabled) {
+@'
+{
+        p_main = "child_materials/pusfume/pusfume_1p_body_child",
+    }
+'@
 } else {
     "false"
 }
@@ -807,6 +915,9 @@ return {
     donor_texture_shadow = $donorTextureShadowValue,
     donor_texture_shadow_package = $donorTextureShadowPackageValue,
     enabled = true,
+    first_person_material_package = $firstPersonMaterialPackageValue,
+    first_person_materials = $firstPersonMaterialsValue,
+    first_person_unit = $firstPersonUnitValue,
     hero_preview_enabled = $heroPreviewEnabled,
     hide_donor_weapons = true,
     locomotion_events_enabled = true,
@@ -826,12 +937,19 @@ return {
 "@ | Set-Content -LiteralPath (Join-Path $stageMod `
     "scripts\mods\pusfume\_pusfume_native_config.lua") -Encoding utf8
 
-@'
+$firstPersonUnitPackageEntry = if ($firstPersonEnabled) {
+    '    "units/pusfume/pusfume_1p_arms"'
+} else {
+    ""
+}
+
+@"
 
 unit = [
     "units/pusfume/pusfume_3p"
+$firstPersonUnitPackageEntry
 ]
-'@ | Add-Content -LiteralPath (Join-Path $stageMod `
+"@ | Add-Content -LiteralPath (Join-Path $stageMod `
     "resource_packages\pusfume\pusfume.package") -Encoding utf8
 
 @'
@@ -878,6 +996,29 @@ $modFile = Join-Path $bundleRoot "pusfume.mod"
 if (-not (Test-Path -LiteralPath $modFile -PathType Leaf)) {
     throw "SDK reported success but did not produce $modFile"
 }
+
+$processedBundlesPath = Join-Path $stageRoot ".temp\pusfumeV2\compile\processed_bundles.csv"
+if (-not (Test-Path -LiteralPath $processedBundlesPath -PathType Leaf)) {
+    throw "SDK reported success without a processed resource manifest"
+}
+$processedBundlesText = Get-Content -LiteralPath $processedBundlesPath -Raw
+$requiredCompiledResources = @(
+    "gui/1080p/single_textures/pusfume_portraits/portrait_pusfume,texture,",
+    "gui/1080p/single_textures/pusfume_portraits/medium_portrait_pusfume,texture,",
+    "gui/1080p/single_textures/pusfume_portraits/small_portrait_pusfume,texture,",
+    "materials/ui/portrait_pusfume,material,",
+    "materials/ui/medium_portrait_pusfume,material,",
+    "materials/ui/small_portrait_pusfume,material,"
+)
+if ($firstPersonEnabled) {
+    $requiredCompiledResources += "units/pusfume/pusfume_1p_arms,unit,"
+}
+foreach ($resource in $requiredCompiledResources) {
+    if (-not $processedBundlesText.Contains(",$resource")) {
+        throw "Compiled resource manifest omitted $resource"
+    }
+}
+Write-Host "Compiled portrait and first-person resource manifest passed"
 
 if ($ParentChildMaterial) {
     # The compiled stub parent rides into a bundle at the game's resource path
@@ -996,6 +1137,48 @@ if ($SplicedGameChild) {
     }
 
     Write-Host "Spliced game child payload (768 bytes, atlas texture ids) into $($splicedInto[0])"
+
+    if ($firstPersonEnabled) {
+        # The 1P mesh keeps Janfon's original UVs, so splice the same proven
+        # character-skin binding with direct body maps rather than the 3P atlas.
+        $firstPersonPayload = Join-Path $generatedRoot "spliced_1p_child_payload.bin"
+        & py (Join-Path $repoRoot "tools\make_spliced_child.py") `
+            --extracted $gameChildPath `
+            --resource hash:90BDF3BAC6F81BA8 --expect-size 768 `
+            --expect-parent 3D25339231384C80 `
+            --map DD74D8319F514D96=E0C4E09D80AE735B `
+            --map E334A8CB6BCB5E6D=3B3F6545AF6782F5 `
+            --set-variable emissive_color=0,0,0 `
+            --expect-texture texture_map_02af90f8=E0C4E09D80AE735B `
+            --expect-texture texture_map_27b67fd2=45FFAEEF53695A86 `
+            --expect-texture texture_map_8bf37d8e=3B3F6545AF6782F5 `
+            --out $firstPersonPayload
+        if ($LASTEXITCODE -ne 0) {
+            throw "Spliced first-person child payload generation failed"
+        }
+
+        $firstPersonSplicedInto = @()
+        foreach ($bundleFile in (Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)) {
+            & py $spliceTool $bundleFile.FullName --type material `
+                --name "child_materials/pusfume/pusfume_1p_body_child" `
+                --payload $firstPersonPayload --dry-run 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                & py $spliceTool $bundleFile.FullName --type material `
+                    --name "child_materials/pusfume/pusfume_1p_body_child" `
+                    --payload $firstPersonPayload
+                if ($LASTEXITCODE -ne 0) {
+                    throw "First-person material splice failed on $($bundleFile.Name)"
+                }
+                $firstPersonSplicedInto += $bundleFile.Name
+            }
+        }
+
+        if ($firstPersonSplicedInto.Count -ne 1) {
+            throw "Expected the first-person child in exactly 1 bundle, spliced $($firstPersonSplicedInto.Count)"
+        }
+
+        Write-Host "Spliced native 1P body payload (768 bytes, direct UV maps) into $($firstPersonSplicedInto[0])"
+    }
 
     # Laurel's compiled feather material is the proven skinned alpha-card
     # contract. Preserve its shader parent, alpha scalar, and channel layout;
@@ -1210,3 +1393,4 @@ Write-Host "Native Pusfume build passed: source=$nativeSourceKind bytes=$nativeS
 Write-Host "Native Pusfume materials passed: textures=$($textureNames.Count) materials=$materialCount"
 Write-Host "Native Pusfume animation package passed: controller=pusfume_3p clips=pusfume_3p_idle,pusfume_3p_walk"
 Write-Host "Native Pusfume hero preview enabled: $($HeroPreview.IsPresent)"
+Write-Host "Native Pusfume first-person arms enabled: $firstPersonEnabled"

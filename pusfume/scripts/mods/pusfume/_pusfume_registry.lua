@@ -200,6 +200,10 @@ function M.register()
     career.character_state_list = build_state_list(profile.base_character_states, career.additional_character_states_list)
     career.camera_state_list = build_state_list(profile.base_camera_states, career.additional_camera_states_list)
     career.base_skin = M.NATIVE_SKIN_NAME or CareerSettings[M.DONOR_CAREER_NAME].base_skin
+    career.portrait_image = "portrait_pusfume"
+    career.picking_image = "medium_portrait_pusfume"
+    career.portrait_image_picking = "medium_portrait_pusfume"
+    career.portrait_thumbnail = "small_portrait_pusfume"
     career.activated_ability = ActivatedAbilitySettings.pusfume
     career.passive_ability = PassiveAbilitySettings.pusfume
 

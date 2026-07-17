@@ -3,6 +3,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+Add-Type -AssemblyName System.Drawing
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $SourceRoot = (Resolve-Path $SourceRoot).Path
 $failures = 0
@@ -19,6 +20,25 @@ function Test-Condition {
 
     if (-not $Condition) {
         $script:failures++
+    }
+}
+
+function Test-ImageDimensions {
+    param(
+        [string]$Path,
+        [int]$Width,
+        [int]$Height
+    )
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        return $false
+    }
+
+    $image = [System.Drawing.Image]::FromFile($Path)
+    try {
+        return $image.Width -eq $Width -and $image.Height -eq $Height
+    } finally {
+        $image.Dispose()
     }
 }
 
@@ -43,6 +63,7 @@ $nativeCutoutTemplatePath = Join-Path $repoRoot "tools\material_templates\charac
 $nativeExporterPath = Join-Path $repoRoot "tools\export_blender_bsi.py"
 $animatedFbxToolPath = Join-Path $repoRoot "tools\prepare_animated_pusfume_fbx.py"
 $idleFbxToolPath = Join-Path $repoRoot "tools\generate_idle_pusfume_fbx.py"
+$firstPersonFbxToolPath = Join-Path $repoRoot "tools\prepare_pusfume_1p_blend.py"
 $changelogPath = Join-Path $repoRoot "CHANGELOG.md"
 $contributingPath = Join-Path $repoRoot "CONTRIBUTING.md"
 $nativeMilestonePath = Join-Path $repoRoot "docs\NATIVE_CHARACTER_MILESTONE.md"
@@ -50,6 +71,8 @@ $workflowPath = Join-Path $repoRoot ".github\workflows\source-preflight.yml"
 $previewPath = Join-Path $repoRoot "pusfume\textures\pusfume\pusfume_model_preview.png"
 $previewTexturePath = Join-Path $repoRoot "pusfume\textures\pusfume\pusfume_model_preview.texture"
 $previewMaterialPath = Join-Path $repoRoot "pusfume\materials\pusfume\pusfume_model_preview.material"
+$portraitToolPath = Join-Path $repoRoot "tools\Build-PusfumePortrait.ps1"
+$portraitTextureRoot = Join-Path $repoRoot "pusfume\gui\1080p\single_textures\pusfume_portraits"
 $mainText = Get-Content -LiteralPath $mainPath -Raw
 $configText = Get-Content -LiteralPath $configPath -Raw
 $backendText = Get-Content -LiteralPath $backendPath -Raw
@@ -72,6 +95,8 @@ $nativeCutoutTemplateText = Get-Content -LiteralPath $nativeCutoutTemplatePath -
 $nativeExporterText = Get-Content -LiteralPath $nativeExporterPath -Raw
 $animatedFbxToolText = Get-Content -LiteralPath $animatedFbxToolPath -Raw
 $idleFbxToolText = Get-Content -LiteralPath $idleFbxToolPath -Raw
+$firstPersonFbxToolText = Get-Content -LiteralPath $firstPersonFbxToolPath -Raw
+$portraitToolText = Get-Content -LiteralPath $portraitToolPath -Raw
 $changelogText = Get-Content -LiteralPath $changelogPath -Raw
 $contributingText = Get-Content -LiteralPath $contributingPath -Raw
 $nativeMilestoneText = if (Test-Path -LiteralPath $nativeMilestonePath) {
@@ -112,6 +137,40 @@ Test-Condition ($nativeConfigText -match 'enabled\s*=\s*false') `
 Test-Condition ($nativeText -match 'PlayerUnitCosmeticExtension' -and `
     $nativeText -match '_init_mesh_attachment') `
     "native cosmetic" "player mesh attachment is career-scoped"
+Test-Condition ($nativeConfigText -match 'first_person_unit\s*=\s*false' -and `
+    $nativeConfigText -match 'first_person_material_package\s*=\s*false' -and `
+    $nativeConfigText -match 'first_person_materials\s*=\s*false') `
+    "first-person source default" "private handoff remains disabled in public source"
+Test-Condition ($firstPersonFbxToolText -match 'REQUIRED_GROUPS' -and `
+    $firstPersonFbxToolText -match 'MAXIMUM_ORPHAN_WEIGHT\s*=\s*0\.05' -and `
+    $firstPersonFbxToolText -match 'source blend is never overwritten' -and `
+    $firstPersonFbxToolText -match 'bake_anim=False') `
+    "first-person Blender preparation" "selective, bounded, non-destructive export"
+Test-Condition ($nativeBuildText -match '\[string\]\$FirstPersonBlend' -and `
+    $nativeBuildText -match 'prepare_pusfume_1p_blend\.py' -and `
+    $nativeBuildText -match 'pusfume_1p_arms\.unit' -and `
+    $nativeBuildText -match 'native_1p_child\.package' -and `
+    $nativeBuildText -match 'pusfume_1p_body_child' -and `
+    $nativeBuildText -match 'E0C4E09D80AE735B' -and `
+    $nativeBuildText -match '3B3F6545AF6782F5') `
+    "first-person native build" "direct-UV arms use a dedicated spliced skin binding"
+Test-Condition ($nativeBuildText -match 'processed_bundles\.csv' -and `
+    $nativeBuildText -match 'medium_portrait_pusfume,texture' -and `
+    $nativeBuildText -match 'units/pusfume/pusfume_1p_arms,unit') `
+    "compiled asset manifest" "native build rejects omitted portrait or first-person resources"
+Test-Condition ($assetsText -match 'M\.first_person_attachment' -and `
+    $assetsText -match 'source = "j_spine2", target = "j_spine1"' -and `
+    $assetsText -match '"j_lefthandindex4"' -and `
+    $assetsText -match '"j_righthandthumb3"') `
+    "first-person bone bridge" "native 1P parent maps to Janfon's 99-bone target"
+Test-Condition ($nativeText -match 'PlayerUnitFirstPerson, "init"' -and `
+    $nativeText -match 'PlayerUnitFirstPerson, "update"' -and `
+    $nativeText -match 'apply_first_person_materials' -and `
+    $nativeText -match 'first_person_attachment') `
+    "first-person runtime" "Pusfume arms attach and receive the late skinned material"
+Test-Condition ($nativeText -match 'function M\.first_person_status\(\)' -and `
+    $preflightText -match 'add\(checks, "native first-person arms"') `
+    "first-person preflight" "runtime diagnostics separate unit, hook, package, and material state"
 Test-Condition ($nativeText -match 'Unit\.has_animation_state_machine\(mesh\)' -and `
     $nativeText -match 'Unit\.has_animation_event\(mesh, "enable"\)') `
     "native animation diagnostics" "runtime log verifies controller and enable event availability"
@@ -388,6 +447,33 @@ Test-Condition ($dataText -match '"pusfume_model_preview"' -and `
 Test-Condition ($packageText -match 'material\s*=\s*\[' -and `
     $packageText -match '"materials/pusfume/\*"') `
     "selector preview package" "custom material is included"
+Test-Condition ($registryText -match 'career\.portrait_image\s*=\s*"portrait_pusfume"' -and `
+    $registryText -match 'career\.picking_image\s*=\s*"medium_portrait_pusfume"' -and `
+    $registryText -match 'career\.portrait_thumbnail\s*=\s*"small_portrait_pusfume"') `
+    "Pusfume portrait registration" "career uses custom HUD, selector, and compact portraits"
+Test-Condition ($dataText -match '"portrait_pusfume"' -and `
+    $dataText -match '"level_end_view_base"' -and `
+    $packageText -match 'materials/ui/portrait_pusfume') `
+    "Pusfume portrait package" "standalone materials reach HUD, selector, and score renderers"
+Test-Condition ([regex]::Matches($packageText, '(?m)^texture\s*=\s*\[').Count -le 1) `
+    "resource package keys" "source manifest cannot create duplicate texture sections in native staging"
+Test-Condition ($portraitToolText -match 'New-ResizedBitmap \$source 110 130' -and `
+    $portraitToolText -match 'New-ResizedBitmap \$medium 86 108' -and `
+    $portraitToolText -match 'New-ResizedBitmap \$medium 60 70' -and `
+    $portraitToolText -match 'Set-AlphaFromMask') `
+    "Pusfume portrait pipeline" "canonical source generates three masked VT2 variants"
+Test-Condition (Test-ImageDimensions (Join-Path $portraitTextureRoot "portrait_pusfume.png") 86 108) `
+    "Pusfume HUD portrait" "86x108"
+Test-Condition (Test-ImageDimensions (Join-Path $portraitTextureRoot "medium_portrait_pusfume.png") 110 130) `
+    "Pusfume selector portrait" "110x130"
+Test-Condition (Test-ImageDimensions (Join-Path $portraitTextureRoot "small_portrait_pusfume.png") 60 70) `
+    "Pusfume compact portrait" "60x70"
+foreach ($portraitName in @("portrait_pusfume", "medium_portrait_pusfume", "small_portrait_pusfume")) {
+    Test-Condition (Test-Path -LiteralPath (Join-Path $portraitTextureRoot "$portraitName.texture")) `
+        "Pusfume portrait recipe" "$portraitName texture recipe exists"
+    Test-Condition (Test-Path -LiteralPath (Join-Path $repoRoot "pusfume\materials\ui\$portraitName.material")) `
+        "Pusfume portrait material" "$portraitName GUI material exists"
+}
 Test-Condition ($mainText -match 'registry\.refresh_item_permissions\(\)') `
     "item permissions" "late-loaded items are refreshed"
 Test-Condition ($registryText -match 'function M\.refresh_career_color\(\)' -and `

@@ -21,15 +21,17 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current friends-only test build is **v0.6.5-dev**, Steam ManifestID
+The current local live-test candidate is **v0.6.6-dev**. The latest uploaded
+friends-only build remains v0.6.5-dev, Steam ManifestID
 `441804382456025179`. Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,
 and idle/walk playback through v0.6.4. The v0.6.5 candidate bridges every
 career-kit string into vanilla's global localization path and gives
 `p_whiskers` the game's skinned Laurel alpha binding while preserving Janfon's
-fractional coverage alpha. Those two changes now require live visual and UI
-verification.
+fractional coverage alpha. v0.6.6 adds Janfon's dedicated first-person arms;
+their visibility, deformation, and direct-UV material now require live
+verification before upload.
 
 Skaven Ingenuity currently records a 20-second station and starts its cooldown,
 but it does not yet spawn an interactable bag or modify inventory. Potion

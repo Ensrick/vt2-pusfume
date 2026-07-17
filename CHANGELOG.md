@@ -48,6 +48,15 @@ request rather than in release notes.
 
 ### Added
 
+- Added Janfon's canonical Pusfume portrait as dedicated selector, HUD/score,
+  and compact UI assets, using the proven vanilla frame masks from Dynamic
+  Cosmetic Portraits and standalone renderer injection for every supported UI.
+- Added Janfon's dedicated first-person Pusfume arms as an optional private
+  native build input. The build non-destructively isolates and validates the
+  weighted arm mesh, compiles a 99-bone attachment, and applies a dedicated
+  direct-UV skinned material without committing the private source asset.
+- Added first-person runtime and preflight diagnostics that distinguish unit
+  availability, hook installation, package loading, and material application.
 - Added Pusfume's localized `Under-Empire Reject` career identity, `The Great
   Scheme` placeholder Skaven quests, and the first functional versions of Hell
   Pit Native, Scaredy-rat, and Insider Knowledge.
@@ -87,6 +96,9 @@ request rather than in release notes.
 
 ### Changed
 
+- Advanced the local live-test candidate to v0.6.6-dev for first-person arms.
+  Janfon's `positioningtest` action remains a diagnostic handoff clip; this
+  candidate instead links the arms to VT2's native first-person animation rig.
 - Updated the README, career-kit contract, and live-test checklist to identify
   v0.6.5-dev as the current candidate and distinguish confirmed runtime
   milestones from pending stability, localization, whisker, and multiplayer

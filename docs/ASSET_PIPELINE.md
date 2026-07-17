@@ -72,12 +72,28 @@ Stage and deploy the native unit without copying generated assets into the publi
 .\tools\Build-NativePusfume.ps1 `
   -HeroPreview `
   -LegacyFur `
+  -FirstPersonBlend ".build\janfon_1p_20260717\pusfume_1p_arms 2.blend" `
   -TextureSource ".build\pusfume_handoff\textures conv"
 ```
 
 The command first runs `tools/prepare_animated_pusfume_fbx.py` through Blender 5.2. That step merges Janfon's skinned model and baked walk into one character FBX, rigidly retargets each licensed legacy fur card to the current body, and fails unless the transferred action moves the armature, body, and fur without changing authored fur edge lengths. The source FBXs remain unchanged; generated output stays under ignored `.build/generated-native`.
 
 The command then writes only beneath ignored `.build/native-workshop`, generates VT2 texture recipes and materials from the untracked handoff, enables the native cosmetic in that staged copy, compiles it with VMB, and copies the resulting bundles into Workshop item `3764954245` by default.
+
+When `-FirstPersonBlend` is supplied, `tools/prepare_pusfume_1p_blend.py`
+finds the single armature-bound arm mesh, requires the expected left and right
+arm/hand groups, removes only negligible orphan groups, enforces four normalized
+influences, and exports the mesh plus rig without animation. The source `.blend`
+hash is checked before and after preparation. The native build links the
+resulting 99-bone attachment to VT2's first-person rig and splices the proven
+character-skin binding to Janfon's direct body diffuse and normal maps. This
+path requires `-SplicedGameChild`; public source defaults remain disabled.
+
+The 2026-07-17 handoff's `positioningtest` action spans frames 0-342. Its scale
+curves are effectively constant, but several shoulder translations are real,
+so it is retained as a diagnostic clip rather than installed as the gameplay
+controller. Normal first-person movement, attacks, blocks, jumps, and
+interactions should drive the linked arms through VT2's native rig.
 
 A local deploy alone is not a release: Steam can re-sync a subscribed item back to the last uploaded manifest at any time, so testers only reliably run the last UPLOAD. The staging root carries a `.vmbrc` so the monorepo's `VMBLauncher.exe` resolves it directly; upload with a settings file whose `ProjectRoot` is the staging root:
 

@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.5-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.6-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -22,12 +22,13 @@ ManifestID `441804382456025179` on the current `feat/15-career-kit` branch.
 2. Confirm a full-size gold-trimmed card appears one row above Saltzpyre, to the right of the career heading.
 3. Confirm the five existing hero rows and their career cards retain their original size and positions.
 4. Click the card. The center preview should show Janfon's textured Pusfume model while the career heading says **Pusfume**.
-5. Confirm no Ranger Veteran body, beard, or hat is visible with the Pusfume mesh.
-6. Watch the preview long enough to confirm the generated spine/head/tail idle is visible and there is no green glow beneath dark texture regions.
-7. Confirm the whiskers move with the head and no lit rectangular alpha card is visible around them.
-8. Run `/pusfume_status`; `UI(card=true selected=true)` confirms both UI hooks executed.
-9. Run `/pusfume_preflight` again. The five-row card, preview hook, native hero preview, native third-person unit, whisker material, and spawn weapon checks should pass.
-10. Confirm the selection through the normal Hero-menu button.
+5. Confirm the card itself uses the close-up orange-eyed Pusfume portrait, not Ranger Veteran.
+6. Confirm no Ranger Veteran body, beard, or hat is visible with the Pusfume mesh.
+7. Watch the preview long enough to confirm the generated spine/head/tail idle is visible and there is no green glow beneath dark texture regions.
+8. Confirm the whiskers move with the head and no lit rectangular alpha card is visible around them.
+9. Run `/pusfume_status`; `UI(card=true selected=true)` confirms both UI hooks executed.
+10. Run `/pusfume_preflight` again. The five-row card, preview hook, native hero preview, native third-person unit, whisker material, and spawn weapon checks should pass.
+11. Confirm the selection through the normal Hero-menu button.
 
 ## Spawn smoke test
 
@@ -40,12 +41,22 @@ ManifestID `441804382456025179` on the current `feat/15-career-kit` branch.
    no visible or interactable bag is expected yet.
 6. Switch to another Bardin career, then back to Pusfume, checking that neither loadout nor talents disappear.
 7. Use `/pusfume` once as a fallback test. The command should print the host request and a `success` response.
-8. Open the in-game player list and keep it visible long enough for the portrait to refresh; confirm Pusfume's row renders without a Lua error.
+8. Open the in-game player list and keep it visible long enough for the portrait to refresh; confirm the close-up Pusfume portrait renders inside the frame with no clipping or Ranger Veteran art.
 9. Stand still and confirm the placeholder idle deforms the spine, head, tail, and whiskers.
 10. Walk and confirm the controller blends into Janfon's walk cycle, then returns to idle after stopping.
 11. Confirm Pusfume's atlas remains correctly aligned, no whole-body or dark-region green emissive glow returns, and the whisker cards have no tape-like lighting rectangle.
 12. Turn, crouch, jump, dodge, attack, and use the career ability while watching the third-person model. These actions do not yet have dedicated Pusfume clips; record translation without matching pose as missing animation coverage, not a skinning regression.
 13. Note any rest-pose offset, detached region, inverted limb, or extreme stretch.
+
+## First-person arms
+
+1. Enter a mission in the normal first-person camera and confirm both Pusfume arms and hands are visible.
+2. Confirm the arms use Pusfume's direct-UV body textures with no green donor glow, atlas scrambling, or opaque whisker-style cards.
+3. Attack, block, push, reload, swap weapons, interact, revive, crouch, jump, dodge, and move in every direction.
+4. Confirm the arms follow VT2's native first-person poses without remaining in rest pose, separating from the camera rig, or stretching fingers.
+5. Enable Tweaker: General's third-person camera and confirm the established third-person body still animates and shades correctly.
+6. Run `/pusfume_preflight` after spawning. `native first-person arms` must report PASS; preserve the log if it reports WARN or FAIL.
+7. Treat Janfon's `positioningtest` clip as an unwired diagnostic asset in this candidate, not an expected looping gameplay animation.
 
 ## Career-kit smoke test
 

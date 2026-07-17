@@ -58,6 +58,75 @@ M.third_person_attachment = {
     { source = "j_righthandthumb2", target = "j_handthumb2_R" },
 }
 
+-- Janfon's arms retain VT2's human first-person bone names. Link only the
+-- shared subset: the source rig has no digit-4 or thumb-3 targets, and linking
+-- absent child nodes makes the attachment fail as a whole.
+local first_person_bones = {
+    "j_leftshoulder",
+    "j_leftarm",
+    "j_leftarmroll",
+    "j_leftforearm",
+    "j_leftforearmroll",
+    "j_lefthand",
+    "j_lefthandindex1",
+    "j_lefthandindex2",
+    "j_lefthandindex3",
+    "j_lefthandindex4",
+    "j_lefthandmiddle1",
+    "j_lefthandmiddle2",
+    "j_lefthandmiddle3",
+    "j_lefthandmiddle4",
+    "j_lefthandpinky1",
+    "j_lefthandpinky2",
+    "j_lefthandpinky3",
+    "j_lefthandpinky4",
+    "j_lefthandring1",
+    "j_lefthandring2",
+    "j_lefthandring3",
+    "j_lefthandring4",
+    "j_leftinhandthumb",
+    "j_lefthandthumb1",
+    "j_lefthandthumb2",
+    "j_lefthandthumb3",
+    "j_rightshoulder",
+    "j_rightarm",
+    "j_rightarmroll",
+    "j_rightforearm",
+    "j_rightforearmroll",
+    "j_righthand",
+    "j_righthandindex1",
+    "j_righthandindex2",
+    "j_righthandindex3",
+    "j_righthandindex4",
+    "j_righthandmiddle1",
+    "j_righthandmiddle2",
+    "j_righthandmiddle3",
+    "j_righthandmiddle4",
+    "j_righthandpinky1",
+    "j_righthandpinky2",
+    "j_righthandpinky3",
+    "j_righthandpinky4",
+    "j_righthandring1",
+    "j_righthandring2",
+    "j_righthandring3",
+    "j_righthandring4",
+    "j_rightinhandthumb",
+    "j_righthandthumb1",
+    "j_righthandthumb2",
+    "j_righthandthumb3",
+}
+
+M.first_person_attachment = {
+    { source = "root_point", target = "root_point" },
+    { source = "j_spine2", target = "j_spine1" },
+}
+for index, bone_name in ipairs(first_person_bones) do
+    M.first_person_attachment[index + 2] = {
+        source = bone_name,
+        target = bone_name,
+    }
+end
+
 -- Diagnostic bridge: preserve placement while the packaged controller drives
 -- Pusfume's complete child skeleton. This isolates skin deformation from the
 -- production Bardin-to-Pusfume bone bridge without removing that bridge.
@@ -71,6 +140,7 @@ function M.install()
     end
 
     AttachmentNodeLinking.pusfume_third_person_attachment = M.third_person_attachment
+    AttachmentNodeLinking.pusfume_first_person_attachment = M.first_person_attachment
     AttachmentNodeLinking.pusfume_root_animation_attachment = M.root_animation_attachment
 
     return true
