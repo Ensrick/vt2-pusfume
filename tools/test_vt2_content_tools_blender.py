@@ -201,6 +201,19 @@ def main(repo_root, output_root, installed=False):
     mesh.modifiers.remove(mesh.modifiers["unbound_armature_reference"])
     test_pose_mirroring(bpy.data.objects["fixture_rig"], settings, operators)
 
+    bpy.ops.object.select_all(action="DESELECT")
+    armature.select_set(True)
+    bpy.context.view_layer.objects.active = armature
+    settings.scope = "SELECTED"
+    selected_names = {obj.name for obj in validation.export_objects(bpy.context, settings.scope)}
+    if selected_names != {"fixture_body", "fixture_rig"}:
+        raise RuntimeError(f"Selected armature did not discover its bound mesh: {selected_names}")
+
+    settings.scope = "ALL"
+    settings.clip_action = armature.animation_data.action
+    armature.animation_data.action = None
+    bpy.ops.object.select_all(action="SELECT")
+
     before = validation.validate(bpy.context, settings)
     if not any(issue["code"] == "too_many_influences" for issue in before["issues"]):
         raise RuntimeError(f"Fixture did not trigger the weight limit: {before}")

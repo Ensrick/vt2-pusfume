@@ -30,6 +30,25 @@ def _add_referenced_armatures(objects):
     return result
 
 
+def _add_bound_meshes(context, objects):
+    result = list(objects)
+    known = set(result)
+    selected_armatures = {obj for obj in result if obj.type == "ARMATURE"}
+    if not selected_armatures:
+        return result
+
+    for obj in context.scene.objects:
+        if obj is None or obj.type != "MESH" or obj in known:
+            continue
+        if any(
+            modifier.type == "ARMATURE" and modifier.object in selected_armatures
+            for modifier in obj.modifiers
+        ):
+            result.append(obj)
+            known.add(obj)
+    return result
+
+
 def export_objects(context, scope):
     supported = {"ARMATURE", "EMPTY", "MESH"}
     if scope == "SELECTED":
@@ -38,6 +57,7 @@ def export_objects(context, scope):
             for obj in context.selected_objects
             if obj is not None and obj.type in supported
         ]
+        objects = _add_bound_meshes(context, objects)
     elif scope == "ACTIVE":
         active = context.view_layer.objects.active
         if active is None or active.type not in supported:
@@ -340,7 +360,9 @@ def validate(context, settings):
         ]
 
         if settings.export_mode in {"ANIMATION", "BOTH"}:
-            action = armature.animation_data.action if armature.animation_data else None
+            action = settings.clip_action
+            if action is None and armature.animation_data:
+                action = armature.animation_data.action
             if action is None:
                 issues.append(
                     core.issue(

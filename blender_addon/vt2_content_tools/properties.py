@@ -19,7 +19,11 @@ class VT2ContentToolsSettings(bpy.types.PropertyGroup):
         name="Scope",
         items=(
             ("ALL", "Whole Scene", "Validate and export all scene meshes and armatures"),
-            ("SELECTED", "Selected", "Use selected meshes and their armatures"),
+            (
+                "SELECTED",
+                "Selected Character",
+                "Use selected meshes and automatically include meshes bound to selected armatures",
+            ),
             ("ACTIVE", "Active Character", "Use the active mesh or armature hierarchy"),
         ),
         default="ALL",
@@ -37,6 +41,11 @@ class VT2ContentToolsSettings(bpy.types.PropertyGroup):
         name="Clip Name",
         description="VT2-safe name for the active animation clip",
         default="idle",
+    )
+    clip_action: bpy.props.PointerProperty(
+        name="Action",
+        description="Animation Action to validate and export; does not depend on Blender's hidden active Action",
+        type=bpy.types.Action,
     )
     bone_prefix: bpy.props.StringProperty(
         name="Bone Prefix",

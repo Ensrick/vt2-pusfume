@@ -40,11 +40,12 @@ def _sha256(path):
     return digest.hexdigest()
 
 
-def _export_selection(context, objects, output_path, animation):
+def _export_selection(context, objects, output_path, animation, action=None):
     selected_before = list(context.selected_objects)
     active_before = context.view_layer.objects.active
     frame_start = context.scene.frame_start
     frame_end = context.scene.frame_end
+    original_action = None
 
     try:
         bpy.ops.object.select_all(action="DESELECT")
@@ -55,7 +56,9 @@ def _export_selection(context, objects, output_path, animation):
 
         if animation:
             armature = armatures[0]
-            action = armature.animation_data.action
+            armature.animation_data_create()
+            original_action = armature.animation_data.action
+            armature.animation_data.action = action
             context.scene.frame_start = math.floor(action.frame_range[0])
             context.scene.frame_end = math.ceil(action.frame_range[1])
 
@@ -86,6 +89,8 @@ def _export_selection(context, objects, output_path, animation):
     finally:
         context.scene.frame_start = frame_start
         context.scene.frame_end = frame_end
+        if animation:
+            armatures[0].animation_data.action = original_action
         bpy.ops.object.select_all(action="DESELECT")
         for obj in selected_before:
             if obj.name in context.view_layer.objects:
@@ -397,6 +402,9 @@ class VT2_OT_export_handoff(bpy.types.Operator):
         objects = validation.export_objects(context, settings.scope)
         meshes = [obj for obj in objects if obj.type == "MESH"]
         armature = validation.armatures_for_objects(objects)[0]
+        action = settings.clip_action
+        if action is None and armature.animation_data:
+            action = armature.animation_data.action
         output_root = Path(bpy.path.abspath(settings.export_directory)).resolve()
         output_root.mkdir(parents=True, exist_ok=True)
         outputs = []
@@ -410,7 +418,13 @@ class VT2_OT_export_handoff(bpy.types.Operator):
                 animation_path = output_root / core.export_filename(
                     settings.asset_name, "animation", settings.clip_name
                 )
-                _export_selection(context, [armature], animation_path, animation=True)
+                _export_selection(
+                    context,
+                    [armature],
+                    animation_path,
+                    animation=True,
+                    action=action,
+                )
                 outputs.append(animation_path)
         except Exception as error:
             self.report({"ERROR"}, f"VT2 FBX export failed: {error}")

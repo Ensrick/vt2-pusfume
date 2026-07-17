@@ -1,7 +1,7 @@
 # VT2 Content Tools for Blender 5.2
 
 VT2 Content Tools is the supported no-Maya authoring path for Janfon's Pusfume
-models and animations. Release `0.3.1` is acceptance-tested against **Blender
+models and animations. Release `0.4.0` is acceptance-tested against **Blender
 5.2.0 LTS** on Windows. Its extension manifest permits Blender 4.3 or newer,
 but 5.2.0 LTS is the project's primary tested version.
 
@@ -17,11 +17,11 @@ Build the installable package from the repository root:
 py -3 tools\package_blender_addon.py
 ```
 
-This writes `.build/dist/vt2_content_tools-0.3.1.zip`. In Blender 5.2:
+This writes `.build/dist/vt2_content_tools-0.4.0.zip`. In Blender 5.2:
 
 1. Open **Edit > Preferences > Get Extensions**.
 2. Open the menu and choose **Install from Disk**.
-3. Select `vt2_content_tools-0.3.1.zip`.
+3. Select `vt2_content_tools-0.4.0.zip`.
 4. Open the 3D Viewport and press `N` to show the sidebar.
 5. Select the **VT2** tab.
 
@@ -83,9 +83,11 @@ them rather than silently baking an unexpected pose.
 
 ## Animation setup
 
-Assign the clip to the exported armature as its active Action, set the scene to
-30 FPS, and choose **Active Clip** or **Model + Active Clip**. Give the clip a
-short VT2-safe name such as `idle`, `walk`, `dodge_left`, or `jump_start`.
+Choose the clip explicitly in the VT2 panel's **Action** field, set the scene
+to 30 FPS, and choose **Active Clip** or **Model + Active Clip**. The exporter
+temporarily assigns that Action only while writing the animation FBX and then
+restores Blender's previous active Action. Give the clip a short VT2-safe name
+such as `idle`, `walk`, `dodge_left`, or `jump_start`.
 
 The verified Pusfume path uses rotation animation. Root translation can be
 intentional, but non-root translation and animated scale receive warnings and
@@ -122,7 +124,7 @@ Run the normal tests, package validation, and the real Blender 5.2 fixture:
 py -3 -m unittest discover -s tests -v
 py -3 tools\package_blender_addon.py
 & "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" `
-  --command extension validate .build\dist\vt2_content_tools-0.3.1.zip
+  --command extension validate .build\dist\vt2_content_tools-0.4.0.zip
 & "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" `
   --background --factory-startup --disable-autoexec `
   --python tools\test_vt2_content_tools_blender.py -- `

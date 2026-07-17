@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 
 
-VERSION = (0, 3, 1)
+VERSION = (0, 4, 0)
 VERSION_STRING = ".".join(str(part) for part in VERSION)
 SAFE_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 POSE_PATH_PATTERN = re.compile(

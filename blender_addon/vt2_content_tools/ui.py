@@ -56,6 +56,7 @@ class VT2_PT_content_tools(bpy.types.Panel):
         export.label(text="Export", icon="EXPORT")
         export.prop(settings, "export_mode")
         if settings.export_mode in {"ANIMATION", "BOTH"}:
+            export.prop_search(settings, "clip_action", bpy.data, "actions")
             export.prop(settings, "clip_name")
         export.prop(settings, "include_textures")
         export.prop(settings, "allow_warnings")

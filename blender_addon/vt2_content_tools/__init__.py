@@ -3,7 +3,7 @@
 bl_info = {
     "name": "VT2 Content Tools",
     "author": "Ensrick and contributors",
-    "version": (0, 3, 1),
+    "version": (0, 4, 0),
     "blender": (4, 3, 0),
     "location": "View3D > Sidebar > VT2",
     "description": "Validate and export Blender assets for Vermintide 2",
