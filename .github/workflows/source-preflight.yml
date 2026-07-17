@@ -15,12 +15,12 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Check out Pusfume
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Check out VT2 source reference
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: Aussiemon/Vermintide-2-Source-Code
           path: Vermintide-2-Source-Code
@@ -39,7 +39,7 @@ jobs:
         run: python tools/package_blender_addon.py
 
       - name: Upload Blender extension
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: vt2-content-tools
           path: .build/dist/vt2_content_tools-*.zip
