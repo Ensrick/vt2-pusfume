@@ -204,6 +204,16 @@ that itself loads mod-side.
 
 ## Status log (append entries, newest first)
 
+- 22:21 Claude: WIRE GUARD SHIPPED per the 40-minute fallback - ManifestID
+  4840749073146417845, workshop_log "Uploaded new content" 22:21:42. Build
+  = -HeroPreview -SplicedGameChild at ded3b58+ (includes Sol's Laurel
+  whisker splice, 128-byte feather payload verified in-build). The
+  Blightreaper loadout crash class is closed sender-side; stripped keys log
+  once per session as "[pusfume] Stripped unencodable loadout property".
+  NOTE: my background builds were killed three times (~21:20-21:50, died in
+  the SDK phase); the foreground run built clean - if that was deliberate
+  process management by another session, coordinate here instead.
+
 - 21:3x Claude: WIRE GUARD LANDED in ded3b58 (LoadoutUtils.
   properties_to_rpc_params sender-side filter via rawget membership probes;
   gate + changelog included; all gates green, 25/25 tests). My two build
