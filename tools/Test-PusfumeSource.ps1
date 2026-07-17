@@ -168,6 +168,11 @@ Test-Condition ($nativeText -match 'PlayerUnitFirstPerson, "init"' -and `
     $nativeText -match 'apply_first_person_materials' -and `
     $nativeText -match 'first_person_attachment') `
     "first-person runtime" "Pusfume arms attach and receive the late skinned material"
+Test-Condition ($nativeText -match 'career\.name == registry\.CAREER_NAME' -and `
+    $nativeText -match 'extension_init_data\.skin_name = config\.skin_name' -and `
+    $nativeText -match 'extension_init_data\.skin_name = donor_skin_name' -and `
+    $nativeText -match 'First-person skin substitution') `
+    "first-person skin substitution" "Pusfume replaces donor arms before vanilla attachment spawn"
 Test-Condition ($nativeText -match 'function M\.first_person_status\(\)' -and `
     $preflightText -match 'add\(checks, "native first-person arms"') `
     "first-person preflight" "runtime diagnostics separate unit, hook, package, and material state"

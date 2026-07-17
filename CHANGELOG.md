@@ -12,6 +12,10 @@ request rather than in release notes.
 
 ### Fixed
 
+- Fixed v0.6.6-dev spawning the equipped Ranger Veteran first-person skin
+  before its post-init Pusfume check. The career-scoped hook now substitutes
+  the native Pusfume skin during vanilla attachment creation and immediately
+  restores the shared init data afterward.
 - Fixed a session-ending crash when the shared Ranger Veteran loadout carries
   an item the vanilla loadout-sync RPC cannot encode (live: the Blightreaper
   event sword's `woc_power_vs_order` property is absent from
@@ -96,7 +100,7 @@ request rather than in release notes.
 
 ### Changed
 
-- Advanced the local live-test candidate to v0.6.6-dev for first-person arms.
+- Advanced the local live-test candidate to v0.6.7-dev for first-person arms.
   Janfon's `positioningtest` action remains a diagnostic handoff clip; this
   candidate instead links the arms to VT2's native first-person animation rig.
 - Updated the README, career-kit contract, and live-test checklist to identify

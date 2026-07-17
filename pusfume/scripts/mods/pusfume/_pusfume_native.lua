@@ -923,7 +923,7 @@ local function apply_first_person_materials(extension, config)
     return true
 end
 
-local function install_first_person_hook(config)
+local function install_first_person_hook(registry, config)
     if not config.first_person_unit then
         return true
     end
@@ -938,14 +938,30 @@ local function install_first_person_hook(config)
 
     mod:hook(PlayerUnitFirstPerson, "init", function(func, extension,
             extension_init_context, unit, extension_init_data)
-        local result = func(extension, extension_init_context, unit, extension_init_data)
+        local profile = extension_init_data.profile
+        local hero_attributes = Managers.backend:get_interface("hero_attributes")
+        local career_index = hero_attributes:get(profile.display_name, "career") or 1
+        local career = profile.careers[career_index]
 
-        if extension_init_data.skin_name == config.skin_name then
+        if career and career.name == registry.CAREER_NAME then
+            local donor_skin_name = extension_init_data.skin_name
+
+            -- Vanilla chooses and spawns the first-person attachment inside
+            -- init. Substitute only for that call, then restore the shared
+            -- extension data before any later system can observe the change.
+            extension_init_data.skin_name = config.skin_name
+            mod:info("[pusfume] First-person skin substitution: %s -> %s",
+                tostring(donor_skin_name), config.skin_name)
+            local result = func(extension, extension_init_context, unit, extension_init_data)
+
+            extension_init_data.skin_name = donor_skin_name
             extension._pusfume_first_person = true
             apply_first_person_materials(extension, config)
+
+            return result
         end
 
-        return result
+        return func(extension, extension_init_context, unit, extension_init_data)
     end)
     mod:hook_safe(PlayerUnitFirstPerson, "update", function(extension)
         if extension._pusfume_first_person then
@@ -1052,7 +1068,7 @@ function M.install(registry, config)
     end
 
     install_cosmetic_hook(registry, config)
-    local first_person_hook_ready = install_first_person_hook(config)
+    local first_person_hook_ready = install_first_person_hook(registry, config)
     install_probe_hook()
     install_material_probe_command(config)
 
