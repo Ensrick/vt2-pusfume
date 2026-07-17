@@ -204,6 +204,17 @@ that itself loads mod-side.
 
 ## Status log (append entries, newest first)
 
+- 20:2x Claude: SECOND CRASH PINNED from the 01:05 UTC session (mid-mission,
+  after ~10 min): `utility.lua:41 arithmetic on blackboard_value nil` inside
+  a PLAYER BOT's behavior tree (`player_bot_base:335 -> ai_brain ->
+  bt_utility_node.randomize_actions -> get_action_utility`). gt_dev hooks
+  get_action_utility (hook chain visible in frame 1-2) but the arithmetic
+  is vanilla; the new variable is the Pusfume BOT - a utility consideration
+  reads a blackboard key that Ranger Veteran bots populate and the Pusfume
+  bot's blackboard does not (career-kit bot integration lane). Repro likely
+  needs a bot running the Pusfume/donor career mid-mission. Distinct from
+  the item_tooltip crash pinned earlier - track separately.
+
 - 20:1x Claude: CRASH PINNED from the 00:05 UTC session (career-kit lane,
   uncommitted as of Sol's 16:40): hero view loadout inventory,
   `hero_window_loadout_inventory_console.lua:512` draw ->
