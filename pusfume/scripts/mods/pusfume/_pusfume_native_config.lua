@@ -6,6 +6,7 @@ return {
     donor_texture_shadow_package = false,
     enabled = false,
     hero_preview_enabled = false,
+    fur_child_material = false,
     hide_donor_weapons = false,
     locomotion_events_enabled = false,
     manual_clip_length = 0.8,

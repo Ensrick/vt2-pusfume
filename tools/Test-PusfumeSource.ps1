@@ -211,6 +211,29 @@ Test-Condition ($nativeText -match 'Material\.set_texture\(material, channel, te
     $animatedFbxToolText -match 'remap_material_uvs_to_atlas' -and `
     $animatedFbxToolText -match 'shift_u = int\(anchor\.x // 1\)') `
     "per-mesh donor atlas" "atlas channels are set on every material by index so swapped donor instances are reached"
+Test-Condition ($nativeBuildText -match '\[switch\]\$LegacyFur' -and `
+    $nativeBuildText -match 'dalokraff legacy fur license/provenance contract is missing' -and `
+    $animatedFbxToolText -match 'def add_legacy_fur\(' -and `
+    $animatedFbxToolText -match 'def retarget_fur_surface\(' -and `
+    $animatedFbxToolText -match 'def connected_vertex_islands\(' -and `
+    $animatedFbxToolText -match 'Rigid fur-island retarget changed authored card geometry' -and `
+    $animatedFbxToolText -match 'after\["mean"\] >= before\["mean"\] \* 0\.65' -and `
+    $animatedFbxToolText -match 'Legacy fur weight transfer left' -and `
+    $animatedFbxToolText -match 'Transferred action did not deform legacy fur' -and `
+    $nativeBuildText -match '\[double\]\$BodyDiffuseGain = 1\.2' -and `
+    $nativeBuildText -match '\[double\]\$FurDiffuseGain = 0\.55' -and `
+    $nativeBuildText -match '\$furMaterialEntry = if \(\$LegacyFur\)' -and `
+    $nativeBuildText -match 'p_fur = "materials/pusfume/pusfume_fur"' -and `
+    $nativeBuildText -match '\$furRenderableEntry = if \(\$LegacyFur\)' -and `
+    $nativeBuildText -match 'child_materials/pusfume/pusfume_fur_child' -and `
+    $nativeBuildText -match '20A7120B25F414F7' -and `
+    $nativeConfigText -match 'fur_child_material\s*=\s*false' -and `
+    $nativeText -match 'Unit\.set_material\(unit, FUR_MATERIAL_SLOT, config\.fur_child_material\)' -and `
+    $nativeBuildText.IndexOf('function Write-LegacyFurTexture') -gt `
+        $nativeBuildText.IndexOf('function Write-NativeTextureRecipe') -and `
+    $nativeBuildText.IndexOf('function Write-LegacyFurTexture') -gt `
+        $nativeBuildText.IndexOf('"@ | Set-Content -LiteralPath (Join-Path $textureRoot "$Name.texture")')) `
+    "dalokraff fur integration" "licensed fur is weight-transferred, deformation-checked, and packaged by a callable texture helper"
 Test-Condition ($nativeText -match 'function M\.native_skin_name' -and `
     $nativeText -notmatch 'third_person_attachment = nil' -and `
     $uiText -match 'MenuWorldPreviewer, "request_spawn_hero_unit"' -and `
@@ -256,8 +279,11 @@ Test-Condition ((Test-Path (Join-Path $repoRoot "tools\strip_bundle_resource.py"
     $nativeBuildText -match '--expect 0 --dry-run') `
     "stub identity strip" "-ParentChildMaterial builds rename the bundled stub so the game parent resolves at runtime"
 Test-Condition ($nativeText -match 'function M\.apply_donor_to_unit' -and `
-    $uiText -match 'native\.apply_donor_to_unit\(mesh_unit\)') `
-    "menu preview shader" "the preview mesh receives the donor character shader so the menu idle can deform"
+    $nativeText -match 'not unit or not Unit\.alive\(unit\)' -and `
+    $uiText -match 'local function initialize_native_preview\(previewer\)' -and `
+    $uiText -match 'if not native\.apply_donor_to_unit\(mesh_unit\) then' -and `
+    $uiText -match 'initialize_native_preview\(previewer\)') `
+    "menu preview shader" "preview-world units retry the donor character shader before starting the native idle"
 Test-Condition ($nativeConfigText -match 'donor_texture_shadow\s*=\s*false' -and `
     $nativeConfigText -match 'donor_texture_shadow_package\s*=\s*false' -and `
     $nativeBuildText -match '\[switch\]\$NoDonorTextureShadow' -and `

@@ -27,6 +27,7 @@ local state = {
     donor_material_error_logged = false,
     donor_material_applied = false,
     whisker_material_applied = false,
+    fur_material_applied = false,
     donor_texture_errors = {},
     donor_weapons_hidden = false,
     locomotion_events_available = false,
@@ -55,6 +56,7 @@ local DONOR_MATERIAL_SLOTS = {
     "p_ammo_box_limited_b",
 }
 local WHISKER_MATERIAL_SLOT = "p_whiskers"
+local FUR_MATERIAL_SLOT = "p_fur"
 local DONOR_ATLAS_TEXTURES = {
     color = "pusfume_atlas_df",
     normal = "pusfume_atlas_nm",
@@ -237,7 +239,10 @@ end
 
 
 local function apply_donor_material_to_unit(unit, config)
-    if not config.donor_material_enabled or not ALIVE[unit] or not ensure_donor_package(config)
+    -- Menu preview units live outside the gameplay ALIVE registry. Unit.alive
+    -- is the shared validity check for both preview-world and gameplay units.
+    if not config.donor_material_enabled or not unit or not Unit.alive(unit)
+            or not ensure_donor_package(config)
             or not ensure_whisker_donor_package(config) then
         return false
     end
@@ -300,11 +305,24 @@ local function apply_donor_material_to_unit(unit, config)
                 Unit.set_material(unit, WHISKER_MATERIAL_SLOT, config.whisker_child_material)
                 state.whisker_material_applied = true
                 material_slots = material_slots + 1
-                assignments[#assignments + 1] = WHISKER_MATERIAL_SLOT .. "=laurel_child"
+                assignments[#assignments + 1] = WHISKER_MATERIAL_SLOT .. "=pusfume_whiskers_child"
             else
                 state.whisker_material_applied = false
                 mod:error("[pusfume] Native whisker child material is unavailable: %s",
                     config.whisker_child_material)
+            end
+        end
+
+        if type(config.fur_child_material) == "string" then
+            if can_get("material", config.fur_child_material) then
+                Unit.set_material(unit, FUR_MATERIAL_SLOT, config.fur_child_material)
+                state.fur_material_applied = true
+                material_slots = material_slots + 1
+                assignments[#assignments + 1] = FUR_MATERIAL_SLOT .. "=pusfume_fur_child"
+            else
+                state.fur_material_applied = false
+                mod:error("[pusfume] Native fur child material is unavailable: %s",
+                    config.fur_child_material)
             end
         end
 
@@ -960,6 +978,9 @@ function M.donor_status()
         material_ok = can_get("material", config.donor_material) == true,
         package_loaded = state.donor_package_loaded,
         applied = state.donor_material_applied,
+        fur_material_ok = type(config.fur_child_material) == "string"
+            and can_get("material", config.fur_child_material) == true,
+        fur_applied = state.fur_material_applied,
         whisker_material_ok = type(config.whisker_child_material) == "string"
             and can_get("material", config.whisker_child_material) == true,
         whisker_applied = state.whisker_material_applied,

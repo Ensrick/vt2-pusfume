@@ -349,28 +349,52 @@ local function install_previewer_purity_hooks(registry, native)
 
         if is_pusfume then
             previewer._pusfume_preview_active = true
+            previewer._pusfume_preview_mesh = nil
+            previewer._pusfume_preview_ready = nil
+            previewer._pusfume_preview_pending_logged = nil
             optional_skin = native_skin
             mod:info("[pusfume] Menu previewer forcing the native Pusfume skin")
         else
             previewer._pusfume_preview_active = nil
+            previewer._pusfume_preview_mesh = nil
+            previewer._pusfume_preview_ready = nil
+            previewer._pusfume_preview_pending_logged = nil
         end
 
         return func(previewer, profile_name, career_index, state_character, callback,
             optional_scale, camera_move_duration, optional_skin, reset_camera)
     end)
 
-    -- The previewer spawns the mesh attachment raw, so its packaged idle/walk
-    -- controller never starts by itself; mirror the gameplay activation.
-    mod:hook_safe(MenuWorldPreviewer, "_spawn_hero_unit", function(previewer)
+    local function initialize_native_preview(previewer)
         if not previewer._pusfume_preview_active then
-            return
+            return false
         end
 
         local mesh_unit = previewer.mesh_unit
 
         if not mesh_unit or not Unit.alive(mesh_unit)
                 or not Unit.has_animation_state_machine(mesh_unit) then
-            return
+            return false
+        end
+
+        if previewer._pusfume_preview_mesh ~= mesh_unit then
+            previewer._pusfume_preview_mesh = mesh_unit
+            previewer._pusfume_preview_ready = nil
+            previewer._pusfume_preview_pending_logged = nil
+        elseif previewer._pusfume_preview_ready then
+            return true
+        end
+
+        -- Preview units exist outside gameplay's ALIVE registry, and their
+        -- donor packages may still be loading. Retry from the preview update
+        -- until the complete skinned material set, including whiskers, lands.
+        if not native.apply_donor_to_unit(mesh_unit) then
+            if not previewer._pusfume_preview_pending_logged then
+                previewer._pusfume_preview_pending_logged = true
+                mod:info("[pusfume] Menu preview materials pending; retrying")
+            end
+
+            return false
         end
 
         Unit.set_animation_bone_mode(mesh_unit, "transform")
@@ -385,19 +409,24 @@ local function install_previewer_purity_hooks(registry, native)
             Unit.animation_event(mesh_unit, "idle")
         end
 
-        -- The preview mesh spawns with the compiled standard materials, which
-        -- have no skinning permutation - the controller was running against a
-        -- rigid render path. The donor material carries the character shader,
-        -- so the menu idle only becomes visible after this swap.
-        native.apply_donor_to_unit(mesh_unit)
+        previewer._pusfume_preview_ready = true
+        mod:info("[pusfume] Menu preview materials ready; native idle started")
 
-        mod:info("[pusfume] Menu previewer native controller enabled")
+        return true
+    end
+
+    -- The previewer spawns the mesh attachment raw, so its packaged idle/walk
+    -- controller never starts by itself; mirror the gameplay activation.
+    mod:hook_safe(MenuWorldPreviewer, "_spawn_hero_unit", function(previewer)
+        initialize_native_preview(previewer)
     end)
 
     mod:hook_safe(MenuWorldPreviewer, "_update_units_visibility", function(previewer)
         if not previewer._pusfume_preview_active then
             return
         end
+
+        initialize_native_preview(previewer)
 
         local equipment_units = previewer._equipment_units
 

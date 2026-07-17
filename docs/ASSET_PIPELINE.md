@@ -71,11 +71,11 @@ Stage and deploy the native unit without copying generated assets into the publi
 ```powershell
 .\tools\Build-NativePusfume.ps1 `
   -HeroPreview `
-  -SplicedGameChild `
+  -LegacyFur `
   -TextureSource ".build\pusfume_handoff\textures conv"
 ```
 
-The command first runs `tools/prepare_animated_pusfume_fbx.py` through Blender 5.2. That step merges Janfon's skinned model and baked walk into one character FBX and fails unless the transferred action moves both the armature and evaluated mesh vertices. The source FBXs remain unchanged; generated output stays under ignored `.build/generated-native`.
+The command first runs `tools/prepare_animated_pusfume_fbx.py` through Blender 5.2. That step merges Janfon's skinned model and baked walk into one character FBX, rigidly retargets each licensed legacy fur card to the current body, and fails unless the transferred action moves the armature, body, and fur without changing authored fur edge lengths. The source FBXs remain unchanged; generated output stays under ignored `.build/generated-native`.
 
 The command then writes only beneath ignored `.build/native-workshop`, generates VT2 texture recipes and materials from the untracked handoff, enables the native cosmetic in that staged copy, compiles it with VMB, and copies the resulting bundles into Workshop item `3764954245` by default.
 

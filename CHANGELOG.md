@@ -12,6 +12,11 @@ request rather than in release notes.
 
 ### Fixed
 
+- Replaced the legacy fur's per-vertex body projection with rigid connected-card
+  retargeting, preventing individual triangle corners from stretching across
+  unrelated body regions while preserving animated weight transfer.
+- Added build-time fur fit and edge-preservation assertions so detached or
+  destructively warped fur fails before native bundle compilation.
 - Fixed Pusfume ability, passive, perk, and quest labels rendering as
   angle-bracketed internal keys by bridging the complete VMF localization
   table into vanilla's global `Localize` path.

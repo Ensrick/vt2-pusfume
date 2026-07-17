@@ -9,6 +9,9 @@ import os
 import sys
 
 import bpy
+import bmesh
+from mathutils import Vector
+from mathutils.bvhtree import BVHTree
 
 TOOLS_DIR = os.path.dirname(os.path.abspath(__file__))
 if TOOLS_DIR not in sys.path:
@@ -41,6 +44,231 @@ def transfer_action(model_armature, walk_armature):
 
     action.name = "pusfume_walk"
     return action
+
+
+def mesh_bvh(mesh_object):
+    vertices = [mesh_object.matrix_world @ vertex.co for vertex in mesh_object.data.vertices]
+    polygons = [tuple(polygon.vertices) for polygon in mesh_object.data.polygons]
+    return BVHTree.FromPolygons(vertices, polygons, all_triangles=False)
+
+
+def surface_distances(source_object, target_tree):
+    distances = []
+    for vertex in source_object.data.vertices:
+        nearest = target_tree.find_nearest(source_object.matrix_world @ vertex.co)
+        if nearest:
+            distances.append(nearest[3])
+    distances.sort()
+    return {
+        "mean": sum(distances) / len(distances),
+        "p90": distances[int(len(distances) * 0.9)],
+        "max": distances[-1],
+    }
+
+
+def connected_vertex_islands(mesh):
+    adjacency = [set() for _ in mesh.vertices]
+    for edge in mesh.edges:
+        first, second = edge.vertices
+        adjacency[first].add(second)
+        adjacency[second].add(first)
+
+    unseen = set(range(len(mesh.vertices)))
+    islands = []
+    while unseen:
+        seed = unseen.pop()
+        pending = [seed]
+        island = [seed]
+        while pending:
+            vertex_index = pending.pop()
+            for neighbor in adjacency[vertex_index]:
+                if neighbor in unseen:
+                    unseen.remove(neighbor)
+                    pending.append(neighbor)
+                    island.append(neighbor)
+        islands.append(island)
+    return islands
+
+
+def edge_lengths(mesh_object):
+    matrix = mesh_object.matrix_world
+    lengths = {}
+    for edge in mesh_object.data.edges:
+        first = matrix @ mesh_object.data.vertices[edge.vertices[0]].co
+        second = matrix @ mesh_object.data.vertices[edge.vertices[1]].co
+        lengths[tuple(sorted(edge.vertices))] = (first - second).length
+    return lengths
+
+
+def retarget_fur_surface(fur_mesh, legacy_body_mesh, model_mesh):
+    legacy_tree = mesh_bvh(legacy_body_mesh)
+    model_tree = mesh_bvh(model_mesh)
+    before = surface_distances(fur_mesh, model_tree)
+    legacy_fit = surface_distances(fur_mesh, legacy_tree)
+    fur_inverse = fur_mesh.matrix_world.inverted()
+    islands = connected_vertex_islands(fur_mesh.data)
+    original_edges = edge_lengths(fur_mesh)
+    movements = []
+
+    # Preserve each authored fur card while moving it from the legacy body to
+    # the nearest corresponding surface on Janfon's current body.
+    for island in islands:
+        world_positions = [
+            fur_mesh.matrix_world @ fur_mesh.data.vertices[index].co
+            for index in island
+        ]
+        centroid = sum(world_positions, Vector()) / len(world_positions)
+        legacy_nearest = legacy_tree.find_nearest(centroid)
+        if not legacy_nearest:
+            raise RuntimeError("Legacy body has no nearest point for a fur island")
+        legacy_anchor = legacy_nearest[0]
+        model_nearest = model_tree.find_nearest(legacy_anchor)
+        if not model_nearest:
+            raise RuntimeError("Current body has no nearest point for a fur island")
+        movement = model_nearest[0] - legacy_anchor
+        for vertex_index, world_position in zip(island, world_positions):
+            fur_mesh.data.vertices[vertex_index].co = fur_inverse @ (
+                world_position + movement
+            )
+        movements.append(movement.length)
+
+    fur_mesh.data.update()
+    retargeted_edges = edge_lengths(fur_mesh)
+    max_edge_error = max(
+        abs(retargeted_edges[key] - original_length)
+        for key, original_length in original_edges.items()
+    )
+    if max_edge_error > 1e-5:
+        raise RuntimeError(
+            "Rigid fur-island retarget changed authored card geometry: "
+            f"max_edge_error={max_edge_error}"
+        )
+
+    after = surface_distances(fur_mesh, model_tree)
+    if legacy_fit["mean"] > 0.06:
+        raise RuntimeError(f"Legacy fur no longer fits its source body: {legacy_fit}")
+    if after["mean"] >= before["mean"] * 0.65 or after["mean"] > 0.07:
+        raise RuntimeError(
+            "Legacy fur surface retarget did not improve the current-body fit: "
+            f"before={before} after={after}"
+        )
+
+    return {
+        "after": after,
+        "before": before,
+        "islands": len(islands),
+        "largest_island_vertices": max(len(island) for island in islands),
+        "legacy": legacy_fit,
+        "max_edge_error": max_edge_error,
+        "max_movement": max(movements),
+        "mean_movement": sum(movements) / len(movements),
+    }
+
+
+def add_legacy_fur(fur_path, legacy_body_path, model_armature, model_mesh):
+    existing_objects = set(bpy.context.scene.objects)
+    bpy.ops.import_scene.fbx(filepath=fur_path, automatic_bone_orientation=False)
+    imported = [obj for obj in bpy.context.scene.objects if obj not in existing_objects]
+    fur_meshes = [obj for obj in imported if obj.type == "MESH"]
+    fur_armatures = [obj for obj in imported if obj.type == "ARMATURE"]
+    if len(fur_meshes) != 1 or len(fur_armatures) != 1:
+        raise RuntimeError(
+            "The legacy fur FBX must contain exactly one armature and one mesh: "
+            f"armatures={len(fur_armatures)} meshes={len(fur_meshes)}"
+        )
+
+    fur_mesh = fur_meshes[0]
+    material_names = [material.name.split(".", 1)[0] for material in fur_mesh.data.materials]
+    if "p_fur" not in material_names or "p_whiskers" not in material_names:
+        raise RuntimeError(
+            f"Legacy fur material contract changed: materials={material_names}"
+        )
+
+    fur_material_index = material_names.index("p_fur")
+    mesh_data = fur_mesh.data
+    mesh = bmesh.new()
+    mesh.from_mesh(mesh_data)
+    duplicate_whiskers = [face for face in mesh.faces if face.material_index != fur_material_index]
+    if len(duplicate_whiskers) != 60:
+        raise RuntimeError(
+            "Legacy duplicate-whisker polygon contract changed: "
+            f"expected=60 actual={len(duplicate_whiskers)}"
+        )
+    bmesh.ops.delete(mesh, geom=duplicate_whiskers, context="FACES")
+    loose_vertices = [vertex for vertex in mesh.verts if not vertex.link_faces]
+    if loose_vertices:
+        bmesh.ops.delete(mesh, geom=loose_vertices, context="VERTS")
+    mesh.to_mesh(mesh_data)
+    mesh.free()
+    mesh_data.update()
+
+    before_legacy_body = set(bpy.context.scene.objects)
+    bpy.ops.import_scene.fbx(filepath=legacy_body_path, automatic_bone_orientation=False)
+    legacy_body_objects = list(set(bpy.context.scene.objects) - before_legacy_body)
+    legacy_body_meshes = [obj for obj in legacy_body_objects if obj.type == "MESH"]
+    legacy_body_matches = [
+        obj for obj in legacy_body_meshes if obj.name.split(".", 1)[0] == "p_body"
+    ]
+    if len(legacy_body_matches) != 1:
+        raise RuntimeError(
+            "Legacy body FBX must contain exactly one p_body mesh: "
+            f"matches={[obj.name for obj in legacy_body_matches]}"
+        )
+    alignment = retarget_fur_surface(fur_mesh, legacy_body_matches[0], model_mesh)
+    for legacy_object in legacy_body_objects:
+        bpy.data.objects.remove(legacy_object, do_unlink=True)
+
+    for modifier in list(fur_mesh.modifiers):
+        fur_mesh.modifiers.remove(modifier)
+    fur_mesh.vertex_groups.clear()
+    for source_group in model_mesh.vertex_groups:
+        fur_mesh.vertex_groups.new(name=source_group.name)
+
+    transfer = fur_mesh.modifiers.new("transfer_current_pusfume_weights", "DATA_TRANSFER")
+    transfer.object = model_mesh
+    transfer.use_vert_data = True
+    transfer.data_types_verts = {"VGROUP_WEIGHTS"}
+    transfer.vert_mapping = "POLYINTERP_NEAREST"
+    transfer.layers_vgroup_select_src = "ALL"
+    transfer.layers_vgroup_select_dst = "NAME"
+    transfer.mix_mode = "REPLACE"
+    transfer.use_object_transform = True
+    bpy.context.view_layer.objects.active = fur_mesh
+    fur_mesh.select_set(True)
+    bpy.ops.object.modifier_apply(modifier=transfer.name)
+
+    unweighted = []
+    for vertex in fur_mesh.data.vertices:
+        total = sum(group.weight for group in vertex.groups)
+        if total <= 1e-6:
+            unweighted.append(vertex.index)
+            continue
+        for membership in vertex.groups:
+            fur_mesh.vertex_groups[membership.group].add(
+                [vertex.index], membership.weight / total, "REPLACE"
+            )
+    if unweighted:
+        raise RuntimeError(
+            f"Legacy fur weight transfer left {len(unweighted)} unweighted vertices"
+        )
+
+    world_transform = fur_mesh.matrix_world.copy()
+    fur_mesh.parent = model_armature
+    fur_mesh.matrix_world = world_transform
+    armature_modifier = fur_mesh.modifiers.new("pusfume_armature", "ARMATURE")
+    armature_modifier.object = model_armature
+    armature_modifier.use_deform_preserve_volume = False
+
+    fur_material = bpy.data.materials.get("p_fur") or bpy.data.materials.new("p_fur")
+    fur_mesh.data.materials.clear()
+    fur_mesh.data.materials.append(fur_material)
+    for polygon in fur_mesh.data.polygons:
+        polygon.material_index = 0
+    fur_mesh.name = "p_fur"
+    fur_mesh.data.name = "p_fur"
+
+    bpy.data.objects.remove(fur_armatures[0], do_unlink=True)
+    return fur_mesh, alignment
 
 
 def remap_material_uvs_to_atlas(mesh_object):
@@ -86,7 +314,7 @@ def remap_material_uvs_to_atlas(mesh_object):
     return remapped
 
 
-def main(model_path, walk_path, output_path):
+def main(model_path, walk_path, output_path, fur_path=None, legacy_body_path=None):
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.fbx(filepath=model_path, automatic_bone_orientation=False)
 
@@ -100,6 +328,14 @@ def main(model_path, walk_path, output_path):
 
     model_armature = model_armatures[0]
     model_mesh = model_meshes[0]
+    if bool(fur_path) != bool(legacy_body_path):
+        raise RuntimeError("Legacy fur and legacy body paths must be supplied together")
+    fur_result = (
+        add_legacy_fur(fur_path, legacy_body_path, model_armature, model_mesh)
+        if fur_path
+        else None
+    )
+    fur_mesh, fur_alignment = fur_result if fur_result else (None, None)
     model_object_names = {obj.name for obj in bpy.context.scene.objects}
 
     bpy.ops.import_scene.fbx(filepath=walk_path, automatic_bone_orientation=False)
@@ -158,6 +394,19 @@ def main(model_path, walk_path, output_path):
             f"Transferred action did not deform the mesh: delta={max_vertex_delta}"
         )
 
+    fur_vertex_delta = None
+    if fur_mesh:
+        first_fur_vertices = sample_mesh(fur_mesh, 1)
+        middle_fur_vertices = sample_mesh(fur_mesh, 13)
+        fur_vertex_delta = max(
+            (first - middle).length
+            for first, middle in zip(first_fur_vertices, middle_fur_vertices)
+        )
+        if fur_vertex_delta < 0.001:
+            raise RuntimeError(
+                f"Transferred action did not deform legacy fur: delta={fur_vertex_delta}"
+            )
+
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     bpy.ops.export_scene.fbx(
         filepath=output_path,
@@ -182,6 +431,10 @@ def main(model_path, walk_path, output_path):
         "bones": len(model_bones),
         "frame_end": bpy.context.scene.frame_end,
         "frame_start": bpy.context.scene.frame_start,
+        "fur_max_vertex_delta": fur_vertex_delta,
+        "fur_surface_alignment": fur_alignment,
+        "fur_polygons": len(fur_mesh.data.polygons) if fur_mesh else 0,
+        "fur_vertices": len(fur_mesh.data.vertices) if fur_mesh else 0,
         "max_pose_delta": max_pose_delta,
         "max_vertex_delta": max_vertex_delta,
         "output": output_path,
@@ -192,9 +445,10 @@ def main(model_path, walk_path, output_path):
 
 
 arguments = sys.argv[sys.argv.index("--") + 1 :]
-if len(arguments) != 3:
+if len(arguments) not in (3, 5):
     raise SystemExit(
-        "usage: prepare_animated_pusfume_fbx.py -- MODEL_FBX WALK_FBX OUTPUT_FBX"
+        "usage: prepare_animated_pusfume_fbx.py -- MODEL_FBX WALK_FBX OUTPUT_FBX "
+        "[LEGACY_FUR_FBX LEGACY_BODY_FBX]"
     )
 
 main(*(os.path.abspath(argument) for argument in arguments))
