@@ -21,8 +21,8 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current local live-test candidate is **v0.6.11-dev**. The latest uploaded
-friends-only build is v0.6.10-dev, Steam ManifestID `1380279707573289085`.
+The current local and uploaded live-test candidate is **v0.6.11-dev**, Steam
+ManifestID `5832214133899576087`.
 Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,

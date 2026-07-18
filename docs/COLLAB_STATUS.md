@@ -11,6 +11,11 @@ architecture and reproduction contract are in
 
 ## Latest shipment
 
+- 2026-07-17 20:46 local: FIRST-PERSON PROBE CRASH FIX SHIPPED -
+  v0.6.11-dev, commit `cb51156`, ManifestID `5832214133899576087`.
+  v0.6.10 asserted when its diagnostic queried target `j_spine2`; the real
+  attachment pair is donor `j_spine2` to Janfon `j_spine1`. The probe now
+  follows that pair, and preflight percent-bearing output is format-safe.
 - 2026-07-17 20:30 local: FIRST-PERSON A/B TEST SHIPPED - v0.6.10-dev,
   commit `2ac6c29`, ManifestID `1380279707573289085`. v0.6.9 loaded the
   custom 1P unit/material but rendered no arms. This candidate retains the

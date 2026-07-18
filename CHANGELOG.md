@@ -26,6 +26,8 @@ request rather than in release notes.
 - Fixed the v0.6.10-dev crash in the delayed first-person probe. Its target
   lookup now follows the actual `j_spine2 -> j_spine1` attachment pair instead
   of asserting on a target `j_spine2` node that is not present at runtime.
+- Uploaded the crash-safe v0.6.11-dev friends-only test as Steam ManifestID
+  `5832214133899576087` after full native build and local deployment checks.
 - Wrapped preflight output in a literal `%s` VMF format so percentage-bearing
   check details no longer produce `<Invalid string format>` errors.
 - Reset Janfon's first-person armature to its authored rest pose before static
