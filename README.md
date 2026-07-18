@@ -23,7 +23,9 @@ and reproduction steps are recorded in
 
 The current friends-only live-test candidate is **v0.6.22-dev**. It keeps
 Janfon's new authored idle and the original walk as separate clips on the
-138-bone untouched Skaven rig.
+138-bone untouched Skaven rig. Source commit `83583ce` was uploaded to the
+friends-only Workshop item at 2026-07-18 14:42 America/Chicago; live verification
+and Steam ManifestID refresh remain pending.
 The previous v0.6.21 candidate was source commit `04caf66` and Workshop
 ManifestID `3411867430659936354`.
 Live logs have confirmed mod startup, zero-failure

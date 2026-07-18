@@ -18,7 +18,11 @@ architecture and reproduction contract are in
   model, not Janfon's original clip. v0.6.22 restores the genuine 82-bone walk,
   rotation-retargets 79 mapped bones onto the untouched 138-bone rig, retains
   Janfon's new authored idle as a separate clip, and adds structural plus visual
-  preflight. Pending compiler, deployment, and live verification.
+  preflight. All 49 tests, source preflight, GitHub CI, native SDK compilation,
+  and exact eight-file staging/live hash comparison pass. Source commit
+  `83583ce`; the friends-only uploader reported success at 2026-07-18 14:42
+  America/Chicago, while Steam's stale ACF prevents claiming a new ManifestID.
+  Pending live verification.
 - 2026-07-18 local: v0.6.20 LIVE RESULT / v0.6.21 CANDIDATE - the game
   shut down normally, but fingers curled incorrectly and the third-person body
   looked UV-corrupted. The log proved all first-person attachment node distances

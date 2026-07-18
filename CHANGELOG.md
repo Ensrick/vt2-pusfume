@@ -18,6 +18,10 @@ request rather than in release notes.
   untouched Skaven rig. Three-frame front/side renders verify coherent idle and
   gait deformation before compilation, and the build now rejects missing bones,
   missing actions, and zero-duration clips instead of trusting handoff filenames.
+- Compiled, locally deployed, and hash-verified the v0.6.22-dev eight-file
+  package from source commit `83583ce`. The friends-only Workshop uploader
+  reported `Upload finished` at 2026-07-18 14:42 America/Chicago; Steam's local
+  ACF has not refreshed, so a new ManifestID remains intentionally unclaimed.
 - Added the v0.6.21 material and first-person deformation candidate after the
   v0.6.20 live test reached a normal shutdown but showed malformed finger curls
   and a corrupted-looking third-person surface. The log decoded the failed

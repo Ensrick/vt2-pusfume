@@ -31,6 +31,9 @@ basis despite correct donor positions. v0.6.17 counter-scales the exported
 armature and hard-fails unless 54 transforms in the compiled custom unit match
 the compiled donor; offline maximum error is now `0.00000263`. It also replaces
 the old body with Janfon's repaired 138-bone untouched-rig model.
+The current v0.6.22 animation candidate is source commit `83583ce`; the
+friends-only uploader reported success at 2026-07-18 14:42 America/Chicago,
+but Steam has not refreshed a new ManifestID in the local ACF yet.
 
 ## Before opening Heroes
 
@@ -48,7 +51,7 @@ the old body with Janfon's repaired 138-bone untouched-rig model.
 4. Click the card. The center preview should show Janfon's textured Pusfume model while the career heading says **Pusfume**.
 5. Confirm the card itself uses the close-up orange-eyed Pusfume portrait, not Ranger Veteran.
 6. Confirm no Ranger Veteran body, beard, or hat is visible with the Pusfume mesh.
-7. Watch the preview long enough to confirm the generated spine/head/tail idle is visible and there is no green glow beneath dark texture regions.
+7. Watch the preview long enough to confirm Janfon's new 96-frame authored idle is visible and there is no green glow beneath dark texture regions.
 8. Confirm the whiskers move with the head and no lit rectangular alpha card is visible around them.
 9. Run `/pusfume_status`; `UI(card=true selected=true)` confirms both UI hooks executed.
 10. Run `/pusfume_preflight` again. The five-row card, preview hook, native hero preview, native third-person unit, whisker material, and spawn weapon checks should pass.
@@ -67,7 +70,7 @@ the old body with Janfon's repaired 138-bone untouched-rig model.
 7. Use `/pusfume` once as a fallback test. The command should print the host request and a `success` response.
 8. Open the in-game player list and keep it visible long enough for the portrait to refresh; confirm the close-up Pusfume portrait renders inside the frame with no clipping or Ranger Veteran art.
 9. Stand still and confirm the new 138-bone body deforms the spine, head, tail, integrated fur, and whiskers.
-10. Walk and confirm the controller blends into Janfon's 96-frame untouched-rig action, then returns to idle after stopping.
+10. Walk and confirm the controller blends into the restored 25-frame original walk, then returns to Janfon's authored idle after stopping.
 11. Confirm Pusfume's atlas remains correctly aligned, no whole-body or dark-region green emissive glow returns, and the whisker cards have no tape-like lighting rectangle.
 12. Turn, crouch, jump, dodge, attack, and use the career ability while watching the third-person model. These actions do not yet have dedicated Pusfume clips; record translation without matching pose as missing animation coverage, not a skinning regression.
 13. Note any rest-pose offset, detached region, inverted limb, or extreme stretch.
