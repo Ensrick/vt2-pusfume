@@ -18,6 +18,10 @@ request rather than in release notes.
   remains pending through construction and is applied only from the guarded
   update path once inventory exists. Weapon hiding still persists after wield
   updates without dereferencing an unavailable extension.
+- Deployed and hash-verified the v0.6.20-dev eight-file package locally and
+  uploaded source commit `b578b23` to friends-only Workshop item `3764954245`.
+  Steam recorded ManifestID `627079647267377713` at 2026-07-18 13:01
+  America/Chicago.
 - Added the v0.6.19 presentation and hand-inspection candidate. Hero-selection
   name writes are now career-scoped at the final UI boundary so the shared
   Bardin profile cannot restore `Bardin Goreksson` over `Pusfume`.

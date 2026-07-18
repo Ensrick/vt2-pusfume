@@ -11,6 +11,15 @@ architecture and reproduction contract are in
 
 ## Latest shipment
 
+- 2026-07-18 local: v0.6.19 CRASH / v0.6.20 SHIPPED - selecting Pusfume
+  reached first-person skin substitution, then crashed in vanilla
+  `PlayerUnitFirstPerson.hide_weapons` because the v0.6.19 init hook called it
+  before `extensions_ready` assigned `inventory_extension`. v0.6.20 leaves
+  the hide request pending during init and applies it only from the guarded
+  update path once inventory exists. The 0.01 FBX hand-scale contract is
+  unchanged and still compiles 54 donor-linked transforms at maximum error
+  `0.00000263`. Source commit `b578b23`; Workshop ManifestID
+  `627079647267377713`; pending live test.
 - 2026-07-18 local: v0.6.18 LIVE RESULT / v0.6.19 CANDIDATE - the newest log
   reached normal shutdown with direct links, identity attachment root, and zero
   mapped-node distances, while the visible hands remained long and thin. A
