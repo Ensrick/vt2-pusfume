@@ -333,12 +333,14 @@ function M.install(registry, career_index, backend, compat, ui, native)
         local checks = M.collect(registry, career_index, backend, compat, ui, native)
 
         for _, check in ipairs(checks) do
-            mod:echo(string.format("[%s] %s: %s", check.status, check.name, check.detail))
+            mod:echo("%s", string.format(
+                "[%s] %s: %s", check.status, check.name, check.detail))
         end
 
         local totals = M.summarize(checks)
 
-        mod:echo(string.format("Pusfume preflight: %d PASS, %d WARN, %d FAIL.",
+        mod:echo("%s", string.format(
+            "Pusfume preflight: %d PASS, %d WARN, %d FAIL.",
             totals.PASS, totals.WARN, totals.FAIL))
     end)
 end

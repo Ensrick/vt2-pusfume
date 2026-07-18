@@ -179,8 +179,12 @@ Test-Condition ($nativeText -match 'PlayerUnitFirstPerson, "init"' -and `
     "first-person runtime" "Pusfume arms attach and receive the late skinned material"
 Test-Condition ($nativeText -match 'First-person attachment probe meshes=%d' -and `
     $nativeText -match 'Unit\.num_meshes\(target\)' -and `
+    $nativeText -match 'source = "j_spine2", target = "j_spine1"' -and `
+    $nativeText -notmatch 'Unit\.node\(target, node_name\)' -and `
     $nativeText -match 'Vector3\.distance\(source_position, target_position\)') `
     "first-person runtime probe" "live logs distinguish render visibility from node alignment"
+Test-Condition ($preflightText -match 'mod:echo\("%s", string\.format\(') `
+    "preflight output" "percent-bearing details cannot become VMF format strings"
 Test-Condition ($nativeText -match 'career\.name == registry\.CAREER_NAME' -and `
     $nativeText -match 'extension_init_data\.skin_name = config\.skin_name' -and `
     $nativeText -match 'extension_init_data\.skin_name = donor_skin_name' -and `

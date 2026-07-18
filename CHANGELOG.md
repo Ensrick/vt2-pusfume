@@ -23,6 +23,11 @@ request rather than in release notes.
 
 ### Fixed
 
+- Fixed the v0.6.10-dev crash in the delayed first-person probe. Its target
+  lookup now follows the actual `j_spine2 -> j_spine1` attachment pair instead
+  of asserting on a target `j_spine2` node that is not present at runtime.
+- Wrapped preflight output in a literal `%s` VMF format so percentage-bearing
+  check details no longer produce `<Invalid string format>` errors.
 - Reset Janfon's first-person armature to its authored rest pose before static
   export, removing the saved `positioningtest` NLA strip and 45 non-identity
   pose transforms that made the hands appear as stretched sticks in game.

@@ -924,11 +924,11 @@ local function apply_first_person_materials(extension, config)
 end
 
 local first_person_probe_nodes = {
-    "j_spine2",
-    "j_leftarm",
-    "j_lefthand",
-    "j_rightarm",
-    "j_righthand",
+    { source = "j_spine2", target = "j_spine1" },
+    { source = "j_leftarm", target = "j_leftarm" },
+    { source = "j_lefthand", target = "j_lefthand" },
+    { source = "j_rightarm", target = "j_rightarm" },
+    { source = "j_righthand", target = "j_righthand" },
 }
 
 local function log_first_person_attachment_probe(extension)
@@ -943,14 +943,15 @@ local function log_first_person_attachment_probe(extension)
     end
 
     local node_distances = {}
-    for _, node_name in ipairs(first_person_probe_nodes) do
-        local source_node = Unit.node(source, node_name)
-        local target_node = Unit.node(target, node_name)
+    for _, node_pair in ipairs(first_person_probe_nodes) do
+        local source_node = Unit.node(source, node_pair.source)
+        local target_node = Unit.node(target, node_pair.target)
         local source_position = Unit.world_position(source, source_node)
         local target_position = Unit.world_position(target, target_node)
 
         node_distances[#node_distances + 1] = string.format(
-            "%s=%.4f", node_name, Vector3.distance(source_position, target_position))
+            "%s->%s=%.4f", node_pair.source, node_pair.target,
+            Vector3.distance(source_position, target_position))
     end
 
     extension._pusfume_first_person_probe_logged = true
