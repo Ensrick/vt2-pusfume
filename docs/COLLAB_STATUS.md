@@ -11,6 +11,15 @@ architecture and reproduction contract are in
 
 ## Latest shipment
 
+- 2026-07-17 23:40 local: v0.6.15 LIVE RESULT / v0.6.16 CANDIDATE - the
+  newest probe closed the hand errors to `0.0181/0.0119m`, but the arm roots
+  remained `0.4647/0.5126m` from the donor and the mesh rendered as two tiny
+  strands. This proves the remaining failure is incompatible rest geometry,
+  not visibility, material, camera placement, or hand anchoring. v0.6.16 parses
+  the installed compiled donor unit, rebinds 54 shared Blender bones to its
+  exact rest matrices, and uses native direct links with no runtime retarget.
+  Blender 5.2 measured maximum matrix error `0.00000310` and rest-mesh movement
+  `0.00000036m`; shipment pending.
 - 2026-07-17 22:20 local: v0.6.14 LIVE RESULT / v0.6.15 CANDIDATE - vague
   transparent strands appeared. The probe reported midpoint error `0.4414m`,
   per-hand errors `0.4408/0.4419m`, and identical residuals; midpoint and arm
@@ -58,7 +67,8 @@ architecture and reproduction contract are in
   the other rebases.
 - Every change passes `tools/Test-PusfumeSource.ps1` and
   `py -m unittest discover -s tests` before commit.
-- Ship = `tools/Build-NativePusfume.ps1 -HeroPreview -SplicedGameChild`, then
+- Ship = `tools/Build-NativePusfume.ps1 -HeroPreview -SplicedGameChild` with
+  the private `-FirstPersonBlend` and extracted `-FirstPersonDonorUnit`, then
   VMBLauncher upload
   (settings file with ProjectRoot = `.build/native-workshop`; the staging root
   carries `.vmbrc`), then verify `Steam/logs/workshop_log.txt` gained a fresh

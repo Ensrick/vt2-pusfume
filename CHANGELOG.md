@@ -12,6 +12,19 @@ request rather than in release notes.
 
 ### Changed
 
+- Replaced the failed first-person runtime translation/retarget experiment with
+  an offline exact-rest rebind. v0.6.15's latest live probe placed each hand
+  within `0.0181/0.0119m` of the donor while the shoulder roots remained
+  `0.4647/0.5126m` away, empirically explaining the two stretched strands.
+- Added a guarded parser for VT2 version-189 compiled unit scene graphs. The
+  private build reads the installed Ranger Veteran first-person donor's 63
+  rest nodes, maps 54 shared bones, and refuses an incompatible unit.
+- Blender 5.2 now rebinds Janfon's arms to those exact donor rest matrices
+  offline, verifies a maximum matrix error of `0.00000310`, and rejects any
+  change to the authored mesh above `0.00001m` (observed `0.00000036m`).
+- Donor-rest builds use VT2's native 53-node first-person attachment directly
+  and skip every per-frame midpoint, arm-root, and rest-retarget correction.
+  Source builds retain the root-only fallback and diagnostics.
 - Added the v0.6.15-dev staged-transform correction after v0.6.14 exposed
   vague transparent strands. The live probe showed midpoint and per-arm
   translations each repeating the same `~0.441m` offset, while per-arm

@@ -4,6 +4,7 @@ param(
     [string]$AnimationFbx = ".build\pusfume_handoff\pusfume_3p_walk.fbx",
     [string]$BlenderExe = "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe",
     [string]$FirstPersonBlend = "",
+    [string]$FirstPersonDonorUnit = "",
     [string]$TextureSource = ".build\pusfume_handoff\textures conv",
     [string]$WorkshopPath = "C:\Program Files (x86)\Steam\steamapps\workshop\content\552500\3764954245",
     [string]$GameBundleDir = "C:\Program Files (x86)\Steam\steamapps\common\Warhammer Vermintide 2\bundle",
@@ -50,7 +51,11 @@ if ($firstPersonEnabled -and -not $SplicedGameChild) {
     throw "FirstPersonBlend requires -SplicedGameChild for the proven skinned material binding"
 }
 $firstPersonBlendPath = $null
+$firstPersonDonorUnitPath = $null
 if ($firstPersonEnabled) {
+    if ([string]::IsNullOrWhiteSpace($FirstPersonDonorUnit)) {
+        throw "FirstPersonBlend requires -FirstPersonDonorUnit for the exact VT2 rest-skeleton rebind"
+    }
     $firstPersonBlendPath = if ([IO.Path]::IsPathRooted($FirstPersonBlend)) {
         (Resolve-Path $FirstPersonBlend).Path
     } else {
@@ -58,6 +63,14 @@ if ($firstPersonEnabled) {
     }
     if ([IO.Path]::GetExtension($firstPersonBlendPath) -ine ".blend") {
         throw "FirstPersonBlend must be a Blender source file: $firstPersonBlendPath"
+    }
+    $firstPersonDonorUnitPath = if ([IO.Path]::IsPathRooted($FirstPersonDonorUnit)) {
+        (Resolve-Path $FirstPersonDonorUnit).Path
+    } else {
+        (Resolve-Path (Join-Path $repoRoot $FirstPersonDonorUnit)).Path
+    }
+    if ([IO.Path]::GetExtension($firstPersonDonorUnitPath) -ine ".unit") {
+        throw "FirstPersonDonorUnit must be an extracted compiled VT2 unit: $firstPersonDonorUnitPath"
     }
 }
 $legacyFurPath = $null
@@ -128,7 +141,7 @@ if ($firstPersonEnabled) {
 
     & $blenderExePath --background --factory-startup --disable-autoexec `
         --python $firstPersonTool -- `
-        $firstPersonBlendPath $firstPersonFbxPath
+        $firstPersonBlendPath $firstPersonDonorUnitPath $firstPersonFbxPath
     if ($LASTEXITCODE -ne 0) {
         throw "First-person Pusfume FBX preparation failed with exit code $LASTEXITCODE"
     }
@@ -906,6 +919,7 @@ $donorTextureShadowPackageValue = if ($NoDonorTextureShadow) {
 } else {
     '"resource_packages/pusfume/native_shadow"'
 }
+$firstPersonDirectLinkValue = if ($firstPersonEnabled) { "true" } else { "false" }
 
 @"
 return {
@@ -917,6 +931,7 @@ return {
     enabled = true,
     first_person_material_package = $firstPersonMaterialPackageValue,
     first_person_materials = $firstPersonMaterialsValue,
+    first_person_direct_link = $firstPersonDirectLinkValue,
     first_person_unit = $firstPersonUnitValue,
     hero_preview_enabled = $heroPreviewEnabled,
     hide_donor_weapons = true,

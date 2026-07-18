@@ -2,7 +2,8 @@
 
 Run through Blender 5.2:
     blender --background --factory-startup --disable-autoexec \
-        --python tools/prepare_pusfume_1p_blend.py -- INPUT.blend OUTPUT.fbx
+        --python tools/prepare_pusfume_1p_blend.py -- \
+        INPUT.blend DONOR.unit OUTPUT.fbx
 
 The source blend is opened read-only from this script's perspective and is never saved.
 """
@@ -12,11 +13,24 @@ import os
 import sys
 
 import bpy
+from mathutils import Matrix, Vector
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from stingray_unit_scene import read_scene_graph, short_hash
 
 
 MAXIMUM_INFLUENCES = 4
 MAXIMUM_ORPHAN_WEIGHT = 0.05
 REQUIRED_GROUPS = {"j_leftarm", "j_rightarm", "j_lefthand", "j_righthand"}
+REQUIRED_DONOR_BONES = {
+    "j_leftarm",
+    "j_leftforearm",
+    "j_lefthand",
+    "j_rightarm",
+    "j_rightforearm",
+    "j_righthand",
+}
+DONOR_NAME_OVERRIDES = {"j_spine1": "j_spine2"}
 
 
 def arguments_after_separator():
@@ -183,12 +197,119 @@ def weight_stats(mesh_object):
     }
 
 
+def blender_matrix_from_stingray(values):
+    matrix = Matrix(
+        (
+            (values[0], values[4], values[8], values[12]),
+            (values[1], values[5], values[9], values[13]),
+            (values[2], values[6], values[10], values[14]),
+            (0, 0, 0, 1),
+        )
+    )
+    # DCC object scale can be baked into compiled node axes. Bone rest matrices
+    # need only the orthonormal basis and world-space translation.
+    for column in range(3):
+        axis = Vector((matrix[0][column], matrix[1][column], matrix[2][column]))
+        if axis.length <= 0.000001:
+            raise RuntimeError("Donor scene graph contains a zero-length bone axis")
+        axis.normalize()
+        matrix[0][column], matrix[1][column], matrix[2][column] = axis
+    return matrix
+
+
+def rebind_to_donor_rest(mesh_object, armature, donor_unit_path):
+    """Replace shared rest matrices while preserving Janfon's authored mesh."""
+    armature.data.pose_position = "REST"
+    bpy.context.view_layer.update()
+    mesh_before = evaluated_vertex_positions(mesh_object)
+    old_world = {bone.name: bone.matrix_local.copy() for bone in armature.data.bones}
+    old_length = {bone.name: bone.length for bone in armature.data.bones}
+    bone_order = [bone.name for bone in armature.data.bones]
+    parent_names = {
+        bone.name: bone.parent.name if bone.parent else None
+        for bone in armature.data.bones
+    }
+
+    donor_graph = read_scene_graph(donor_unit_path)
+    donor_by_hash = {node["name_hash"]: node for node in donor_graph["nodes"]}
+    expected = {}
+    missing = []
+    for bone in armature.data.bones:
+        donor_name = DONOR_NAME_OVERRIDES.get(bone.name, bone.name)
+        donor_node = donor_by_hash.get(short_hash(donor_name))
+        if donor_node:
+            expected[bone.name] = (
+                armature.matrix_world.inverted()
+                @ blender_matrix_from_stingray(donor_node["world"])
+            )
+        elif bone.name in REQUIRED_DONOR_BONES:
+            missing.append(bone.name)
+    if missing:
+        raise RuntimeError("Donor unit is missing required bones: %s" % sorted(missing))
+
+    bpy.context.view_layer.objects.active = armature
+    armature.select_set(True)
+    bpy.ops.object.mode_set(mode="EDIT")
+    edit_bones = armature.data.edit_bones
+    for edit_bone in edit_bones:
+        edit_bone.use_connect = False
+
+    rebound_world = {}
+    for name in bone_order:
+        parent_name = parent_names[name]
+        if name in expected:
+            matrix = expected[name]
+        elif parent_name:
+            source_local = old_world[parent_name].inverted() @ old_world[name]
+            matrix = rebound_world[parent_name] @ source_local
+        else:
+            matrix = old_world[name]
+        edit_bones[name].matrix = matrix
+        edit_bones[name].length = old_length[name]
+        rebound_world[name] = matrix.copy()
+    bpy.ops.object.mode_set(mode="OBJECT")
+    bpy.context.view_layer.update()
+
+    maximum_matrix_delta = 0
+    for name, matrix in expected.items():
+        actual = armature.data.bones[name].matrix_local
+        maximum_matrix_delta = max(
+            maximum_matrix_delta,
+            max(abs(actual[row][column] - matrix[row][column]) for row in range(4) for column in range(4)),
+        )
+    if maximum_matrix_delta > 0.0001:
+        raise RuntimeError(
+            "Donor rest rebind matrix error is %.8f" % maximum_matrix_delta
+        )
+
+    mesh_after = evaluated_vertex_positions(mesh_object)
+    maximum_mesh_delta = max(
+        ((mesh_after[index] - mesh_before[index]).length for index in range(len(mesh_before))),
+        default=0,
+    )
+    if maximum_mesh_delta > 0.00001:
+        raise RuntimeError(
+            "Donor rest rebind changed Janfon's rest mesh by %.8f" % maximum_mesh_delta
+        )
+
+    return {
+        "donor_nodes": len(donor_graph["nodes"]),
+        "mapped_bones": len(expected),
+        "maximum_matrix_delta": maximum_matrix_delta,
+        "maximum_mesh_delta": maximum_mesh_delta,
+    }
+
+
 def main():
     arguments = arguments_after_separator()
-    if len(arguments) != 2:
-        raise SystemExit("Usage: prepare_pusfume_1p_blend.py -- INPUT.blend OUTPUT.fbx")
+    if len(arguments) != 3:
+        raise SystemExit(
+            "Usage: prepare_pusfume_1p_blend.py -- INPUT.blend DONOR.unit OUTPUT.fbx"
+        )
 
-    input_path, output_path = (os.path.abspath(value) for value in arguments)
+    input_path, donor_unit_path, output_path = (
+        os.path.abspath(value) for value in arguments
+    )
     if input_path == output_path:
         raise SystemExit("Input and output paths must differ; the source blend is never overwritten.")
     if not input_path.lower().endswith(".blend"):
@@ -198,6 +319,7 @@ def main():
     bpy.ops.wm.open_mainfile(filepath=input_path, load_ui=False)
     mesh, armature = find_arms_and_rig()
     bind_reset = reset_bind_pose(mesh, armature)
+    donor_rebind = rebind_to_donor_rest(mesh, armature, donor_unit_path)
 
     bone_names = {bone.name for bone in armature.data.bones}
     orphan_stats = orphan_group_stats(mesh, bone_names)
@@ -246,6 +368,7 @@ def main():
             {
                 "bind_reset": bind_reset,
                 "bones": len(armature.data.bones),
+                "donor_rebind": donor_rebind,
                 "materials": material_names,
                 "mesh": mesh.name,
                 "orphan_groups": orphan_stats,

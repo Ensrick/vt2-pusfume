@@ -72,7 +72,9 @@ Stage and deploy the native unit without copying generated assets into the publi
 .\tools\Build-NativePusfume.ps1 `
   -HeroPreview `
   -LegacyFur `
+  -SplicedGameChild `
   -FirstPersonBlend ".build\janfon_1p_20260717\pusfume_1p_arms 2.blend" `
+  -FirstPersonDonorUnit ".build\donor_1p_extract\units\beings\player\dwarf_ranger\first_person_base\chr_first_person_mesh.unit" `
   -TextureSource ".build\pusfume_handoff\textures conv"
 ```
 
@@ -82,12 +84,18 @@ The command then writes only beneath ignored `.build/native-workshop`, generates
 
 When `-FirstPersonBlend` is supplied, `tools/prepare_pusfume_1p_blend.py`
 finds the single armature-bound arm mesh, requires the expected left and right
-arm/hand groups, removes only negligible orphan groups, enforces four normalized
-influences, and exports the mesh plus rig without animation. The source `.blend`
-hash is checked before and after preparation. The native build links the
-resulting 99-bone attachment to VT2's first-person rig and splices the proven
-character-skin binding to Janfon's direct body diffuse and normal maps. This
-path requires `-SplicedGameChild`; public source defaults remain disabled.
+arm/hand groups, removes only negligible orphan groups, and enforces four
+normalized influences. `-FirstPersonDonorUnit` must point to the locally
+extracted compiled
+`units/beings/player/dwarf_ranger/first_person_base/chr_first_person_mesh.unit`;
+the raw game unit remains ignored and must never be committed. The guarded
+version-189 parser reads the donor's scene graph, and Blender rebinds every
+shared bone to its exact rest matrix while preserving Janfon's world-space
+rest mesh. The build rejects missing donor bones, matrix error over `0.0001`,
+or mesh movement over `0.00001m`. It then exports the 99-bone attachment
+without animation, links its 53 native donor nodes directly, and splices the
+proven character-skin binding to Janfon's direct body diffuse and normal maps.
+This path requires `-SplicedGameChild`; public source defaults remain disabled.
 
 The 2026-07-17 handoff's `positioningtest` action spans frames 0-342. Its scale
 curves are effectively constant, but several shoulder translations are real,

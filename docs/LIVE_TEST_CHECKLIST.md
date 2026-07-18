@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.15-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.16-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -21,7 +21,10 @@ That test exposed vague transparent strands and a parent/child double
 translation of about `0.441m`. v0.6.15 subtracts the inherited midpoint shift
 from each arm-root correction and delays residual measurement by one frame; its
 source commit is `ecbddd0` and Workshop ManifestID is
-`5051999329694268825`.
+`5051999329694268825`. That live probe closed hand errors to
+`0.0181/0.0119m`, but the shoulder roots remained `0.4647/0.5126m` away and
+stretched the mesh into two strands. v0.6.16 rebinds the mesh offline to the
+compiled donor rest skeleton and removes runtime retargeting.
 
 ## Before opening Heroes
 
@@ -73,8 +76,8 @@ source commit is `ecbddd0` and Workshop ManifestID is
 6. Confirm the arms follow VT2's native first-person poses without remaining in rest pose, separating from the camera rig, changing bone lengths, or stretching fingers.
 7. Enable Tweaker: General's third-person camera and confirm the established third-person body still animates and shades correctly.
 8. Run `/pusfume_preflight` after spawning. `native first-person arms` must report PASS; preserve the log if it reports WARN or FAIL.
-9. Check the log for `First-person rest retarget initialized`; it must report a nonzero pair count, `lods=0/0`, and `anchors=2`. `bounds_copied=false` is expected for the generated attachment.
-10. Check the delayed `First-person attachment probe`; it must report `retarget=true`, `lods=0/0`, finite midpoint and limb corrections, and near-zero `limb_residual` values with no invalid-pose error. `bounds=false` is expected because neither first-person unit exposes an LOD object.
+9. Check the log for `First-person donor-rest direct links active`. `First-person rest retarget initialized` must not appear for v0.6.16.
+10. Check the delayed `First-person attachment probe`; it must report `direct=true`, `retarget=false`, and near-zero source/target node distances. Runtime anchor and limb corrections should remain zero because Blender already matched the compiled donor rest matrices.
 11. Treat Janfon's `positioningtest` clip as an unwired diagnostic asset in this candidate, not an expected looping gameplay animation.
 
 ## Career-kit smoke test

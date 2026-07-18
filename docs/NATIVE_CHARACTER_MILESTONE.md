@@ -300,9 +300,10 @@ can reproduce the required character shader binding.
   attacks, ability actions, ledge states, downed, death, and weapon poses need
   authored or safely retargeted clips.
 - The placeholder armature and mesh still need Janfon's planned overhaul.
-- Janfon's first-person arms are compiled and attached; v0.6.9 resets their
-  saved NLA pose before export. Full in-game animation coverage still requires
-  live verification.
+- Janfon's first-person arms are compiled and attached. v0.6.16 resets their
+  saved NLA pose, rebinds them offline to the exact compiled donor rest
+  skeleton, and removes runtime transform correction. The direct-link result
+  still requires live verification.
 - Pusfume still borrows Ranger Veteran gameplay, talents, ability, inventory,
   and persistence.
 - Bardin's donor weapon bodies are hidden rather than integrated with custom
@@ -332,6 +333,7 @@ can reproduce the required character shader binding.
 - `tools/prepare_animated_pusfume_fbx.py`: model, animation, and atlas merge.
 - `tools/generate_idle_pusfume_fbx.py`: deterministic placeholder idle.
 - `tools/prepare_pusfume_1p_blend.py`: guarded static first-person bind export.
+- `tools/stingray_unit_scene.py`: guarded VT2 v189 compiled-unit scene parser.
 - `tools/diagnose_pusfume_1p_blend.py`: Blender deformation and rig evidence.
 - `tools/make_spliced_child.py`: texture and reflected-variable material patch.
 - `tools/splice_bundle_resource.py`: size-aware bundle payload replacement.

@@ -120,9 +120,8 @@ M.first_person_attachment = {
     { source = "root_point", target = "root_point" },
 }
 
--- Direct World links copy absolute donor transforms and collapse Janfon's
--- differently authored bind pose. Runtime retargeting consumes these pairs as
--- rest-relative animation deltas while the engine links only the scene root.
+-- Source builds retain Janfon's original rest pose and consume these pairs as
+-- runtime animation deltas while the engine links only the scene root.
 M.first_person_retarget_pairs = {
     -- Janfon's extracted 1P spine2 is authored at the donor spine1 level.
     { source = "j_spine2", target = "j_spine1" },
@@ -133,6 +132,10 @@ for index, bone_name in ipairs(first_person_bones) do
         target = bone_name,
     }
 end
+
+-- Donor-rest-rebound builds can use VT2's native absolute node links directly.
+-- The root-only table remains available for source builds and diagnostics.
+M.first_person_direct_attachment = M.first_person_retarget_pairs
 
 -- Diagnostic bridge: preserve placement while the packaged controller drives
 -- Pusfume's complete child skeleton. This isolates skin deformation from the
@@ -148,6 +151,8 @@ function M.install()
 
     AttachmentNodeLinking.pusfume_third_person_attachment = M.third_person_attachment
     AttachmentNodeLinking.pusfume_first_person_attachment = M.first_person_attachment
+    AttachmentNodeLinking.pusfume_first_person_direct_attachment =
+        M.first_person_direct_attachment
     AttachmentNodeLinking.pusfume_first_person_retarget_pairs = M.first_person_retarget_pairs
     AttachmentNodeLinking.pusfume_root_animation_attachment = M.root_animation_attachment
 

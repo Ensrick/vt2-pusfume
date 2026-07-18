@@ -869,9 +869,12 @@ local function register_cosmetic(registry, config)
         attachment_node_linking = attachment_node_linking,
     }
     if first_person_unit then
+        local first_person_linking = config.first_person_direct_link
+                and AttachmentNodeLinking.pusfume_first_person_direct_attachment
+            or AttachmentNodeLinking.pusfume_first_person_attachment
         skin.first_person_attachment = {
             unit = first_person_unit,
-            attachment_node_linking = AttachmentNodeLinking.pusfume_first_person_attachment,
+            attachment_node_linking = first_person_linking,
         }
     end
     Cosmetics[config.skin_name] = skin
@@ -1173,10 +1176,11 @@ local function log_first_person_attachment_probe(extension)
 
     extension._pusfume_first_person_probe_logged = true
     mod:info(
-        "[pusfume] First-person attachment probe meshes=%d mode=%s shown=%s retarget=%s bounds=%s lods=%s/%s anchor_error=%.4f anchor_delta=%s limb_error=%.4f/%.4f limb_residual=%.4f/%.4f limb_delta=%s/%s root=%s scale=%s node_distance(%s)",
+        "[pusfume] First-person attachment probe meshes=%d mode=%s shown=%s direct=%s retarget=%s bounds=%s lods=%s/%s anchor_error=%.4f anchor_delta=%s limb_error=%.4f/%.4f limb_residual=%.4f/%.4f limb_delta=%s/%s root=%s scale=%s node_distance(%s)",
         Unit.num_meshes(target),
         tostring(extension.first_person_mode),
         tostring(extension._show_first_person_units),
+        tostring(installed_config and installed_config.first_person_direct_link == true),
         tostring(extension._pusfume_first_person_retarget ~= nil),
         tostring(extension._pusfume_first_person_retarget
             and extension._pusfume_first_person_retarget.bounds_copied),
@@ -1242,7 +1246,12 @@ local function install_first_person_hook(registry, config)
             extension_init_data.skin_name = donor_skin_name
             extension._pusfume_first_person = true
             apply_first_person_materials(extension, config)
-            initialize_first_person_retarget(extension, source_rest_unit_name)
+            if config.first_person_direct_link then
+                state.first_person_direct_link = true
+                mod:info("[pusfume] First-person donor-rest direct links active")
+            else
+                initialize_first_person_retarget(extension, source_rest_unit_name)
+            end
 
             return result
         end
@@ -1252,7 +1261,9 @@ local function install_first_person_hook(registry, config)
     mod:hook_safe(PlayerUnitFirstPerson, "update", function(extension)
         if extension._pusfume_first_person then
             apply_first_person_materials(extension, config)
-            update_first_person_retarget(extension)
+            if not config.first_person_direct_link then
+                update_first_person_retarget(extension)
+            end
             extension._pusfume_first_person_probe_frames =
                 (extension._pusfume_first_person_probe_frames or 0) + 1
 
@@ -1435,6 +1446,7 @@ function M.first_person_status()
         package_requested = state.first_person_material_package_requested,
         package_loaded = state.first_person_material_package_loaded,
         materials_applied = state.first_person_materials_applied,
+        direct_link = state.first_person_direct_link == true,
         retarget_initialized = state.first_person_retarget_initialized == true,
         bounds_copied = state.first_person_bounds_copied == true,
         camera_anchor = state.first_person_retarget_initialized == true,

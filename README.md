@@ -21,8 +21,9 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current local and uploaded live-test candidate is **v0.6.15-dev**, source
-commit `ecbddd0`, Steam ManifestID `5051999329694268825`.
+The current local live-test candidate is **v0.6.16-dev**. The last uploaded
+candidate is v0.6.15-dev, source commit `ecbddd0`, Steam ManifestID
+`5051999329694268825`.
 Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,
@@ -55,17 +56,21 @@ tiny black specks. v0.6.14 independently translates each complete arm at its
 root to close those final offsets without scaling or collapsing the skeleton.
 The v0.6.14 live test exposed a lazy world-transform ordering error: the spine
 and each arm root repeated the same `~0.441m` translation, producing vague
-transparent strands. v0.6.15 subtracts inherited midpoint motion from each arm
-correction and measures residuals only after Stingray resolves the frame.
+transparent strands. v0.6.15 removed that duplicate translation, but its live
+probe proved the corrected hands (`0.0181/0.0119m` error) were stretching from
+incompatible shoulder roots (`0.4647/0.5126m` error). v0.6.16 therefore removes
+runtime correction entirely: Blender rebinds Janfon's mesh to the exact rest
+matrices extracted from VT2's compiled Ranger Veteran first-person unit, and
+the game uses its normal direct node links.
 
 The first-person material uses the same proven compiled skinned-child technique
 as the working third-person model. Animation cannot yet use the identical
 root-controller path because third person has Pusfume-authored idle/walk clips,
 while first person must inherit VT2's full weapon-action set from a donor with a
-different rest rig. The durable simplification is to rebind Janfon's arm mesh
-offline to the exact donor first-person rest skeleton, then remove runtime
-retargeting; current candidates are collecting the transform data needed for
-that conversion.
+different rest rig. v0.6.16 implements the durable path: the build parses the
+compiled donor unit, rebinds Janfon's arm mesh offline to its exact
+first-person rest skeleton, and rejects matrix drift or rest-mesh deformation
+before compilation.
 
 Moulder Ingenuity currently arms the next consumable selection and starts its
 cooldown, but it does not yet transform inventory. Aggressive Iteration records
@@ -113,7 +118,9 @@ game tooling present, the known-good native build is:
 ```powershell
 py -m unittest discover -s tests -v
 .\tools\Test-PusfumeSource.ps1
-.\tools\Build-NativePusfume.ps1 -HeroPreview -SplicedGameChild
+.\tools\Build-NativePusfume.ps1 -HeroPreview -SplicedGameChild `
+  -FirstPersonBlend ".build\janfon_1p_20260717\pusfume_1p_arms 2.blend" `
+  -FirstPersonDonorUnit ".build\donor_1p_extract\units\beings\player\dwarf_ranger\first_person_base\chr_first_person_mesh.unit"
 ```
 
 See [LIVE_TEST_CHECKLIST.md](docs/LIVE_TEST_CHECKLIST.md) for the in-game pass,

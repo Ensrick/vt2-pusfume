@@ -65,6 +65,7 @@ $animatedFbxToolPath = Join-Path $repoRoot "tools\prepare_animated_pusfume_fbx.p
 $idleFbxToolPath = Join-Path $repoRoot "tools\generate_idle_pusfume_fbx.py"
 $firstPersonFbxToolPath = Join-Path $repoRoot "tools\prepare_pusfume_1p_blend.py"
 $firstPersonDiagnosticPath = Join-Path $repoRoot "tools\diagnose_pusfume_1p_blend.py"
+$firstPersonUnitScenePath = Join-Path $repoRoot "tools\stingray_unit_scene.py"
 $changelogPath = Join-Path $repoRoot "CHANGELOG.md"
 $contributingPath = Join-Path $repoRoot "CONTRIBUTING.md"
 $nativeMilestonePath = Join-Path $repoRoot "docs\NATIVE_CHARACTER_MILESTONE.md"
@@ -98,6 +99,7 @@ $animatedFbxToolText = Get-Content -LiteralPath $animatedFbxToolPath -Raw
 $idleFbxToolText = Get-Content -LiteralPath $idleFbxToolPath -Raw
 $firstPersonFbxToolText = Get-Content -LiteralPath $firstPersonFbxToolPath -Raw
 $firstPersonDiagnosticText = Get-Content -LiteralPath $firstPersonDiagnosticPath -Raw
+$firstPersonUnitSceneText = Get-Content -LiteralPath $firstPersonUnitScenePath -Raw
 $portraitToolText = Get-Content -LiteralPath $portraitToolPath -Raw
 $changelogText = Get-Content -LiteralPath $changelogPath -Raw
 $contributingText = Get-Content -LiteralPath $contributingPath -Raw
@@ -148,14 +150,24 @@ Test-Condition ($firstPersonFbxToolText -match 'REQUIRED_GROUPS' -and `
     $firstPersonFbxToolText -match 'reset_bind_pose' -and `
     $firstPersonFbxToolText -match 'armature\.animation_data_clear\(\)' -and `
     $firstPersonFbxToolText -match 'maximum_delta > 0\.00001' -and `
+    $firstPersonFbxToolText -match 'rebind_to_donor_rest' -and `
+    $firstPersonFbxToolText -match 'maximum_matrix_delta > 0\.0001' -and `
+    $firstPersonFbxToolText -match 'maximum_mesh_delta > 0\.00001' -and `
     $firstPersonFbxToolText -match 'source blend is never overwritten' -and `
     $firstPersonFbxToolText -match 'bake_anim=False') `
-    "first-person Blender preparation" "rest-pose reset, selective, bounded, non-destructive export"
+    "first-person Blender preparation" "donor-rest rebind preserves Janfon's mesh and validates every mapped matrix"
+Test-Condition ($firstPersonUnitSceneText -match 'version != 189' -and `
+    $firstPersonUnitSceneText -match 'channel_count \* 17' -and `
+    $firstPersonUnitSceneText -match 'world_matrices' -and `
+    $firstPersonUnitSceneText -match 'name_hashes') `
+    "compiled donor unit parser" "VT2 scene graph matrices and bone hashes are read with guarded version and bounds"
 Test-Condition ($firstPersonDiagnosticText -match 'def edge_stretch' -and `
     $firstPersonDiagnosticText -match 'maximum_vertex_delta' -and `
     $firstPersonDiagnosticText -match 'nonidentity_pose_bones') `
     "first-person Blender diagnostics" "bind deformation remains independently measurable"
 Test-Condition ($nativeBuildText -match '\[string\]\$FirstPersonBlend' -and `
+    $nativeBuildText -match '\[string\]\$FirstPersonDonorUnit' -and `
+    $nativeBuildText -match 'FirstPersonBlend requires -FirstPersonDonorUnit' -and `
     $nativeBuildText -match 'prepare_pusfume_1p_blend\.py' -and `
     $nativeBuildText -match 'pusfume_1p_arms\.unit' -and `
     $nativeBuildText -match 'native_1p_child\.package' -and `
@@ -172,13 +184,19 @@ Test-Condition ($assetsText -match 'M\.first_person_retarget_pairs' -and `
     $assetsText -match '"j_lefthandindex4"' -and `
     $assetsText -match '"j_righthandthumb3"' -and `
     $assetsText -match '(?s)M\.first_person_attachment\s*=\s*\{.*?root_point.*?\n\}' -and `
+    $assetsText -match 'M\.first_person_direct_attachment = M\.first_person_retarget_pairs' -and `
     $assetsText -match 'pusfume_first_person_retarget_pairs') `
-    "first-person bone bridge" "root-only attachment and rest-relative pairs map to the 99-bone target"
+    "first-person bone bridge" "donor-rest builds use all native links while root-only retarget remains a fallback"
 Test-Condition ($nativeText -match 'PlayerUnitFirstPerson, "init"' -and `
     $nativeText -match 'PlayerUnitFirstPerson, "update"' -and `
     $nativeText -match 'apply_first_person_materials' -and `
     $nativeText -match 'first_person_attachment') `
     "first-person runtime" "Pusfume arms attach and receive the late skinned material"
+Test-Condition ($nativeText -match 'config\.first_person_direct_link' -and `
+    $nativeText -match 'pusfume_first_person_direct_attachment' -and `
+    $nativeText -match 'First-person donor-rest direct links active' -and `
+    $nativeText -match 'if not config\.first_person_direct_link then\s*update_first_person_retarget') `
+    "first-person donor-rest runtime" "exact-rest builds bypass all per-frame retarget and anchor corrections"
 Test-Condition ($nativeText -match 'First-person attachment probe meshes=%d' -and `
     $nativeText -match 'Unit\.num_meshes\(target\)' -and `
     $nativeText -match 'source = "j_spine2", target = "j_spine1"' -and `
