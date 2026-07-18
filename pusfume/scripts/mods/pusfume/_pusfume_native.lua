@@ -77,9 +77,14 @@ local MATERIAL_PROBE_MODES = {
     split = true,
 }
 
-local PROBE_LINKS = {
+local LEGACY_PROBE_LINKS = {
     { source = "j_hips", target = "j_hips" },
     { source = "j_lefthand", target = "j_hand_L" },
+}
+
+local NATIVE_PROBE_LINKS = {
+    { source = "j_hips", target = "j_hips" },
+    { source = "j_lefthand", target = "j_lefthand" },
 }
 
 local function can_get(resource_type, path)
@@ -579,6 +584,10 @@ local function hide_donor_weapons(extension, unit, config)
 end
 
 local function articulation_vector(unit, hips_node, hand_node)
+    if not Unit.has_node(unit, hips_node) or not Unit.has_node(unit, hand_node) then
+        return nil
+    end
+
     local hips_position = Unit.world_position(unit, Unit.node(unit, hips_node))
     local hand_position = Unit.world_position(unit, Unit.node(unit, hand_node))
 
@@ -654,7 +663,7 @@ local function sample_link_probe(extension, unit, t)
             Unit.animation_bone_mode(probe.mesh))
     end
 
-    for _, link in ipairs(PROBE_LINKS) do
+    for _, link in ipairs(probe.links) do
         local source_position = Unit.world_position(unit, Unit.node(unit, link.source))
         local target_position = Unit.world_position(probe.mesh, Unit.node(probe.mesh, link.target))
         local initial = probe.initial[link.source]
@@ -668,13 +677,18 @@ local function sample_link_probe(extension, unit, t)
     end
 
     local source_articulation = articulation_vector(unit, "j_hips", "j_lefthand")
-    local target_articulation = articulation_vector(probe.mesh, "j_hips", "j_hand_L")
+    local target_articulation = articulation_vector(probe.mesh, "j_hips", probe.target_hand)
 
-    details[#details + 1] = string.format(
-        "articulation source_delta=%.4f target_delta=%.4f manual_angle=%.4f",
-        Vector3.distance(source_articulation, probe.initial_source_articulation:unbox()),
-        Vector3.distance(target_articulation, probe.initial_target_articulation:unbox()),
-        probe.manual_angle or 0)
+    if source_articulation and target_articulation
+            and probe.initial_source_articulation and probe.initial_target_articulation then
+        details[#details + 1] = string.format(
+            "articulation source_delta=%.4f target_delta=%.4f manual_angle=%.4f",
+            Vector3.distance(source_articulation, probe.initial_source_articulation:unbox()),
+            Vector3.distance(target_articulation, probe.initial_target_articulation:unbox()),
+            probe.manual_angle or 0)
+    else
+        details[#details + 1] = "articulation=unavailable"
+    end
 
     probe.samples = probe.samples + 1
     probe.next_sample_at = probe.samples == 1 and 2 or 5
@@ -715,23 +729,43 @@ local function initialize_link_probe(extension, unit, config)
         tostring(initial_bone_mode),
         tostring(Unit.animation_bone_mode(mesh)))
 
+    local requested_links = config.root_animation_isolation
+            and NATIVE_PROBE_LINKS
+        or LEGACY_PROBE_LINKS
+    local links = {}
     local initial = {}
 
-    for _, link in ipairs(PROBE_LINKS) do
-        initial[link.source] = {
-            source = Vector3Box(Unit.world_position(unit, Unit.node(unit, link.source))),
-            target = Vector3Box(Unit.world_position(mesh, Unit.node(mesh, link.target))),
-        }
+    for _, link in ipairs(requested_links) do
+        if Unit.has_node(unit, link.source) and Unit.has_node(mesh, link.target) then
+            links[#links + 1] = link
+            initial[link.source] = {
+                source = Vector3Box(Unit.world_position(unit, Unit.node(unit, link.source))),
+                target = Vector3Box(Unit.world_position(mesh, Unit.node(mesh, link.target))),
+            }
+        else
+            mod:warning(
+                "[pusfume] Native animation probe skipped unavailable node pair %s->%s",
+                link.source,
+                link.target)
+        end
     end
+
+    local target_hand = config.root_animation_isolation and "j_lefthand" or "j_hand_L"
+    local initial_source_articulation = articulation_vector(unit, "j_hips", "j_lefthand")
+    local initial_target_articulation = articulation_vector(mesh, "j_hips", target_hand)
 
     local probe = {
         complete = false,
         initial = initial,
-        initial_source_articulation = Vector3Box(articulation_vector(unit, "j_hips", "j_lefthand")),
-        initial_target_articulation = Vector3Box(articulation_vector(mesh, "j_hips", "j_hand_L")),
+        initial_source_articulation = initial_source_articulation
+            and Vector3Box(initial_source_articulation),
+        initial_target_articulation = initial_target_articulation
+            and Vector3Box(initial_target_articulation),
+        links = links,
         mesh = mesh,
         next_sample_at = 0.5,
         samples = 0,
+        target_hand = target_hand,
     }
 
     if config.manual_clip_probe then
@@ -747,11 +781,15 @@ local function initialize_link_probe(extension, unit, config)
             tostring(probe.manual_clip_id),
             probe.manual_clip_length)
     elseif config.manual_skin_probe then
-        probe.manual_skin_probe = true
-        probe.manual_node = Unit.node(mesh, "j_spine1")
-        probe.manual_base_rotation = QuaternionBox(Unit.local_rotation(mesh, probe.manual_node))
-        Unit.disable_animation_state_machine(mesh)
-        mod:warning("[pusfume] Manual skin deformation probe is active on j_spine1")
+        if Unit.has_node(mesh, "j_spine1") then
+            probe.manual_skin_probe = true
+            probe.manual_node = Unit.node(mesh, "j_spine1")
+            probe.manual_base_rotation = QuaternionBox(Unit.local_rotation(mesh, probe.manual_node))
+            Unit.disable_animation_state_machine(mesh)
+            mod:warning("[pusfume] Manual skin deformation probe is active on j_spine1")
+        else
+            mod:warning("[pusfume] Manual skin deformation probe skipped: j_spine1 is unavailable")
+        end
     elseif config.locomotion_events_enabled and has_state_machine then
         probe.locomotion_events = Unit.has_animation_event(mesh, "walk")
             and Unit.has_animation_event(mesh, "idle")

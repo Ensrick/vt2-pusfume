@@ -12,6 +12,11 @@ request rather than in release notes.
 
 ### Changed
 
+- Added the v0.6.18 crash fix after the first v0.6.17 live spawn reached the
+  new hero preview but asserted on legacy diagnostic bone `j_hand_L`. Native
+  root-isolated builds now probe the untouched Skaven rig's `j_lefthand`, and
+  every optional probe node is checked with `Unit.has_node` before `Unit.node`.
+  Missing diagnostic nodes now produce a warning instead of terminating VT2.
 - Uploaded the locally hash-verified v0.6.17-dev eight-file package from source
   commit `d0d7893` to friends-only Workshop item `3764954245`. Steam's UGC
   uploader reported `Upload finished`; the friends-only page and refreshed
