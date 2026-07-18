@@ -22,6 +22,11 @@ request rather than in release notes.
 - Added regression coverage for the native Skaven first-person contract and
   complete base-item cloning. Janfon's first-person asset remains preserved in
   the build pipeline for a later exact Skaven-rest rebind.
+- Built and hash-verified the v0.6.26 native package from source commit
+  `b059534`, deployed all eight files locally, and uploaded the friends-only
+  Workshop candidate. Steam's persistent log confirmed ManifestID
+  `4747837235132942219` for item `3764954245` at 2026-07-18 18:33
+  America/Chicago. Live gameplay validation remains pending.
 
 - Corrected the v0.6.24 prototype weapon adapter after crash
   `c6fadfc5-d61e-4eaf-9d19-ced33b4d75ae`. Both models now resolve directly

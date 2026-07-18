@@ -32,11 +32,10 @@ slot metadata, and isolated templates changed. Warpfire retains Fatshark's
 native left-handed actions with mechanism-only callbacks removed. The claw's
 temporary hero attacks remain isolated because the native Packmaster grab is a
 character state rather than an ordinary weapon action.
-Source commit `c59ab62` was compiled, hash-verified, deployed locally, and
-uploaded to the friends-only Workshop item at 2026-07-18 17:45
-America/Chicago. Steam recorded ManifestID `1817442651143246521`; the v0.6.25
-action-hand adapter corrects the crash found in v0.6.24 and awaits live
-gameplay verification.
+Source commit `b059534` was compiled, hash-verified, deployed locally, and
+uploaded to the friends-only Workshop item at 2026-07-18 18:33
+America/Chicago. Steam recorded ManifestID `4747837235132942219`; v0.6.26
+awaits live first-person weapon-placement verification.
 Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,

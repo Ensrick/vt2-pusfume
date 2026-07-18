@@ -48,6 +48,9 @@ Pusfume inventory records are complete clones of their official Versus base
 items, adapted only for Pusfume ownership and Adventure slots. This is an
 intentional native-rig baseline: Janfon's arms remain in the source pipeline
 but are not displayed until they can be rebound to the exact Skaven rest rig.
+Source commit `b059534` was compiled, locally hash-verified, and uploaded at
+2026-07-18 18:33 America/Chicago. Steam confirmed ManifestID
+`4747837235132942219`; live validation remains pending.
 
 ## Before opening Heroes
 
