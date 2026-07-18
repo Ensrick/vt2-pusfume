@@ -22,7 +22,8 @@ architecture and reproduction contract are in
   translations and unit bone bases, and passes the 54-node rest check at
   maximum error `0.00000263`. The same candidate adds career-scoped Pusfume
   UI identity, playable Globadier combat VO routing, and diagnostic first-
-  person weapon hiding. Pending source commit, Workshop upload, and live test.
+  person weapon hiding. Source commit `721d3c0`; Workshop ManifestID
+  `8719688784520429489`; pending live test.
 - 2026-07-18 local: v0.6.17 CANDIDATE - post-compiler inspection proved
   v0.6.16's donor positions were correct but all custom bone bases were about
   `100x`, explaining the remaining sticks/strands. The counter-scaled FBX

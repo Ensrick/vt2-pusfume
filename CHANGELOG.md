@@ -28,8 +28,9 @@ request rather than in release notes.
   bone bases compile at unit scale with maximum rest error `0.00000263`; this
   targets the remaining long, thin first-person arm deformation.
 - Deployed and hash-verified the v0.6.19-dev eight-file package locally and
-  uploaded it to friends-only Workshop item `3764954245`. Steam recorded
-  ManifestID `8719688784520429489` at 2026-07-18 12:27 America/Chicago.
+  uploaded source commit `721d3c0` to friends-only Workshop item `3764954245`.
+  Steam recorded ManifestID `8719688784520429489` at 2026-07-18 12:27
+  America/Chicago.
 - Added the source-referenced Pusfume career production workbook for Janfon:
   823 checklist items across animation, models/rigging/physics, materials, UI,
   audio, VFX/gameplay, export validation, and a 34-entry VT2 source map.
