@@ -36,6 +36,8 @@ The v0.6.26 live test proved Adventure did not make the Skaven first-person
 inventory packages resident before vanilla spawned Pusfume. v0.6.27 loads and
 verifies those unit packages synchronously with a dedicated reference before
 skin registration and rechecks residency immediately before player spawn.
+The candidate is source commit `182f977`, Workshop ManifestID
+`4012083168238356315`; live gameplay validation remains pending.
 Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,

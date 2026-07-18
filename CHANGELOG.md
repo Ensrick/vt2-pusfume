@@ -21,6 +21,11 @@ request rather than in release notes.
 - Added a crash-safe fallback to the bundled first-person path if any native
   package cannot become resident, plus symmetric shutdown and regression
   coverage. This prevents another nil-unit spawn from reaching vanilla.
+- Built and hash-verified the v0.6.27 native package from source commit
+  `182f977`, deployed all eight game files locally, and uploaded the same
+  payload to the friends-only Workshop item. Steam confirmed ManifestID
+  `4012083168238356315` at 2026-07-18 18:55 America/Chicago. Live gameplay
+  validation remains pending.
 
 - Replaced the Ranger Veteran first-person base used by the v0.6.25 weapon
   prototype with Fatshark's shared Skaven first-person base and native

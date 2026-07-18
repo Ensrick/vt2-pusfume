@@ -53,7 +53,10 @@ Source commit `b059534` was compiled, locally hash-verified, and uploaded at
 `4747837235132942219`. That candidate crashed because Adventure had not made
 the Skaven first-person unit packages resident before vanilla player spawn.
 v0.6.27 synchronously loads and verifies all three native unit packages before
-registering the skin and falls back safely if any package cannot load.
+registering the skin and falls back safely if any package cannot load. Source
+commit `182f977` was compiled, locally hash-verified, and uploaded at
+2026-07-18 18:55 America/Chicago. Steam confirmed ManifestID
+`4012083168238356315`; the live result is pending.
 
 ## Before opening Heroes
 
