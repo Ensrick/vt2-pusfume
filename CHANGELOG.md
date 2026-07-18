@@ -12,6 +12,18 @@ request rather than in release notes.
 
 ### Changed
 
+- Uploaded the locally hash-verified v0.6.17-dev eight-file package from source
+  commit `d0d7893` to friends-only Workshop item `3764954245`. Steam's UGC
+  uploader reported `Upload finished`; the friends-only page and refreshed
+  manifest ID still require an authenticated Steam client verification.
+- Corrected the Stingray FBX armature counter-scale that left v0.6.16's
+  compiled first-person bone bases roughly 100 times larger than the Ranger
+  donor. The v0.6.17 post-compiler gate compared all 54 mapped transforms and
+  measured a maximum error of `0.00000263` against the `0.001` limit.
+- Confirmed from the 2026-07-18 live log that the visible, animated but skinny
+  hands were produced by v0.6.16. Runtime attachment was healthy (`direct=true`,
+  identity root scale, and zero arm/hand node distance), isolating that result
+  to the old compiled deformation asset rather than camera placement or links.
 - Replaced the 82-bone normalized placeholder body with Janfon's new
   138-bone untouched Skaven rig. The guarded Blender preparation keeps only
   `p_mainbody` and the game rig, transfers the one stray pinky weight, assigns
