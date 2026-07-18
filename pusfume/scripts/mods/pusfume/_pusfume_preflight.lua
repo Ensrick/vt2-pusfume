@@ -166,32 +166,45 @@ function M.collect(registry, career_index, backend, compat, ui, native, weapons)
 
     local weapon_status = weapons.status()
     local weapon_items_ready = weapon_status.installed
+    local weapon_units_ready = true
+    local missing_weapon
 
-    for _, slot_name in ipairs({ "slot_melee", "slot_ranged" }) do
-        local item_key = weapons.ITEM_KEYS[slot_name]
-        local item = ItemMasterList and rawget(ItemMasterList, item_key)
+    for _, key in ipairs(weapons.TEST_WEAPON_ORDER) do
+        local definition = weapons.TEST_WEAPONS[key]
+        local item = ItemMasterList and rawget(ItemMasterList, definition.item_key)
         local can_wield = item and item.can_wield
 
         weapon_items_ready = weapon_items_ready and item
+            and item.template == definition.template_name
             and can_wield and #can_wield == 1 and can_wield[1] == registry.CAREER_NAME
-            and NetworkLookup and rawget(NetworkLookup.item_names, item_key)
-            and rawget(NetworkLookup.damage_sources, item_key)
-            and Weapons and rawget(Weapons, weapons.TEMPLATE_NAMES[slot_name])
+            and NetworkLookup and rawget(NetworkLookup.item_names, definition.item_key)
+            and rawget(NetworkLookup.damage_sources, definition.item_key)
+            and Weapons and rawget(Weapons, definition.template_name)
+            and Weapons and rawget(Weapons, definition.source_key)
+
+        if not weapon_items_ready and not missing_weapon then
+            missing_weapon = key
+        end
+
+        if definition.left_hand_unit then
+            weapon_units_ready = weapon_units_ready
+                and Application.can_get("unit", definition.left_hand_unit)
+        end
+
+        if definition.right_hand_unit then
+            weapon_units_ready = weapon_units_ready
+                and Application.can_get("unit", definition.right_hand_unit)
+        end
     end
 
     add(checks, "Pusfume weapon registry", weapon_items_ready and "PASS" or "FAIL",
-        weapon_items_ready and "Packmaster hook and Warpfire Thrower are Pusfume-only synchronized items"
-            or "custom item, template, permission, or network lookup is missing")
-
-    local weapon_units_ready = true
-
-    for _, unit_path in pairs(weapons.UNIT_PATHS) do
-        weapon_units_ready = weapon_units_ready and Application.can_get("unit", unit_path)
-    end
+        weapon_items_ready and "six Pusfume-only Versus rat weapon clones are synchronized items"
+            or "custom item, template, source template, permission, or network lookup is missing: "
+                .. tostring(missing_weapon))
 
     add(checks, "Pusfume weapon units", weapon_units_ready and "PASS" or "FAIL",
-        weapon_units_ready and "shipped Versus Packmaster and Warpfire units resolve"
-            or "a shipped Versus weapon unit is unavailable")
+        weapon_units_ready and "all six shipped Versus rat weapon units resolve"
+            or "a shipped Versus rat weapon unit is unavailable")
 
     local backend_status = backend.status()
     local backend_hooks_ready = backend_status.installed

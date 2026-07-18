@@ -10,11 +10,16 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Replaced the temporary Pusfume weapon pair with six Pusfume-only clones of
+  the playable Versus rat weapon contracts: Gutter Runner claws, Packmaster
+  hook, Poison Wind globe, Ratling gun, Warpfire Thrower, and Rat Ogre hands.
+  `/pusfume_weapon_test next|<key>` now cycles the active melee test clone so
+  Janfon's rat-authored hands can be tested against the intended attachment
+  and weapon-template data.
 - Added the v0.6.24 weapon and identity candidate. Pusfume now owns fixed,
   synchronized prototype items that render the shipped playable-Versus
-  Packmaster hook and Warpfire Thrower, while retaining Adventure-safe Bardin
-  action logic instead of invoking Pactsworn-only character states.
-- Restricted the two prototype weapons to Pusfume, stopped granting him every
+  Packmaster hook and Warpfire Thrower.
+- Restricted the prototype weapons to Pusfume, stopped granting him every
   Ranger Veteran weapon, and removed the first- and third-person diagnostic
   seams that hid equipped weapon units.
 - Added career-scoped character-name guards to the selector header, inventory
