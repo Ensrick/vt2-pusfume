@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.14-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.15-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -17,6 +17,10 @@ That live test showed only two tiny black specks: midpoint error was `0.0044m`,
 but each hand retained about `0.18m` error. v0.6.14 rigidly corrects each arm
 root after midpoint alignment: source commit `ee26fcf`, Workshop ManifestID
 `3997686606515825820`.
+That test exposed vague transparent strands and a parent/child double
+translation of about `0.441m`. v0.6.15 subtracts the inherited midpoint shift
+from each arm-root correction and delays residual measurement by one frame; its
+source commit and manifest are pending.
 
 ## Before opening Heroes
 

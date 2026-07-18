@@ -199,9 +199,10 @@ Test-Condition ($nativeText -match 'source_anchor - target_anchor' -and `
     "first-person camera anchor" "rigid midpoint correction closes camera offset with mesh-bound culling disabled"
 Test-Condition ($nativeText -match 'target_limb_root_nodes' -and `
     $nativeText -match 'Unit\.world_position\(source, retarget\.source_anchor_nodes\[index\]\)' -and `
+    $nativeText -match 'local correction = hand_error - midpoint_correction' -and `
     $nativeText -match 'Unit\.set_local_pose\(\s*target,\s*retarget\.target_limb_root_nodes\[index\]' -and `
-    $nativeText -match 'limb_residuals\[index\] = Vector3\.distance') `
-    "first-person per-arm anchors" "rigid arm-root corrections close both hand offsets without changing limb lengths"
+    $nativeText -match 'if retarget\.correction_applied then\s*for index = 1, 2 do\s*retarget\.limb_residuals\[index\] = Vector3\.distance') `
+    "first-person per-arm anchors" "side corrections exclude inherited midpoint motion and residuals measure the resolved prior frame"
 Test-Condition ($preflightText -match 'mod:echo\("%s", string\.format\(') `
     "preflight output" "percent-bearing details cannot become VMF format strings"
 Test-Condition ($nativeText -match 'career\.name == registry\.CAREER_NAME' -and `

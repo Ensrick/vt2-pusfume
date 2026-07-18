@@ -12,6 +12,14 @@ request rather than in release notes.
 
 ### Changed
 
+- Added the v0.6.15-dev staged-transform correction after v0.6.14 exposed
+  vague transparent strands. The live probe showed midpoint and per-arm
+  translations each repeating the same `~0.441m` offset, while per-arm
+  residuals remained unchanged, proving a parent/child double translation.
+- Per-arm corrections now subtract the shared midpoint translation inherited
+  from the spine and apply only the side-specific remainder. Residuals are
+  measured from the resolved prior frame rather than stale same-update world
+  poses.
 - Added the v0.6.14-dev per-arm anchor candidate after v0.6.13 rendered two
   tiny black specks. The live probe proved the mesh was shown, midpoint error
   fell to `0.0044m`, but each hand remained about `0.18m` from its donor hand.

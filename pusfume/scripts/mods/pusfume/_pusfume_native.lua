@@ -1044,6 +1044,16 @@ local function update_first_person_retarget(extension)
         return
     end
 
+    -- World transforms resolve after the update. Measure the preceding frame's
+    -- completed correction before replacing local poses for this frame.
+    if retarget.correction_applied then
+        for index = 1, 2 do
+            retarget.limb_residuals[index] = Vector3.distance(
+                Unit.world_position(source, retarget.source_anchor_nodes[index]),
+                Unit.world_position(target, retarget.target_anchor_nodes[index]))
+        end
+    end
+
     for _, pair in ipairs(retarget.pairs) do
         local source_pose = Unit.local_pose(source, pair.source_node)
         local source_rest = pair.source_rest:unbox()
@@ -1066,6 +1076,7 @@ local function update_first_person_retarget(extension)
         end
     end
 
+    local midpoint_correction = Vector3.zero()
     if #retarget.source_anchor_nodes == 2 and #retarget.target_anchor_nodes == 2
             and retarget.target_spine_node and retarget.target_spine_parent_node then
         local source_anchor = (
@@ -1090,6 +1101,7 @@ local function update_first_person_retarget(extension)
             Unit.set_local_pose(target, retarget.target_spine_node, spine_local_pose)
             retarget.anchor_correction:store(correction)
             retarget.anchor_error = Vector3.length(correction)
+            midpoint_correction = correction
         elseif not retarget.invalid_pose_logged then
             retarget.invalid_pose_logged = true
             mod:error("[pusfume] First-person camera-anchor correction produced an invalid pose")
@@ -1100,8 +1112,11 @@ local function update_first_person_retarget(extension)
             and #retarget.target_limb_root_nodes == 2
             and #retarget.target_limb_parent_nodes == 2 then
         for index = 1, 2 do
-            local correction = Unit.world_position(source, retarget.source_anchor_nodes[index])
+            local hand_error = Unit.world_position(source, retarget.source_anchor_nodes[index])
                 - Unit.world_position(target, retarget.target_anchor_nodes[index])
+            -- The arm parent inherits the spine's midpoint translation. Apply
+            -- only the remaining side-specific error at the limb root.
+            local correction = hand_error - midpoint_correction
             local limb_world_pose = Unit.world_pose(target, retarget.target_limb_root_nodes[index])
 
             Matrix4x4.set_translation(
@@ -1121,10 +1136,7 @@ local function update_first_person_retarget(extension)
                     retarget.target_limb_root_nodes[index],
                     limb_local_pose)
                 retarget.limb_corrections[index]:store(correction)
-                retarget.limb_errors[index] = Vector3.length(correction)
-                retarget.limb_residuals[index] = Vector3.distance(
-                    Unit.world_position(source, retarget.source_anchor_nodes[index]),
-                    Unit.world_position(target, retarget.target_anchor_nodes[index]))
+                retarget.limb_errors[index] = Vector3.length(hand_error)
             elseif not retarget.invalid_pose_logged then
                 retarget.invalid_pose_logged = true
                 mod:error(
@@ -1132,6 +1144,7 @@ local function update_first_person_retarget(extension)
                     index == 1 and "left" or "right")
             end
         end
+        retarget.correction_applied = true
     end
 end
 

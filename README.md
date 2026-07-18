@@ -21,8 +21,9 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current local and uploaded live-test candidate is **v0.6.14-dev**, source
-commit `ee26fcf`, Steam ManifestID `3997686606515825820`.
+The current local build candidate is **v0.6.15-dev**. The preceding uploaded
+candidate was v0.6.14-dev, source commit `ee26fcf`, Steam ManifestID
+`3997686606515825820`.
 Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,
@@ -53,6 +54,19 @@ The v0.6.13 live probe reduced midpoint error to `0.0044m`, but the two hands
 remained about `0.18m` from their corresponding donor hands and appeared as two
 tiny black specks. v0.6.14 independently translates each complete arm at its
 root to close those final offsets without scaling or collapsing the skeleton.
+The v0.6.14 live test exposed a lazy world-transform ordering error: the spine
+and each arm root repeated the same `~0.441m` translation, producing vague
+transparent strands. v0.6.15 subtracts inherited midpoint motion from each arm
+correction and measures residuals only after Stingray resolves the frame.
+
+The first-person material uses the same proven compiled skinned-child technique
+as the working third-person model. Animation cannot yet use the identical
+root-controller path because third person has Pusfume-authored idle/walk clips,
+while first person must inherit VT2's full weapon-action set from a donor with a
+different rest rig. The durable simplification is to rebind Janfon's arm mesh
+offline to the exact donor first-person rest skeleton, then remove runtime
+retargeting; current candidates are collecting the transform data needed for
+that conversion.
 
 Moulder Ingenuity currently arms the next consumable selection and starts its
 cooldown, but it does not yet transform inventory. Aggressive Iteration records
