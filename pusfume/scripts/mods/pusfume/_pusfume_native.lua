@@ -8,6 +8,12 @@ local SKAVEN_FIRST_PERSON_BOT_BASE =
     "units/beings/player/dark_pact_first_person_base/skaven_common/chr_first_person_bot_base"
 local PACKMASTER_FIRST_PERSON_ARMS =
     "units/beings/player/dark_pact_skins/skaven_pack_master/skin_0000/first_person/chr_first_person_mesh"
+local NATIVE_SKAVEN_FIRST_PERSON_PACKAGES = {
+    SKAVEN_FIRST_PERSON_BASE,
+    SKAVEN_FIRST_PERSON_BOT_BASE,
+    PACKMASTER_FIRST_PERSON_ARMS,
+}
+local NATIVE_SKAVEN_PACKAGE_REFERENCE = "pusfume_native_skaven_first_person"
 local state = {
     cosmetic_registered = false,
     hook_installed = false,
@@ -22,6 +28,9 @@ local state = {
     first_person_material_package_error_logged = false,
     first_person_material_error_logged = false,
     first_person_materials_applied = false,
+    native_skaven_packages_requested = false,
+    native_skaven_packages_loaded = false,
+    native_skaven_skin_registered = false,
     hero_preview_enabled = false,
     donor_package_requested = false,
     donor_package_loaded = false,
@@ -54,6 +63,47 @@ local PUSFUME_CHARACTER_VO = "vs_poison_wind_globadier"
 local PUSFUME_SOUND_CHARACTER = "dwarf_slayer"
 
 local installed_config
+
+local function ensure_native_skaven_first_person_packages(config)
+    if not config.native_skaven_first_person then
+        return false
+    end
+
+    local all_loaded = true
+    state.native_skaven_packages_requested = true
+
+    for _, package_name in ipairs(NATIVE_SKAVEN_FIRST_PERSON_PACKAGES) do
+        local package_available = Managers.package
+            and Application.can_get("package", package_name)
+
+        if package_available and not Managers.package:has_loaded(
+                package_name, NATIVE_SKAVEN_PACKAGE_REFERENCE) then
+            -- PackageManager's fourth argument is `asynchronous`; spawning
+            -- immediately after a queued load recreates the nil-unit crash.
+            Managers.package:load(package_name, NATIVE_SKAVEN_PACKAGE_REFERENCE, nil, false)
+        end
+
+        local loaded = package_available
+            and Managers.package:has_loaded(package_name, NATIVE_SKAVEN_PACKAGE_REFERENCE)
+            and Application.can_get("unit", package_name)
+        all_loaded = all_loaded and loaded
+
+        if not loaded then
+            mod:error("[pusfume] Native Skaven first-person package failed residency: %s",
+                package_name)
+        end
+    end
+
+    state.native_skaven_packages_loaded = all_loaded
+
+    if all_loaded and not state.native_skaven_packages_logged then
+        state.native_skaven_packages_logged = true
+        mod:info("[pusfume] Native Skaven first-person packages resident: %d",
+            #NATIVE_SKAVEN_FIRST_PERSON_PACKAGES)
+    end
+
+    return all_loaded
+end
 
 local function restore_first_person_weapons(extension)
     -- VT2 assigns inventory_extension in extensions_ready(), after init.
@@ -915,14 +965,13 @@ local function register_cosmetic(registry, config)
         return false
     end
 
-    local first_person_unit = config.native_skaven_first_person
+    local native_skaven_ready = config.native_skaven_first_person
+        and ensure_native_skaven_first_person_packages(config)
+    local first_person_unit = native_skaven_ready
             and PACKMASTER_FIRST_PERSON_ARMS
         or config.first_person_unit
     if first_person_unit then
-        -- Native inventory units are loaded later by ProfileSynchronizer from
-        -- the registered skin. Only bundled custom units can be resolved now.
-        state.first_person_resource_available = config.native_skaven_first_person
-            or Application.can_get("unit", first_person_unit)
+        state.first_person_resource_available = Application.can_get("unit", first_person_unit)
 
         if not state.first_person_resource_available then
             mod:error("[pusfume] First-person build enabled but unit is unavailable: %s", first_person_unit)
@@ -944,10 +993,11 @@ local function register_cosmetic(registry, config)
     skin.always_hide_attachment_slots = { "slot_hat" }
     skin.equip_hat_event = nil
     skin.material_changes = nil
-    if config.native_skaven_first_person then
+    if native_skaven_ready then
         skin.first_person = SKAVEN_FIRST_PERSON_BASE
         skin.first_person_bot = SKAVEN_FIRST_PERSON_BOT_BASE
     end
+    state.native_skaven_skin_registered = native_skaven_ready == true
     local attachment_node_linking = config.root_animation_isolation
             and AttachmentNodeLinking.pusfume_root_animation_attachment
         or AttachmentNodeLinking.pusfume_third_person_attachment
@@ -957,7 +1007,7 @@ local function register_cosmetic(registry, config)
         attachment_node_linking = attachment_node_linking,
     }
     if first_person_unit then
-        local first_person_linking = config.native_skaven_first_person
+        local first_person_linking = native_skaven_ready
                 and AttachmentNodeLinking.skaven_first_person_attachment
             or config.first_person_direct_link
                 and AttachmentNodeLinking.pusfume_first_person_direct_attachment
@@ -975,8 +1025,10 @@ local function register_cosmetic(registry, config)
     mod:info("[pusfume] Native third-person cosmetic registered: %s", config.third_person_unit)
     if first_person_unit then
         mod:info("[pusfume] Native first-person cosmetic registered: %s", first_person_unit)
-        if config.native_skaven_first_person then
+        if native_skaven_ready then
             mod:info("[pusfume] Native Skaven first-person base active: %s", SKAVEN_FIRST_PERSON_BASE)
+        elseif config.native_skaven_first_person then
+            mod:warning("[pusfume] Native Skaven first-person unavailable; using bundled arms fallback")
         end
     end
 
@@ -988,7 +1040,7 @@ local function register_cosmetic(registry, config)
 end
 
 local function apply_first_person_materials(extension, config)
-    if config.native_skaven_first_person then
+    if state.native_skaven_skin_registered then
         extension._pusfume_first_person_materials_applied = true
         state.first_person_materials_applied = true
         return true
@@ -1329,6 +1381,12 @@ local function install_first_person_hook(registry, config)
         local career = profile.careers[career_index]
 
         if career and career.name == registry.CAREER_NAME then
+            if state.native_skaven_skin_registered
+                    and not ensure_native_skaven_first_person_packages(config) then
+                mod:error("[pusfume] Native Skaven first-person spawn blocked; retaining donor skin")
+                return func(extension, extension_init_context, unit, extension_init_data)
+            end
+
             local donor_skin_name = extension_init_data.skin_name
             local donor_skin = Cosmetics[donor_skin_name]
             local source_rest_unit_name = donor_skin and donor_skin.first_person
@@ -1544,7 +1602,10 @@ function M.first_person_status()
 
     return {
         enabled = type(config and config.first_person_unit) == "string",
-        native_skaven_baseline = config and config.native_skaven_first_person == true,
+        native_skaven_baseline = config and config.native_skaven_first_person == true
+            and state.native_skaven_skin_registered
+            and state.native_skaven_packages_loaded,
+        native_skaven_packages_loaded = state.native_skaven_packages_loaded,
         resource_available = state.first_person_resource_available,
         hook_installed = state.first_person_hook_installed,
         package_requested = state.first_person_material_package_requested,
@@ -1569,6 +1630,23 @@ function M.animation_status()
 end
 
 function M.shutdown(config)
+    if state.native_skaven_packages_requested then
+        for index = #NATIVE_SKAVEN_FIRST_PERSON_PACKAGES, 1, -1 do
+            local package_name = NATIVE_SKAVEN_FIRST_PERSON_PACKAGES[index]
+
+            if Managers.package and Managers.package:has_loaded(
+                    package_name, NATIVE_SKAVEN_PACKAGE_REFERENCE) then
+                Managers.package:unload(package_name, NATIVE_SKAVEN_PACKAGE_REFERENCE)
+            end
+        end
+
+        state.native_skaven_packages_requested = false
+        state.native_skaven_packages_loaded = false
+        state.native_skaven_packages_logged = false
+        state.native_skaven_skin_registered = false
+        mod:info("[pusfume] Released native Skaven first-person packages")
+    end
+
     if state.first_person_material_package_requested then
         if mod.package_status and
                 mod:package_status(config.first_person_material_package) == "loaded" then

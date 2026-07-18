@@ -38,6 +38,20 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn("if config.native_skaven_first_person then", self.native)
         self.assertIn("native_skaven_baseline", self.native)
 
+    def test_native_skaven_first_person_packages_are_resident_before_spawn(self):
+        self.assertIn("NATIVE_SKAVEN_FIRST_PERSON_PACKAGES", self.native)
+        self.assertIn("ensure_native_skaven_first_person_packages", self.native)
+        self.assertIn(
+            "Managers.package:load(package_name, NATIVE_SKAVEN_PACKAGE_REFERENCE, nil, false)",
+            self.native,
+        )
+        self.assertIn('Application.can_get("unit", package_name)', self.native)
+        self.assertIn("Native Skaven first-person spawn blocked", self.native)
+        self.assertIn(
+            "Managers.package:unload(package_name, NATIVE_SKAVEN_PACKAGE_REFERENCE)",
+            self.native,
+        )
+
     def test_selector_name_is_guarded_at_final_write(self):
         self.assertIn('mod:hook(class, "_set_hero_info"', self.ui)
         self.assertIn('hero_name = mod:localize("pusfume_character_name")', self.ui)

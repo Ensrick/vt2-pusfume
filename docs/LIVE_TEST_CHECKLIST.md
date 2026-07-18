@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.26-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.27-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -50,7 +50,10 @@ intentional native-rig baseline: Janfon's arms remain in the source pipeline
 but are not displayed until they can be rebound to the exact Skaven rest rig.
 Source commit `b059534` was compiled, locally hash-verified, and uploaded at
 2026-07-18 18:33 America/Chicago. Steam confirmed ManifestID
-`4747837235132942219`; live validation remains pending.
+`4747837235132942219`. That candidate crashed because Adventure had not made
+the Skaven first-person unit packages resident before vanilla player spawn.
+v0.6.27 synchronously loads and verifies all three native unit packages before
+registering the skin and falls back safely if any package cannot load.
 
 ## Before opening Heroes
 

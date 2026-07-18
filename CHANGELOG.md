@@ -10,6 +10,18 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Fixed the v0.6.26 spawn crash at
+  `player_unit_first_person.lua:60`. The live locals proved
+  `World.spawn_unit` returned `nil` for the non-resident shared Skaven
+  first-person base before vanilla called `set_animation_state_machine`.
+- Added a reference-counted native package residency contract for the shared
+  Skaven first-person base, bot base, and Packmaster arms. All three are loaded
+  synchronously through Fatshark's `Managers.package` API and verified as
+  gettable units before skin registration and again immediately before spawn.
+- Added a crash-safe fallback to the bundled first-person path if any native
+  package cannot become resident, plus symmetric shutdown and regression
+  coverage. This prevents another nil-unit spawn from reaching vanilla.
+
 - Replaced the Ranger Veteran first-person base used by the v0.6.25 weapon
   prototype with Fatshark's shared Skaven first-person base and native
   Packmaster arm attachment. This isolates weapon placement from Janfon's

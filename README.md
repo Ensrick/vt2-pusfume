@@ -21,7 +21,7 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current friends-only live-test candidate is **v0.6.26-dev**. It keeps the
+The current friends-only live-test candidate is **v0.6.27-dev**. It keeps the
 working v0.6.22 third-person materials, authored idle, and restored original
 walk. It replaces the Ranger first-person base with Fatshark's shared Skaven
 base and native Packmaster arms, establishing an unwarped Pactsworn weapon-rig
@@ -32,10 +32,10 @@ slot metadata, and isolated templates changed. Warpfire retains Fatshark's
 native left-handed actions with mechanism-only callbacks removed. The claw's
 temporary hero attacks remain isolated because the native Packmaster grab is a
 character state rather than an ordinary weapon action.
-Source commit `b059534` was compiled, hash-verified, deployed locally, and
-uploaded to the friends-only Workshop item at 2026-07-18 18:33
-America/Chicago. Steam recorded ManifestID `4747837235132942219`; v0.6.26
-awaits live first-person weapon-placement verification.
+The v0.6.26 live test proved Adventure did not make the Skaven first-person
+inventory packages resident before vanilla spawned Pusfume. v0.6.27 loads and
+verifies those unit packages synchronously with a dedicated reference before
+skin registration and rechecks residency immediately before player spawn.
 Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,
