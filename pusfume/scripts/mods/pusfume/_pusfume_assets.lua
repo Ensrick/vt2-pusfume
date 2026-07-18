@@ -118,11 +118,17 @@ local first_person_bones = {
 
 M.first_person_attachment = {
     { source = "root_point", target = "root_point" },
+}
+
+-- Direct World links copy absolute donor transforms and collapse Janfon's
+-- differently authored bind pose. Runtime retargeting consumes these pairs as
+-- rest-relative animation deltas while the engine links only the scene root.
+M.first_person_retarget_pairs = {
     -- Janfon's extracted 1P spine2 is authored at the donor spine1 level.
     { source = "j_spine2", target = "j_spine1" },
 }
 for index, bone_name in ipairs(first_person_bones) do
-    M.first_person_attachment[index + 2] = {
+    M.first_person_retarget_pairs[index + 1] = {
         source = bone_name,
         target = bone_name,
     }
@@ -142,6 +148,7 @@ function M.install()
 
     AttachmentNodeLinking.pusfume_third_person_attachment = M.third_person_attachment
     AttachmentNodeLinking.pusfume_first_person_attachment = M.first_person_attachment
+    AttachmentNodeLinking.pusfume_first_person_retarget_pairs = M.first_person_retarget_pairs
     AttachmentNodeLinking.pusfume_root_animation_attachment = M.root_animation_attachment
 
     return true

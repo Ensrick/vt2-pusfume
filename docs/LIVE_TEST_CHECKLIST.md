@@ -1,13 +1,14 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.11-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.12-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
 Known-good native body/animation baseline: commit `0ffdf5a`, Workshop ManifestID
 `2405082174877027150`. Current crash-safe first-person A/B candidate: commit
 `cb51156`, Workshop ManifestID `5832214133899576087` on
-`feat/22-first-person-arms`.
+`feat/22-first-person-arms`. That build's live mesh was visible but collapsed
+into blinking sticks. v0.6.12 is the first rest-relative retarget candidate.
 
 ## Before opening Heroes
 
@@ -51,15 +52,17 @@ Known-good native body/animation baseline: commit `0ffdf5a`, Workshop ManifestID
 
 ## First-person arms
 
-1. Enter a mission in the normal first-person camera and confirm both Pusfume arms and hands are visible.
-2. Before moving, confirm the fingers retain their modeled proportions and do not appear as long, thin sticks.
-3. Confirm the arms use Pusfume's direct-UV body textures with no green donor glow, atlas scrambling, or opaque whisker-style cards.
-4. Attack, block, push, reload, swap weapons, interact, revive, crouch, jump, dodge, and move in every direction.
-5. Confirm the arms follow VT2's native first-person poses without remaining in rest pose, separating from the camera rig, or stretching fingers.
-6. Enable Tweaker: General's third-person camera and confirm the established third-person body still animates and shades correctly.
-7. Run `/pusfume_preflight` after spawning. `native first-person arms` must report PASS; preserve the log if it reports WARN or FAIL.
-8. Treat Janfon's `positioningtest` clip as an unwired diagnostic asset in this candidate, not an expected looping gameplay animation.
-9. Preserve the log line beginning `First-person attachment probe`; v0.6.10 is an A/B visibility test of the spine adapter with the clean bind export.
+1. Enter a mission in the normal first-person camera and leave the default weapon equipped for at least ten seconds.
+2. Confirm both arms remain continuously visible while looking up, down, left, and right; blinking is a failure of the LOD-bounds fix.
+3. Before moving, confirm the fingers retain Janfon's modeled proportions and do not appear as long, thin sticks.
+4. Confirm the arms use Pusfume's direct-UV body textures with no green donor glow, atlas scrambling, or opaque whisker-style cards.
+5. Attack, block, push, reload, swap weapons, interact, revive, crouch, jump, dodge, and move in every direction.
+6. Confirm the arms follow VT2's native first-person poses without remaining in rest pose, separating from the camera rig, changing bone lengths, or stretching fingers.
+7. Enable Tweaker: General's third-person camera and confirm the established third-person body still animates and shades correctly.
+8. Run `/pusfume_preflight` after spawning. `native first-person arms` must report PASS; preserve the log if it reports WARN or FAIL.
+9. Check the log for `First-person rest retarget initialized`; it must report a nonzero pair count and `bounds_copied=true`.
+10. Check the delayed `First-person attachment probe`; it must report `retarget=true bounds=true` and no invalid-pose error.
+11. Treat Janfon's `positioningtest` clip as an unwired diagnostic asset in this candidate, not an expected looping gameplay animation.
 
 ## Career-kit smoke test
 

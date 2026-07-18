@@ -12,6 +12,15 @@ request rather than in release notes.
 
 ### Changed
 
+- Added the v0.6.12-dev first-person rebind candidate after v0.6.11 rendered
+  Janfon's arms as blinking sticks despite a live mesh, enabled visibility, and
+  zero-distance attachment nodes.
+- Replaced absolute per-bone `World.link_unit` attachment with a root-only link
+  and rest-relative runtime retarget. Donor animation deltas are applied over
+  Janfon's own bind rotations while preserving his authored local offsets.
+- Copied the donor first-person LOD bounding volume to Janfon's attachment;
+  vanilla cosmetic attachments do this, but VT2's first-person character path
+  does not, allowing a custom mesh to blink at its incorrectly compiled bounds.
 - Advanced the live first-person A/B candidate to v0.6.10-dev after v0.6.9
   loaded its custom unit and material successfully but rendered no arms.
 - Kept the corrected static bind export while restoring Janfon's known-visible

@@ -11,6 +11,13 @@ architecture and reproduction contract are in
 
 ## Latest shipment
 
+- 2026-07-17 21:05 local: v0.6.11 LIVE RESULT / v0.6.12 CANDIDATE - the
+  crash-safe probe reported one mesh, visibility enabled, identity root scale,
+  and zero distance for all sampled source/target nodes while Janfon's arms
+  rendered as blinking sticks. This rules out missing assets and visibility.
+  v0.6.12 removes absolute per-bone links, captures pristine donor and Janfon
+  rest poses, transfers rotational animation deltas while preserving Janfon's
+  local offsets, and copies donor LOD bounds. Pending build/upload/live test.
 - 2026-07-17 20:46 local: FIRST-PERSON PROBE CRASH FIX SHIPPED -
   v0.6.11-dev, commit `cb51156`, ManifestID `5832214133899576087`.
   v0.6.10 asserted when its diagnostic queried target `j_spine2`; the real

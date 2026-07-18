@@ -21,8 +21,8 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current local and uploaded live-test candidate is **v0.6.11-dev**, Steam
-ManifestID `5832214133899576087`.
+The current local build candidate is **v0.6.12-dev**. The preceding uploaded
+candidate was v0.6.11-dev, Steam ManifestID `5832214133899576087`.
 Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,
@@ -40,7 +40,11 @@ the stretched stick-hand export but rendering no arms in the first live test.
 v0.6.10 retains that clean bind and isolates Janfon's spine adapter while
 logging the live attachment geometry needed for the next decision.
 v0.6.11 makes that probe follow the real source/target spine pair after the
-first v0.6.10 test asserted on a nonexistent target node.
+first v0.6.10 test asserted on a nonexistent target node. Its live probe proved
+the mesh was present and enabled, but absolute bone links collapsed the arms
+into blinking sticks. v0.6.12 replaces those links with a rest-relative
+rotation retarget that preserves Janfon's bind offsets and copies donor LOD
+bounds to the custom attachment.
 
 Moulder Ingenuity currently arms the next consumable selection and starts its
 cooldown, but it does not yet transform inventory. Aggressive Iteration records

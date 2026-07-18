@@ -167,11 +167,13 @@ Test-Condition ($nativeBuildText -match 'processed_bundles\.csv' -and `
     $nativeBuildText -match 'medium_portrait_pusfume,texture' -and `
     $nativeBuildText -match 'units/pusfume/pusfume_1p_arms,unit') `
     "compiled asset manifest" "native build rejects omitted portrait or first-person resources"
-Test-Condition ($assetsText -match 'M\.first_person_attachment' -and `
+Test-Condition ($assetsText -match 'M\.first_person_retarget_pairs' -and `
     $assetsText -match 'source = "j_spine2", target = "j_spine1"' -and `
     $assetsText -match '"j_lefthandindex4"' -and `
-    $assetsText -match '"j_righthandthumb3"') `
-    "first-person bone bridge" "Janfon's spine adapter and shared parent nodes map to the 99-bone target"
+    $assetsText -match '"j_righthandthumb3"' -and `
+    $assetsText -match '(?s)M\.first_person_attachment\s*=\s*\{.*?root_point.*?\n\}' -and `
+    $assetsText -match 'pusfume_first_person_retarget_pairs') `
+    "first-person bone bridge" "root-only attachment and rest-relative pairs map to the 99-bone target"
 Test-Condition ($nativeText -match 'PlayerUnitFirstPerson, "init"' -and `
     $nativeText -match 'PlayerUnitFirstPerson, "update"' -and `
     $nativeText -match 'apply_first_person_materials' -and `
@@ -183,6 +185,12 @@ Test-Condition ($nativeText -match 'First-person attachment probe meshes=%d' -an
     $nativeText -notmatch 'Unit\.node\(target, node_name\)' -and `
     $nativeText -match 'Vector3\.distance\(source_position, target_position\)') `
     "first-person runtime probe" "live logs distinguish render visibility from node alignment"
+Test-Condition ($nativeText -match 'spawn_local_unit\(source_rest_unit_name\)' -and `
+    $nativeText -match 'Matrix4x4\.multiply\(source_pose, Matrix4x4\.inverse\(source_rest\)\)' -and `
+    $nativeText -match 'Matrix4x4\.set_translation\(target_pose, Matrix4x4\.translation\(target_rest\)\)' -and `
+    $nativeText -match 'Unit\.set_local_pose\(target, pair\.target_node, target_pose\)' -and `
+    $nativeText -match 'LODObject\.set_bounding_volume\(target_lod, LODObject\.bounding_volume\(source_lod\)\)') `
+    "first-person rest retarget" "donor animation deltas preserve Janfon bind offsets and inherit donor bounds"
 Test-Condition ($preflightText -match 'mod:echo\("%s", string\.format\(') `
     "preflight output" "percent-bearing details cannot become VMF format strings"
 Test-Condition ($nativeText -match 'career\.name == registry\.CAREER_NAME' -and `

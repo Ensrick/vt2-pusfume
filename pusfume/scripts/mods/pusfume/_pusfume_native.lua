@@ -931,6 +931,100 @@ local first_person_probe_nodes = {
     { source = "j_righthand", target = "j_righthand" },
 }
 
+local function initialize_first_person_retarget(extension, source_rest_unit_name)
+    if extension._pusfume_first_person_retarget then
+        return true
+    end
+
+    local source = extension.first_person_unit
+    local target = extension.first_person_attachment_unit
+    local pairs = AttachmentNodeLinking.pusfume_first_person_retarget_pairs
+    local unit_spawner = Managers.state.unit_spawner
+
+    if not source or not target or not Unit.alive(source) or not Unit.alive(target)
+            or type(source_rest_unit_name) ~= "string" or type(pairs) ~= "table"
+            or not unit_spawner then
+        return false
+    end
+
+    -- A copy without an animation state machine exposes the donor's pristine
+    -- local bind transforms. The live target has no controller, so its current
+    -- local transforms are Janfon's authored bind pose.
+    local rest_source = unit_spawner:spawn_local_unit(source_rest_unit_name)
+    local retarget_pairs = {}
+
+    for _, pair in ipairs(pairs) do
+        local source_node = Unit.node(rest_source, pair.source)
+        local target_node = Unit.node(target, pair.target)
+
+        retarget_pairs[#retarget_pairs + 1] = {
+            source = pair.source,
+            target = pair.target,
+            source_node = source_node,
+            target_node = target_node,
+            source_rest = Matrix4x4Box(Unit.local_pose(rest_source, source_node)),
+            target_rest = Matrix4x4Box(Unit.local_pose(target, target_node)),
+        }
+    end
+
+    unit_spawner:mark_for_deletion(rest_source)
+
+    local bounds_copied = false
+    if Unit.num_lod_objects(source) > 0 and Unit.num_lod_objects(target) > 0 then
+        local source_lod = Unit.lod_object(source, 0)
+        local target_lod = Unit.lod_object(target, 0)
+
+        LODObject.set_bounding_volume(target_lod, LODObject.bounding_volume(source_lod))
+        bounds_copied = true
+    end
+
+    extension._pusfume_first_person_retarget = {
+        pairs = retarget_pairs,
+        bounds_copied = bounds_copied,
+        invalid_pose_logged = false,
+    }
+    state.first_person_retarget_initialized = true
+    state.first_person_bounds_copied = bounds_copied
+    mod:info(
+        "[pusfume] First-person rest retarget initialized pairs=%d bounds_copied=%s",
+        #retarget_pairs,
+        tostring(bounds_copied))
+
+    return true
+end
+
+local function update_first_person_retarget(extension)
+    local retarget = extension._pusfume_first_person_retarget
+    local source = extension.first_person_unit
+    local target = extension.first_person_attachment_unit
+
+    if not retarget or not source or not target or not Unit.alive(source) or not Unit.alive(target) then
+        return
+    end
+
+    for _, pair in ipairs(retarget.pairs) do
+        local source_pose = Unit.local_pose(source, pair.source_node)
+        local source_rest = pair.source_rest:unbox()
+        local target_rest = pair.target_rest:unbox()
+        local animation_delta = Matrix4x4.multiply(source_pose, Matrix4x4.inverse(source_rest))
+        local target_pose = Matrix4x4.multiply(animation_delta, target_rest)
+
+        -- VT2's 1P clips are rotational. Preserve Janfon's local offsets so a
+        -- donor translation cannot change his bone lengths or collapse hands.
+        Matrix4x4.set_translation(target_pose, Matrix4x4.translation(target_rest))
+
+        if Matrix4x4.is_valid(target_pose) then
+            Unit.set_local_pose(target, pair.target_node, target_pose)
+        elseif not retarget.invalid_pose_logged then
+            retarget.invalid_pose_logged = true
+            mod:error(
+                "[pusfume] First-person retarget rejected invalid pose %s->%s",
+                pair.source,
+                pair.target)
+        end
+    end
+end
+
 local function log_first_person_attachment_probe(extension)
     if extension._pusfume_first_person_probe_logged then
         return
@@ -956,10 +1050,13 @@ local function log_first_person_attachment_probe(extension)
 
     extension._pusfume_first_person_probe_logged = true
     mod:info(
-        "[pusfume] First-person attachment probe meshes=%d mode=%s shown=%s root=%s scale=%s node_distance(%s)",
+        "[pusfume] First-person attachment probe meshes=%d mode=%s shown=%s retarget=%s bounds=%s root=%s scale=%s node_distance(%s)",
         Unit.num_meshes(target),
         tostring(extension.first_person_mode),
         tostring(extension._show_first_person_units),
+        tostring(extension._pusfume_first_person_retarget ~= nil),
+        tostring(extension._pusfume_first_person_retarget
+            and extension._pusfume_first_person_retarget.bounds_copied),
         tostring(Unit.local_position(target, 0)),
         tostring(Unit.local_scale(target, 0)),
         table.concat(node_distances, ","))
@@ -987,6 +1084,9 @@ local function install_first_person_hook(registry, config)
 
         if career and career.name == registry.CAREER_NAME then
             local donor_skin_name = extension_init_data.skin_name
+            local donor_skin = Cosmetics[donor_skin_name]
+            local source_rest_unit_name = donor_skin and donor_skin.first_person
+                or profile.base_units.first_person
 
             -- Vanilla chooses and spawns the first-person attachment inside
             -- init. Substitute only for that call, then restore the shared
@@ -999,6 +1099,7 @@ local function install_first_person_hook(registry, config)
             extension_init_data.skin_name = donor_skin_name
             extension._pusfume_first_person = true
             apply_first_person_materials(extension, config)
+            initialize_first_person_retarget(extension, source_rest_unit_name)
 
             return result
         end
@@ -1008,6 +1109,7 @@ local function install_first_person_hook(registry, config)
     mod:hook_safe(PlayerUnitFirstPerson, "update", function(extension)
         if extension._pusfume_first_person then
             apply_first_person_materials(extension, config)
+            update_first_person_retarget(extension)
             extension._pusfume_first_person_probe_frames =
                 (extension._pusfume_first_person_probe_frames or 0) + 1
 
@@ -1190,6 +1292,8 @@ function M.first_person_status()
         package_requested = state.first_person_material_package_requested,
         package_loaded = state.first_person_material_package_loaded,
         materials_applied = state.first_person_materials_applied,
+        retarget_initialized = state.first_person_retarget_initialized == true,
+        bounds_copied = state.first_person_bounds_copied == true,
     }
 end
 
