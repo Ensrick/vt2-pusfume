@@ -23,6 +23,12 @@ request rather than in release notes.
 - Added runtime preflight coverage for item/template/network registration,
   shipped weapon-unit availability, exact default loadout keys, and isolated
   weapon permissions. Live gameplay and two-peer verification remain pending.
+- Built, hash-verified, and locally deployed the v0.6.24 native package from
+  source commit `46b9f1f`. Steam's persistent Workshop log confirmed new
+  content as ManifestID `40228561972604423` at 2026-07-18 17:11
+  America/Chicago. The configured direct `pc-b` deploy failed SSH
+  authentication, so the tester distribution path for this candidate is the
+  successful friends-only Workshop upload.
 
 ### Changed
 

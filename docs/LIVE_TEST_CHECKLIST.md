@@ -38,8 +38,9 @@ upload are `6ecf623` and 2026-07-18 16:25 America/Chicago. Steam uploader
 reported success; live verification and a refreshed ManifestID remain pending.
 The v0.6.24 candidate adds fixed Pusfume-only Packmaster hook and Warpfire
 Thrower items, restores weapon visibility, and extends the career-scoped
-Pusfume name guard to selector and inventory surfaces. Its source commit,
-Workshop upload, and live result are pending.
+Pusfume name guard to selector and inventory surfaces. Source commit `46b9f1f`
+was compiled and uploaded at 2026-07-18 17:11 America/Chicago; Steam confirmed
+ManifestID `40228561972604423`. The live result is pending.
 
 ## Before opening Heroes
 
