@@ -23,6 +23,10 @@ request rather than in release notes.
   donor-rebound scene, avoiding FBX's split unit-scale behavior. The SDK probe
   compiled 99 bones, 1,980 triangles, and all 54 donor-linked transforms with
   maximum rest error `0.00000310`; FBX remains an explicit diagnostic fallback.
+- Deployed and hash-verified the v0.6.21-dev eight-file package locally and
+  uploaded source commit `04caf66` to friends-only Workshop item `3764954245`.
+  Steam recorded ManifestID `3411867430659936354` at 2026-07-18 13:36
+  America/Chicago.
 - Added the v0.6.20 lifecycle crash fix after v0.6.19 attempted to hide
   first-person weapons during `PlayerUnitFirstPerson.init`. VT2 does not assign
   `inventory_extension` until `extensions_ready`, so the diagnostic hide now

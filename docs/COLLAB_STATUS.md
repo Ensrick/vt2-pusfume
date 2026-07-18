@@ -18,7 +18,8 @@ architecture and reproduction contract are in
   v0.6.21 enables the dedicated integrated-fur material and moves first-person
   skin compilation to direct BSI, where scene nodes and inverse binds share the
   donor-rebound Blender space. The SDK candidate compiles 54 linked transforms
-  at maximum rest error `0.00000310`; live verification remains pending.
+  at maximum rest error `0.00000310`. Source commit `04caf66`; Workshop
+  ManifestID `3411867430659936354`; live verification remains pending.
 - 2026-07-18 local: v0.6.19 CRASH / v0.6.20 SHIPPED - selecting Pusfume
   reached first-person skin substitution, then crashed in vanilla
   `PlayerUnitFirstPerson.hide_weapons` because the v0.6.19 init hook called it

@@ -21,8 +21,8 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current local live-test candidate is **v0.6.21-dev**. v0.6.20 was uploaded
-from source commit `b578b23` as Workshop ManifestID `627079647267377713`.
+The current friends-only live-test candidate is **v0.6.21-dev**, uploaded from
+source commit `04caf66` as Workshop ManifestID `3411867430659936354`.
 Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,
