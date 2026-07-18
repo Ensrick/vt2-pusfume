@@ -8,7 +8,8 @@ Known-good native body/animation baseline: commit `0ffdf5a`, Workshop ManifestID
 `2405082174877027150`. Current crash-safe first-person A/B candidate: commit
 `cb51156`, Workshop ManifestID `5832214133899576087` on
 `feat/22-first-person-arms`. That build's live mesh was visible but collapsed
-into blinking sticks. v0.6.12 is the first rest-relative retarget candidate.
+into blinking sticks. Current rest-relative retarget candidate: commit
+`b938d14`, Workshop ManifestID `1512228345017462962`.
 
 ## Before opening Heroes
 

@@ -17,7 +17,8 @@ architecture and reproduction contract are in
   rendered as blinking sticks. This rules out missing assets and visibility.
   v0.6.12 removes absolute per-bone links, captures pristine donor and Janfon
   rest poses, transfers rotational animation deltas while preserving Janfon's
-  local offsets, and copies donor LOD bounds. Pending build/upload/live test.
+  local offsets, and copies donor LOD bounds. Shipped as commit `b938d14`,
+  ManifestID `1512228345017462962`; pending live test.
 - 2026-07-17 20:46 local: FIRST-PERSON PROBE CRASH FIX SHIPPED -
   v0.6.11-dev, commit `cb51156`, ManifestID `5832214133899576087`.
   v0.6.10 asserted when its diagnostic queried target `j_spine2`; the real

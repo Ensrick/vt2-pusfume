@@ -21,6 +21,9 @@ request rather than in release notes.
 - Copied the donor first-person LOD bounding volume to Janfon's attachment;
   vanilla cosmetic attachments do this, but VT2's first-person character path
   does not, allowing a custom mesh to blink at its incorrectly compiled bounds.
+- Uploaded the v0.6.12-dev friends-only retarget test as Steam ManifestID
+  `1512228345017462962` after full native compilation, splice validation, and
+  hash-verified local deployment.
 - Advanced the live first-person A/B candidate to v0.6.10-dev after v0.6.9
   loaded its custom unit and material successfully but rendered no arms.
 - Kept the corrected static bind export while restoring Janfon's known-visible
