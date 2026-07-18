@@ -47,6 +47,9 @@ def main():
     bpy.ops.wm.open_mainfile(filepath=input_path, load_ui=False)
     mesh, armature = preparation.find_arms_and_rig()
     bind_reset = preparation.reset_bind_pose(mesh, armature)
+    donor_conformance = preparation.conform_mesh_to_donor_rest(
+        mesh, armature, donor_unit_path
+    )
     donor_rebind = preparation.rebind_to_donor_rest(mesh, armature, donor_unit_path)
 
     bone_names = {bone.name for bone in armature.data.bones}
@@ -104,6 +107,7 @@ def main():
                 "bind_reset": bind_reset,
                 "bones": len(armature.data.bones),
                 "bones_output": bones_path,
+                "donor_conformance": donor_conformance,
                 "donor_rebind": donor_rebind,
                 "exported_vertices": exported_vertices,
                 "materials": material_names,

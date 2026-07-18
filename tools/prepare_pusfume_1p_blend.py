@@ -217,19 +217,14 @@ def blender_matrix_from_stingray(values):
     return matrix
 
 
-def rebind_to_donor_rest(mesh_object, armature, donor_unit_path):
-    """Replace shared rest matrices while preserving Janfon's authored mesh."""
-    armature.data.pose_position = "REST"
-    bpy.context.view_layer.update()
-    mesh_before = evaluated_vertex_positions(mesh_object)
+def donor_rest_matrices(armature, donor_unit_path):
+    """Resolve donor-compatible armature-space matrices for every source bone."""
     old_world = {bone.name: bone.matrix_local.copy() for bone in armature.data.bones}
-    old_length = {bone.name: bone.length for bone in armature.data.bones}
     bone_order = [bone.name for bone in armature.data.bones]
     parent_names = {
         bone.name: bone.parent.name if bone.parent else None
         for bone in armature.data.bones
     }
-
     donor_graph = read_scene_graph(donor_unit_path)
     donor_by_hash = {node["name_hash"]: node for node in donor_graph["nodes"]}
     expected = {}
@@ -247,6 +242,113 @@ def rebind_to_donor_rest(mesh_object, armature, donor_unit_path):
     if missing:
         raise RuntimeError("Donor unit is missing required bones: %s" % sorted(missing))
 
+    resolved = {}
+    for name in bone_order:
+        parent_name = parent_names[name]
+        if name in expected:
+            matrix = expected[name]
+        elif parent_name:
+            source_local = old_world[parent_name].inverted() @ old_world[name]
+            matrix = resolved[parent_name] @ source_local
+        else:
+            matrix = old_world[name]
+        resolved[name] = matrix.copy()
+    return donor_graph, expected, resolved
+
+
+def conform_mesh_to_donor_rest(mesh_object, armature, donor_unit_path):
+    """Bake Janfon's weighted mesh into the donor skeleton's rest shape.
+
+    Moving only edit bones preserves the old vertex shape around new pivots,
+    which looks fine at rest but tears under gameplay rotations. Evaluate the
+    existing skin weights at the donor pose first, then make that pose the bind.
+    """
+    donor_graph, expected, resolved = donor_rest_matrices(armature, donor_unit_path)
+    source_positions = evaluated_vertex_positions(mesh_object)
+    source_rest = {bone.name: bone.matrix_local.copy() for bone in armature.data.bones}
+    conformance_pose = {}
+    for bone_name, source_matrix in source_rest.items():
+        matrix = source_matrix.copy()
+        matrix.translation = resolved[bone_name].translation
+        conformance_pose[bone_name] = matrix
+
+    armature.data.pose_position = "POSE"
+    bone_depth = {}
+    for bone in armature.data.bones:
+        depth = 0
+        parent = bone.parent
+        while parent:
+            depth += 1
+            parent = parent.parent
+        bone_depth[bone.name] = depth
+    for bone_name in sorted(conformance_pose, key=lambda name: bone_depth[name]):
+        armature.pose.bones[bone_name].matrix = conformance_pose[bone_name]
+        bpy.context.view_layer.update()
+    maximum_pose_delta = max(
+        (
+            max(
+                abs(
+                    armature.pose.bones[name].matrix[row][column]
+                    - conformance_pose[name][row][column]
+                )
+                for row in range(4)
+                for column in range(4)
+            )
+            for name in conformance_pose
+        ),
+        default=0,
+    )
+    if maximum_pose_delta > 0.0001:
+        raise RuntimeError(
+            "Donor position conformance pose error is %.8f" % maximum_pose_delta
+        )
+    conformed_positions = evaluated_vertex_positions(mesh_object)
+
+    mesh_inverse = mesh_object.matrix_world.inverted()
+    armature.data.pose_position = "REST"
+    for index, position in enumerate(conformed_positions):
+        mesh_object.data.vertices[index].co = mesh_inverse @ position
+    for pose_bone in armature.pose.bones:
+        pose_bone.matrix_basis.identity()
+    bpy.context.view_layer.update()
+
+    maximum_vertex_delta = max(
+        (
+            (conformed_positions[index] - source_positions[index]).length
+            for index in range(len(source_positions))
+        ),
+        default=0,
+    )
+    if maximum_vertex_delta <= 0.001 or maximum_vertex_delta > 0.75:
+        raise RuntimeError(
+            "Donor position conformance produced an implausible mesh delta %.8f"
+            % maximum_vertex_delta
+        )
+    return {
+        "donor_nodes": len(donor_graph["nodes"]),
+        "mapped_bones": len(expected),
+        "maximum_pose_delta": maximum_pose_delta,
+        "maximum_vertex_delta": maximum_vertex_delta,
+    }
+
+
+def rebind_to_donor_rest(mesh_object, armature, donor_unit_path):
+    """Replace shared rest matrices while preserving Janfon's authored mesh."""
+    armature.data.pose_position = "REST"
+    bpy.context.view_layer.update()
+    mesh_before = evaluated_vertex_positions(mesh_object)
+    old_world = {bone.name: bone.matrix_local.copy() for bone in armature.data.bones}
+    old_length = {bone.name: bone.length for bone in armature.data.bones}
+    bone_order = [bone.name for bone in armature.data.bones]
+    parent_names = {
+        bone.name: bone.parent.name if bone.parent else None
+        for bone in armature.data.bones
+    }
+
+    donor_graph, expected, rebound_world = donor_rest_matrices(
+        armature, donor_unit_path
+    )
+
     bpy.context.view_layer.objects.active = armature
     armature.select_set(True)
     bpy.ops.object.mode_set(mode="EDIT")
@@ -254,19 +356,10 @@ def rebind_to_donor_rest(mesh_object, armature, donor_unit_path):
     for edit_bone in edit_bones:
         edit_bone.use_connect = False
 
-    rebound_world = {}
     for name in bone_order:
-        parent_name = parent_names[name]
-        if name in expected:
-            matrix = expected[name]
-        elif parent_name:
-            source_local = old_world[parent_name].inverted() @ old_world[name]
-            matrix = rebound_world[parent_name] @ source_local
-        else:
-            matrix = old_world[name]
+        matrix = rebound_world[name]
         edit_bones[name].matrix = matrix
         edit_bones[name].length = old_length[name]
-        rebound_world[name] = matrix.copy()
     bpy.ops.object.mode_set(mode="OBJECT")
     bpy.context.view_layer.update()
 

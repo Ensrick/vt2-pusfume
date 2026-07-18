@@ -167,12 +167,13 @@ Test-Condition ($firstPersonFbxToolText -match 'REQUIRED_GROUPS' -and `
     $firstPersonFbxToolText -match 'bake_anim=False') `
     "first-person Blender preparation" "donor-rest rebind and guarded 0.01 FBX position scale preserve Janfon's mesh and unit bone bases"
 Test-Condition ($firstPersonBsiToolText -match 'rebind_to_donor_rest' -and `
+    $firstPersonBsiToolText -match 'conform_mesh_to_donor_rest' -and `
     $firstPersonBsiToolText -match 'build_skin\(' -and `
     $firstPersonBsiToolText -match 'build_geometry\(' -and `
     $firstPersonBsiToolText -match 'bsi_format\.write' -and `
     $firstPersonBsiToolText -match 'material_names != \["p_main"\]' -and `
     $firstPersonBsiToolText -notmatch 'apply_stingray_basis_counter_scale') `
-    "first-person direct BSI preparation" "scene nodes and inverse binds share the exact donor-rebound coordinate space"
+    "first-person direct BSI preparation" "weighted mesh, scene nodes, and inverse binds share the donor-rest coordinate space"
 Test-Condition ($firstPersonUnitSceneText -match 'version != 189' -and `
     $firstPersonUnitSceneText -match 'channel_count \* 17' -and `
     $firstPersonUnitSceneText -match 'world_matrices' -and `
@@ -654,6 +655,10 @@ Test-Condition ($preflightText -match 'direct_loadouts.*item_interface:get_loado
 Test-Condition ($uiText -match 'request_spawn_hero_unit\(hero_name,' -and `
     $uiText -match 'window\._selected_career_index, true, spawn_callback') `
     "native selector preview" "Pusfume forces its base skin instead of the equipped Ranger skin"
+Test-Condition ($uiText -match 'mod:hook_safe\(UnitFramesHandler, "_sync_player_stats"' -and `
+    $uiText -match 'widget:set_portrait\("portrait_pusfume"\)' -and `
+    $preflightText -match 'add\(checks, "live HUD portrait hook"') `
+    "live HUD portrait" "custom portrait is reasserted after other unit-frame hooks"
 Test-Condition ($backendText -match 'unresolved.*slot_melee.*slot_ranged' -or `
     ($backendText -match 'slot_melee' -and $backendText -match 'slot_ranged')) `
     "spawn guard" "both default weapon slots are validated"

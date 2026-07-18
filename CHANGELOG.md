@@ -12,6 +12,24 @@ request rather than in release notes.
 
 ### Changed
 
+- Added the v0.6.23 first-person deformation and HUD candidate. The v0.6.22
+  live log proved direct donor links reached all arm/hand nodes with identity
+  root scale and zero positional error, while blocking still warped the mesh.
+  The direct-BSI pipeline now weight-deforms Janfon's mesh onto the donor joint
+  positions before adopting the donor axes and inverse binds, instead of moving
+  rotation pivots under an unchanged mesh. Blender rejected a full-axis bake
+  that displaced vertices by `1.1730m`; the accepted position-only bake moves
+  at most `0.1857m`, reproduces its target pose within `0.00000018`, and retains
+  the compiled 54-node maximum rest error of `0.00000310`.
+- Reasserted Pusfume's hero-selection identity widgets after vanilla updates
+  its selected indices, and added a final live `UnitFramesHandler` seam that
+  restores `portrait_pusfume` after other HUD/portrait hooks. Both paths emit
+  bounded runtime evidence and are represented in `/pusfume_preflight`.
+- Recorded that Janfon's current first-person handoff has no walk cycle. This
+  candidate does not synthesize one: the existing third-person walk remains
+  separate, while first-person arms inherit VT2's weapon/action poses.
+- Expanded the regression suite to 50 passing tests and made automatic
+  preflight summaries log every warning/failure detail instead of only totals.
 - Added the v0.6.22 animation candidate. Janfon's new 96-frame authored idle is
   packaged separately from the restored original 25-frame walk; the latter is
   rotation-retargeted from its 82-bone source onto the current 138-bone

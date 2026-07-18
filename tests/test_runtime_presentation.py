@@ -39,6 +39,14 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn('hero_name = mod:localize("pusfume_character_name")', self.ui)
         self.assertIn("install_identity_write_guard(HeroWindowCharacterSelectionConsole", self.ui)
         self.assertIn("install_identity_write_guard(CharacterSelectionStateCharacter", self.ui)
+        self.assertIn("hero_widget.content.text", self.ui)
+        self.assertIn("state.identity_widget_seen = true", self.ui)
+
+    def test_live_hud_reasserts_custom_portrait_after_other_mod_hooks(self):
+        self.assertIn('mod:hook_safe(UnitFramesHandler, "_sync_player_stats"', self.ui)
+        self.assertIn('career_name ~= registry.CAREER_NAME', self.ui)
+        self.assertIn('widget:set_portrait("portrait_pusfume")', self.ui)
+        self.assertIn("state.hud_portrait_seen = true", self.ui)
 
 
 if __name__ == "__main__":

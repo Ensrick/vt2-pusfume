@@ -21,6 +21,9 @@ local state = {
     previewer_purity_installed = false,
     preview_widget_seen = false,
     donor_preview_suppressed = false,
+    hud_hook_installed = false,
+    hud_portrait_seen = false,
+    identity_widget_seen = false,
     native_preview_enabled = false,
     selection_seen = false,
     target_column = nil,
@@ -292,6 +295,23 @@ local function sync_pusfume_identity(window, registry, profile_index, career_ind
         mod:localize("pusfume_character_name"),
         mod:localize("pusfume_career_name"),
         level)
+
+    -- Vanilla writes identity before updating its selected indices. Reassert
+    -- the final widget content after selection so hook order cannot blank it.
+    local widgets = window._widgets_by_name
+    local hero_widget = widgets and widgets.info_hero_name
+    local career_widget = widgets and widgets.info_career_name
+    local level_widget = widgets and widgets.info_hero_level
+    if hero_widget and career_widget and level_widget then
+        hero_widget.content.text = mod:localize("pusfume_character_name")
+        career_widget.content.text = mod:localize("pusfume_career_name")
+        level_widget.content.text = tostring(level)
+        if not state.identity_widget_seen then
+            state.identity_widget_seen = true
+            mod:info("[pusfume] Hero identity widgets restored name=%s career=%s level=%s",
+                hero_widget.content.text, career_widget.content.text, level_widget.content.text)
+        end
+    end
 end
 
 local function install_identity_write_guard(class, registry)
@@ -513,11 +533,46 @@ local function install_preview_hooks(registry, native)
     state.preview_hook_installed = true
 end
 
+local function install_hud_hook(registry)
+    if state.hud_hook_installed or not UnitFramesHandler then
+        return
+    end
+
+    mod:hook_safe(UnitFramesHandler, "_sync_player_stats", function(handler, unit_frame)
+        local player_data = unit_frame and unit_frame.player_data
+        local extensions = player_data and player_data.extensions
+        local career_extension = extensions and extensions.career
+        local career_name = career_extension and career_extension:career_name()
+
+        if career_name ~= registry.CAREER_NAME then
+            return
+        end
+
+        local widget = unit_frame.widget
+        local data = unit_frame.data
+        if not widget or not data then
+            return
+        end
+
+        if data.portrait_texture ~= "portrait_pusfume" then
+            data.portrait_texture = "portrait_pusfume"
+            widget:set_portrait("portrait_pusfume")
+        end
+
+        if not state.hud_portrait_seen then
+            state.hud_portrait_seen = true
+            mod:info("[pusfume] Live HUD portrait restored texture=portrait_pusfume")
+        end
+    end)
+    state.hud_hook_installed = true
+end
+
 function M.install(registry, native)
     install_modern_hooks(registry)
     install_legacy_hooks(registry)
     install_preview_hooks(registry, native)
     install_previewer_purity_hooks(registry, native)
+    install_hud_hook(registry)
 
     state.hook_installed = state.modern_hook_installed or state.legacy_hook_installed
 

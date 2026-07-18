@@ -280,6 +280,12 @@ function M.collect(registry, career_index, backend, compat, ui, native)
             or "not rendered yet; reopen the selection grid and rerun")
     add(checks, "Pusfume preview hook", ui_status.preview_hook_installed and "PASS" or "FAIL",
         ui_status.preview_hook_installed and "donor menu spawn is intercepted" or "preview hook unavailable")
+    add(checks, "hero identity widgets", ui_status.identity_widget_seen and "PASS" or "WARN",
+        ui_status.identity_widget_seen and "Pusfume name and career widgets survived final selection"
+            or "select Pusfume, then rerun preflight")
+    add(checks, "live HUD portrait hook", ui_status.hud_hook_installed and "PASS" or "FAIL",
+        ui_status.hud_portrait_seen and "portrait_pusfume was asserted on the live player unit frame"
+            or "hook is installed; spawn Pusfume to verify the live unit frame")
     if native_enabled then
         add(checks, "native hero preview", ui_status.native_preview_enabled and "PASS" or "WARN",
             ui_status.native_preview_enabled and "stock 3D previewer requested the Pusfume cosmetic"
@@ -346,9 +352,15 @@ function M.install(registry, career_index, backend, compat, ui, native)
 end
 
 function M.log_summary(registry, career_index, backend, compat, ui, native)
-    local totals = M.summarize(M.collect(registry, career_index, backend, compat, ui, native))
+    local checks = M.collect(registry, career_index, backend, compat, ui, native)
+    local totals = M.summarize(checks)
 
     mod:info("[pusfume] preflight summary pass=%d warn=%d fail=%d", totals.PASS, totals.WARN, totals.FAIL)
+    for _, check in ipairs(checks) do
+        if check.status ~= "PASS" then
+            mod:info("[pusfume] preflight %s %s: %s", check.status, check.name, check.detail)
+        end
+    end
 end
 
 return M

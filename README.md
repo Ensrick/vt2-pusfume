@@ -21,13 +21,13 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current friends-only live-test candidate is **v0.6.22-dev**. It keeps
-Janfon's new authored idle and the original walk as separate clips on the
-138-bone untouched Skaven rig. Source commit `83583ce` was uploaded to the
-friends-only Workshop item at 2026-07-18 14:42 America/Chicago; live verification
-and Steam ManifestID refresh remain pending.
-The previous v0.6.21 candidate was source commit `04caf66` and Workshop
-ManifestID `3411867430659936354`.
+The current friends-only live-test candidate is **v0.6.23-dev**. It keeps the
+working v0.6.22 third-person materials, authored idle, and restored original
+walk unchanged. For first person, it bakes Janfon's weighted arm mesh onto the
+Ranger donor's joint positions before installing the exact donor axes and bind
+matrices, addressing the block-pose warping seen with an unchanged mesh around
+moved pivots. Janfon's current first-person handoff has no walk cycle; VT2's
+native weapon/action poses remain the intended first-person animation source.
 Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,
@@ -72,7 +72,9 @@ SDK preserved donor bone positions but compiled every Blender bone basis at
 approximately `100x`. v0.6.17-v0.6.18 counter-scaled the armature object, while
 v0.6.19 corrected compiled scene nodes but still produced malformed live finger
 deformation. v0.6.21 bypasses that FBX unit conversion: its direct BSI export
-writes scene nodes and inverse binds from one donor-rebound Blender scene. The
+writes scene nodes and inverse binds from one donor-rebound Blender scene.
+v0.6.23 additionally conforms the weighted mesh to donor joint positions before
+the rebind, so those exact pivots no longer rotate inside Janfon's old shape. The
 build rejects the compiled unit unless all 54 donor-linked transforms match. It
 also requires the dedicated fur material whenever Janfon's untouched 138-bone
 body contains the integrated `p_fur` geometry.
@@ -81,10 +83,10 @@ The first-person material uses the same proven compiled skinned-child technique
 as the working third-person model. Animation cannot yet use the identical
 root-controller path because third person has Pusfume-authored idle/walk clips,
 while first person must inherit VT2's full weapon-action set from a donor with a
-different rest rig. v0.6.17 implements the durable path: the build parses the
-compiled donor unit, rebinds Janfon's arm mesh offline to its exact
-first-person rest skeleton, and rejects matrix drift or rest-mesh deformation
-both before and after Stingray compilation.
+different rest rig. The build parses the compiled donor unit, conforms and
+rebinds Janfon's arm mesh offline to its exact first-person rest skeleton, and
+rejects target-pose, matrix, weight, or post-rebind mesh drift before and after
+Stingray compilation.
 
 Moulder Ingenuity currently arms the next consumable selection and starts its
 cooldown, but it does not yet transform inventory. Aggressive Iteration records
