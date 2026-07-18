@@ -12,6 +12,9 @@ request rather than in release notes.
 
 ### Changed
 
+- Uploaded the locally hash-verified v0.6.18-dev eight-file package from source
+  commit `eaf7ae8` to friends-only Workshop item `3764954245`; Steam's UGC
+  uploader reported `Upload finished` at 2026-07-18 11:39 America/Chicago.
 - Added the v0.6.18 crash fix after the first v0.6.17 live spawn reached the
   new hero preview but asserted on legacy diagnostic bone `j_hand_L`. Native
   root-isolated builds now probe the untouched Skaven rig's `j_lefthand`, and
