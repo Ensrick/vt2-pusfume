@@ -34,6 +34,16 @@ $packagePath = Join-Path $repoRoot "pusfume\resource_packages\pusfume\pusfume.pa
 $previewPath = Join-Path $repoRoot "pusfume\textures\pusfume\pusfume_model_preview.png"
 $previewTexturePath = Join-Path $repoRoot "pusfume\textures\pusfume\pusfume_model_preview.texture"
 $previewMaterialPath = Join-Path $repoRoot "pusfume\materials\pusfume\pusfume_model_preview.material"
+$addonRoot = Join-Path $repoRoot "blender_addon\vt2_content_tools"
+$addonInitPath = Join-Path $addonRoot "__init__.py"
+$addonManifestPath = Join-Path $addonRoot "blender_manifest.toml"
+$addonCorePath = Join-Path $addonRoot "core.py"
+$addonLiveMirrorPath = Join-Path $addonRoot "live_mirror.py"
+$addonOperatorsPath = Join-Path $addonRoot "operators.py"
+$addonUiPath = Join-Path $addonRoot "ui.py"
+$addonValidationPath = Join-Path $addonRoot "validation.py"
+$addonPackagePath = Join-Path $repoRoot "tools\package_blender_addon.py"
+$addonBlenderTestPath = Join-Path $repoRoot "tools\test_vt2_content_tools_blender.py"
 $mainText = Get-Content -LiteralPath $mainPath -Raw
 $configText = Get-Content -LiteralPath $configPath -Raw
 $backendText = Get-Content -LiteralPath $backendPath -Raw
@@ -43,12 +53,71 @@ $assetsText = Get-Content -LiteralPath $assetsPath -Raw
 $uiText = Get-Content -LiteralPath $uiPath -Raw
 $dataText = Get-Content -LiteralPath $dataPath -Raw
 $packageText = Get-Content -LiteralPath $packagePath -Raw
+$addonInitText = Get-Content -LiteralPath $addonInitPath -Raw
+$addonManifestText = Get-Content -LiteralPath $addonManifestPath -Raw
+$addonCoreText = Get-Content -LiteralPath $addonCorePath -Raw
+$addonLiveMirrorText = Get-Content -LiteralPath $addonLiveMirrorPath -Raw
+$addonOperatorsText = Get-Content -LiteralPath $addonOperatorsPath -Raw
+$addonUiText = Get-Content -LiteralPath $addonUiPath -Raw
+$addonValidationText = Get-Content -LiteralPath $addonValidationPath -Raw
+$addonPackageText = Get-Content -LiteralPath $addonPackagePath -Raw
+$addonBlenderTestText = Get-Content -LiteralPath $addonBlenderTestPath -Raw
 $mainVersion = [regex]::Match($mainText, 'MOD_VERSION\s*=\s*"([^"]+)"').Groups[1].Value
 $configVersion = [regex]::Match($configText, 'Prototype v([^";]+)').Groups[1].Value
+$addonManifestVersion = [regex]::Match(
+    $addonManifestText, '(?m)^version\s*=\s*"([^"]+)"').Groups[1].Value
+$addonInitVersionMatch = [regex]::Match(
+    $addonInitText, '"version"\s*:\s*\((\d+),\s*(\d+),\s*(\d+)\)')
+$addonInitVersion = if ($addonInitVersionMatch.Success) {
+    $addonInitVersionMatch.Groups[1..3].Value -join "."
+} else { "" }
+$addonCoreVersionMatch = [regex]::Match(
+    $addonCoreText, 'VERSION\s*=\s*\((\d+),\s*(\d+),\s*(\d+)\)')
+$addonCoreVersion = if ($addonCoreVersionMatch.Success) {
+    $addonCoreVersionMatch.Groups[1..3].Value -join "."
+} else { "" }
 
 Test-Condition ($mainVersion -and $mainVersion -eq $configVersion) "version" "$mainVersion"
 Test-Condition ($configText -match 'visibility\s*=\s*"friends"') "Workshop visibility" "friends only"
 Test-Condition ($configText -match 'published_id\s*=\s*3764954245L') "Workshop identity" "3764954245"
+Test-Condition ((Test-Path -LiteralPath (Join-Path $addonRoot "__init__.py")) -and `
+    (Test-Path -LiteralPath (Join-Path $addonRoot "core.py")) -and `
+    (Test-Path -LiteralPath (Join-Path $addonRoot "live_mirror.py")) -and `
+    (Test-Path -LiteralPath (Join-Path $addonRoot "properties.py")) -and `
+    (Test-Path -LiteralPath (Join-Path $addonRoot "ui.py")) -and `
+    $addonManifestText -match 'id\s*=\s*"vt2_content_tools"' -and `
+    $addonManifestVersion -and `
+    $addonManifestVersion -eq $addonInitVersion -and `
+    $addonManifestVersion -eq $addonCoreVersion) `
+    "Blender content tools" "installable extension source and version $addonManifestVersion are complete"
+Test-Condition ($addonOperatorsText -match 'axis_forward="-Y"' -and `
+    $addonOperatorsText -match 'axis_up="Z"' -and `
+    $addonOperatorsText -match 'add_leaf_bones=False' -and `
+    $addonOperatorsText -match 'bake_anim_simplify_factor=0\.0' -and `
+    $addonOperatorsText -match 'source_blend.*Path\(bpy\.data\.filepath\)\.name') `
+    "Blender content tools" "FBX export uses the verified VT2 contract without leaking source paths"
+Test-Condition ($addonValidationText -match 'too_many_influences' -and `
+    $addonValidationText -match 'unknown_action_bones' -and `
+    $addonValidationText -match 'non_root_translation' -and `
+    $addonPackageText -match 'date_time=\(1980, 1, 1, 0, 0, 0\)' -and `
+    $addonBlenderTestText -match '5\.2\.0 LTS') `
+    "Blender content tools" "weight, animation, deterministic package, and Blender 5.2 acceptance gates are present"
+Test-Condition ($addonOperatorsText -match 'class VT2_OT_mirror_pose' -and `
+    $addonOperatorsText -match 'reflection @ source_pose @ reflection' -and `
+    $addonOperatorsText -match 'mirrored_rest\.inverted_safe\(\)' -and `
+    $addonBlenderTestText -match 'pose_mirror.*automatic bidirectional') `
+    "Blender content tools" "VT2 j_left/j_right poses are rest-corrected and tested in both directions"
+Test-Condition ((Test-Path -LiteralPath (Join-Path $addonRoot "live_mirror.py")) -and `
+    $addonLiveMirrorText -match 'def apply_live_pose_mirror' -and `
+    $addonLiveMirrorText -match 'mirrored_partner_name' -and `
+    $addonLiveMirrorText -match 'use_keyframe_insert_auto' -and `
+    $addonBlenderTestText -match 'Live j_right-to-j_left VT2 pose mirror failed' -and `
+    $addonBlenderTestText -match 'Live j_left-to-j_right VT2 pose mirror failed' -and `
+    $addonBlenderTestText -match 'did not honor Blender Auto Key' -and `
+    $addonUiText -notmatch 'mirror_direction' -and `
+    $addonUiText -notmatch 'mirror_axis' -and `
+    $addonUiText -notmatch 'vt2\.mirror_pose') `
+    "Blender content tools" "one-toggle live mirroring detects either side and follows Auto Key"
 Test-Condition (Test-Path (Join-Path $repoRoot "pusfume\resource_packages\pusfume\pusfume.package")) `
     "resource package" "package manifest exists"
 Test-Condition ($mainText -match 'assets\.install\(\)') "asset bridge" "installed at runtime"
