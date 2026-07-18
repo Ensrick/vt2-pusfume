@@ -11,6 +11,12 @@ architecture and reproduction contract are in
 
 ## Latest shipment
 
+- 2026-07-17 21:35 local: v0.6.12 LIVE RESULT / v0.6.13 CANDIDATE - the
+  retarget initialized all 53 pairs but reported `bounds_copied=false`; no hand
+  model was visible. Live hand-node separation remained 0.50-0.66m, proving the
+  clean Janfon rest pose is outside the donor camera anchors. v0.6.13 adds a
+  rigid two-hand-midpoint spine correction and disables first-person mesh-bound
+  culling. Pending build/upload/live test.
 - 2026-07-17 21:05 local: v0.6.11 LIVE RESULT / v0.6.12 CANDIDATE - the
   crash-safe probe reported one mesh, visibility enabled, identity root scale,
   and zero distance for all sampled source/target nodes while Janfon's arms

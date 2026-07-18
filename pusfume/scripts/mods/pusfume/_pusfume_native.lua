@@ -952,6 +952,9 @@ local function initialize_first_person_retarget(extension, source_rest_unit_name
     -- local transforms are Janfon's authored bind pose.
     local rest_source = unit_spawner:spawn_local_unit(source_rest_unit_name)
     local retarget_pairs = {}
+    local source_anchor_nodes = {}
+    local target_anchor_nodes = {}
+    local target_spine_node
 
     for _, pair in ipairs(pairs) do
         local source_node = Unit.node(rest_source, pair.source)
@@ -965,12 +968,22 @@ local function initialize_first_person_retarget(extension, source_rest_unit_name
             source_rest = Matrix4x4Box(Unit.local_pose(rest_source, source_node)),
             target_rest = Matrix4x4Box(Unit.local_pose(target, target_node)),
         }
+
+        if pair.source == "j_lefthand" or pair.source == "j_righthand" then
+            source_anchor_nodes[#source_anchor_nodes + 1] = source_node
+            target_anchor_nodes[#target_anchor_nodes + 1] = target_node
+        end
+        if pair.target == "j_spine1" then
+            target_spine_node = target_node
+        end
     end
 
     unit_spawner:mark_for_deletion(rest_source)
 
+    local source_lod_count = Unit.num_lod_objects(source)
+    local target_lod_count = Unit.num_lod_objects(target)
     local bounds_copied = false
-    if Unit.num_lod_objects(source) > 0 and Unit.num_lod_objects(target) > 0 then
+    if source_lod_count > 0 and target_lod_count > 0 then
         local source_lod = Unit.lod_object(source, 0)
         local target_lod = Unit.lod_object(target, 0)
 
@@ -981,14 +994,26 @@ local function initialize_first_person_retarget(extension, source_rest_unit_name
     extension._pusfume_first_person_retarget = {
         pairs = retarget_pairs,
         bounds_copied = bounds_copied,
+        source_lod_count = source_lod_count,
+        target_lod_count = target_lod_count,
+        source_anchor_nodes = source_anchor_nodes,
+        target_anchor_nodes = target_anchor_nodes,
+        target_spine_node = target_spine_node,
+        target_spine_parent_node = target_spine_node
+            and Unit.scene_graph_parent(target, target_spine_node),
+        anchor_correction = Vector3Box(Vector3.zero()),
+        anchor_error = 0,
         invalid_pose_logged = false,
     }
     state.first_person_retarget_initialized = true
     state.first_person_bounds_copied = bounds_copied
     mod:info(
-        "[pusfume] First-person rest retarget initialized pairs=%d bounds_copied=%s",
+        "[pusfume] First-person rest retarget initialized pairs=%d bounds_copied=%s lods=%d/%d anchors=%d",
         #retarget_pairs,
-        tostring(bounds_copied))
+        tostring(bounds_copied),
+        source_lod_count,
+        target_lod_count,
+        #source_anchor_nodes)
 
     return true
 end
@@ -1023,6 +1048,36 @@ local function update_first_person_retarget(extension)
                 pair.target)
         end
     end
+
+    if #retarget.source_anchor_nodes == 2 and #retarget.target_anchor_nodes == 2
+            and retarget.target_spine_node and retarget.target_spine_parent_node then
+        local source_anchor = (
+            Unit.world_position(source, retarget.source_anchor_nodes[1])
+            + Unit.world_position(source, retarget.source_anchor_nodes[2])) * 0.5
+        local target_anchor = (
+            Unit.world_position(target, retarget.target_anchor_nodes[1])
+            + Unit.world_position(target, retarget.target_anchor_nodes[2])) * 0.5
+        local correction = source_anchor - target_anchor
+        local spine_world_pose = Unit.world_pose(target, retarget.target_spine_node)
+
+        Matrix4x4.set_translation(
+            spine_world_pose,
+            Matrix4x4.translation(spine_world_pose) + correction)
+
+        local parent_world_pose = Unit.world_pose(target, retarget.target_spine_parent_node)
+        local spine_local_pose = Matrix4x4.multiply(
+            spine_world_pose,
+            Matrix4x4.inverse(parent_world_pose))
+
+        if Matrix4x4.is_valid(spine_local_pose) then
+            Unit.set_local_pose(target, retarget.target_spine_node, spine_local_pose)
+            retarget.anchor_correction:store(correction)
+            retarget.anchor_error = Vector3.length(correction)
+        elseif not retarget.invalid_pose_logged then
+            retarget.invalid_pose_logged = true
+            mod:error("[pusfume] First-person camera-anchor correction produced an invalid pose")
+        end
+    end
 end
 
 local function log_first_person_attachment_probe(extension)
@@ -1050,13 +1105,21 @@ local function log_first_person_attachment_probe(extension)
 
     extension._pusfume_first_person_probe_logged = true
     mod:info(
-        "[pusfume] First-person attachment probe meshes=%d mode=%s shown=%s retarget=%s bounds=%s root=%s scale=%s node_distance(%s)",
+        "[pusfume] First-person attachment probe meshes=%d mode=%s shown=%s retarget=%s bounds=%s lods=%s/%s anchor_error=%.4f anchor_delta=%s root=%s scale=%s node_distance(%s)",
         Unit.num_meshes(target),
         tostring(extension.first_person_mode),
         tostring(extension._show_first_person_units),
         tostring(extension._pusfume_first_person_retarget ~= nil),
         tostring(extension._pusfume_first_person_retarget
             and extension._pusfume_first_person_retarget.bounds_copied),
+        tostring(extension._pusfume_first_person_retarget
+            and extension._pusfume_first_person_retarget.source_lod_count),
+        tostring(extension._pusfume_first_person_retarget
+            and extension._pusfume_first_person_retarget.target_lod_count),
+        extension._pusfume_first_person_retarget
+            and extension._pusfume_first_person_retarget.anchor_error or 0,
+        tostring(extension._pusfume_first_person_retarget
+            and extension._pusfume_first_person_retarget.anchor_correction:unbox()),
         tostring(Unit.local_position(target, 0)),
         tostring(Unit.local_scale(target, 0)),
         table.concat(node_distances, ","))
@@ -1294,6 +1357,7 @@ function M.first_person_status()
         materials_applied = state.first_person_materials_applied,
         retarget_initialized = state.first_person_retarget_initialized == true,
         bounds_copied = state.first_person_bounds_copied == true,
+        camera_anchor = state.first_person_retarget_initialized == true,
     }
 end
 

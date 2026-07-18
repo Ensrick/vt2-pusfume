@@ -191,6 +191,12 @@ Test-Condition ($nativeText -match 'spawn_local_unit\(source_rest_unit_name\)' -
     $nativeText -match 'Unit\.set_local_pose\(target, pair\.target_node, target_pose\)' -and `
     $nativeText -match 'LODObject\.set_bounding_volume\(target_lod, LODObject\.bounding_volume\(source_lod\)\)') `
     "first-person rest retarget" "donor animation deltas preserve Janfon bind offsets and inherit donor bounds"
+Test-Condition ($nativeText -match 'source_anchor - target_anchor' -and `
+    $nativeText -match 'Unit\.world_pose\(target, retarget\.target_spine_node\)' -and `
+    $nativeText -match 'Unit\.set_local_pose\(target, retarget\.target_spine_node, spine_local_pose\)' -and `
+    $nativeText -match 'anchor_error = Vector3\.length\(correction\)' -and `
+    $nativeBuildText -match '(?s)pusfume_1p_arms = \{.*?culling = "disabled"') `
+    "first-person camera anchor" "rigid midpoint correction closes camera offset with mesh-bound culling disabled"
 Test-Condition ($preflightText -match 'mod:echo\("%s", string\.format\(') `
     "preflight output" "percent-bearing details cannot become VMF format strings"
 Test-Condition ($nativeText -match 'career\.name == registry\.CAREER_NAME' -and `

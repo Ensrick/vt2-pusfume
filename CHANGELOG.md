@@ -12,6 +12,16 @@ request rather than in release notes.
 
 ### Changed
 
+- Added the v0.6.13-dev first-person camera-anchor candidate after v0.6.12
+  initialized all 53 retarget pairs but rendered no visible hand model. Its
+  live hand nodes remained `0.50-0.66m` from VT2's animated hand locations.
+- Added a rigid per-frame spine translation that aligns Janfon's two-hand
+  midpoint to VT2's live two-hand midpoint after rotational retargeting. This
+  corrects camera placement without changing any authored bone length.
+- Disabled bounding-volume culling on the generated first-person renderable.
+  The runtime exposes zero LOD objects on the custom target, so donor LOD bounds
+  cannot be copied through `LODObject`; Stingray supports per-mesh disabled
+  culling for exactly this camera-linked case.
 - Added the v0.6.12-dev first-person rebind candidate after v0.6.11 rendered
   Janfon's arms as blinking sticks despite a live mesh, enabled visibility, and
   zero-distance attachment nodes.

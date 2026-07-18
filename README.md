@@ -21,8 +21,8 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current local and uploaded live-test candidate is **v0.6.12-dev**, Steam
-ManifestID `1512228345017462962`.
+The current local build candidate is **v0.6.13-dev**. The preceding uploaded
+candidate was v0.6.12-dev, Steam ManifestID `1512228345017462962`.
 Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,
@@ -45,6 +45,10 @@ the mesh was present and enabled, but absolute bone links collapsed the arms
 into blinking sticks. v0.6.12 replaces those links with a rest-relative
 rotation retarget that preserves Janfon's bind offsets and copies donor LOD
 bounds to the custom attachment.
+The v0.6.12 live test initialized all retarget pairs but left the clean rest-pose
+arms roughly half a metre outside VT2's live hand anchors. v0.6.13 rigidly
+aligns the two-hand midpoint after retargeting and disables mesh-bound culling
+for the first-person renderable; both changes preserve Janfon's bone lengths.
 
 Moulder Ingenuity currently arms the next consumable selection and starts its
 cooldown, but it does not yet transform inventory. Aggressive Iteration records

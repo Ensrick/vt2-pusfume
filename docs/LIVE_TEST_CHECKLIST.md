@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.12-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.13-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -9,7 +9,9 @@ Known-good native body/animation baseline: commit `0ffdf5a`, Workshop ManifestID
 `cb51156`, Workshop ManifestID `5832214133899576087` on
 `feat/22-first-person-arms`. That build's live mesh was visible but collapsed
 into blinking sticks. Current rest-relative retarget candidate: commit
-`b938d14`, Workshop ManifestID `1512228345017462962`.
+`b938d14`, Workshop ManifestID `1512228345017462962`. That build initialized
+all pairs but placed the clean arm rig outside the first-person view. v0.6.13
+adds rigid hand-midpoint camera anchoring and disables mesh-bound culling.
 
 ## Before opening Heroes
 
@@ -61,8 +63,8 @@ into blinking sticks. Current rest-relative retarget candidate: commit
 6. Confirm the arms follow VT2's native first-person poses without remaining in rest pose, separating from the camera rig, changing bone lengths, or stretching fingers.
 7. Enable Tweaker: General's third-person camera and confirm the established third-person body still animates and shades correctly.
 8. Run `/pusfume_preflight` after spawning. `native first-person arms` must report PASS; preserve the log if it reports WARN or FAIL.
-9. Check the log for `First-person rest retarget initialized`; it must report a nonzero pair count and `bounds_copied=true`.
-10. Check the delayed `First-person attachment probe`; it must report `retarget=true bounds=true` and no invalid-pose error.
+9. Check the log for `First-person rest retarget initialized`; it must report a nonzero pair count, `lods=0/0`, and `anchors=2`. `bounds_copied=false` is expected for the generated attachment.
+10. Check the delayed `First-person attachment probe`; it must report `retarget=true`, `lods=0/0`, and a finite `anchor_error`/`anchor_delta` with no invalid-pose error. `bounds=false` is expected because neither first-person unit exposes an LOD object.
 11. Treat Janfon's `positioningtest` clip as an unwired diagnostic asset in this candidate, not an expected looping gameplay animation.
 
 ## Career-kit smoke test
