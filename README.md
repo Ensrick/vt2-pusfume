@@ -21,7 +21,7 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current local live-test candidate is **v0.6.9-dev**. The latest uploaded
+The current local live-test candidate is **v0.6.10-dev**. The latest uploaded
 friends-only build remains v0.6.5-dev, Steam ManifestID
 `441804382456025179`. Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
@@ -35,9 +35,10 @@ visibility, deformation, and direct-UV material now require live verification
 before upload. v0.6.8 adopts the authoritative career specification v2.0 with
 100 HP, a 90-second Moulder Ingenuity cooldown, Aggressive Iteration capture,
 melee-only Scaredy-rat activation, and Swift Claws reload speed.
-v0.6.9 resets Janfon's first-person mesh to its authored bind pose before
-export and uses VT2's canonical upper-spine attachment, fixing the stretched
-stick-hand asset seen in v0.6.8.
+v0.6.9 reset Janfon's first-person mesh to its authored bind pose, eliminating
+the stretched stick-hand export but rendering no arms in the first live test.
+v0.6.10 retains that clean bind and isolates Janfon's spine adapter while
+logging the live attachment geometry needed for the next decision.
 
 Moulder Ingenuity currently arms the next consumable selection and starts its
 cooldown, but it does not yet transform inventory. Aggressive Iteration records

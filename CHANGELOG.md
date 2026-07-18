@@ -10,13 +10,20 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+### Changed
+
+- Advanced the live first-person A/B candidate to v0.6.10-dev after v0.6.9
+  loaded its custom unit and material successfully but rendered no arms.
+- Kept the corrected static bind export while restoring Janfon's known-visible
+  `j_spine2 -> j_spine1` donor adapter as the single deformation variable.
+- Added a delayed runtime probe for first-person mesh count, mode, root
+  transform, scale, and linked source/target node distances.
+
 ### Fixed
 
 - Reset Janfon's first-person armature to its authored rest pose before static
   export, removing the saved `positioningtest` NLA strip and 45 non-identity
   pose transforms that made the hands appear as stretched sticks in game.
-- Restored VT2's canonical `j_spine2` first-person attachment mapping instead
-  of driving Pusfume's upper-spine node from Bardin's `j_spine1`.
 - Added a Blender deformation diagnostic and a build-time rest-pose assertion.
   The corrected FBX holds edge stretch to `1.00003x`, down from `3.58596x`.
 - Imported VT2's canonical buff-perk lookup in both gameplay registration and

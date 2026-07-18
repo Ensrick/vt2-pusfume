@@ -923,6 +923,47 @@ local function apply_first_person_materials(extension, config)
     return true
 end
 
+local first_person_probe_nodes = {
+    "j_spine2",
+    "j_leftarm",
+    "j_lefthand",
+    "j_rightarm",
+    "j_righthand",
+}
+
+local function log_first_person_attachment_probe(extension)
+    if extension._pusfume_first_person_probe_logged then
+        return
+    end
+
+    local source = extension.first_person_unit
+    local target = extension.first_person_attachment_unit
+    if not source or not target or not Unit.alive(source) or not Unit.alive(target) then
+        return
+    end
+
+    local node_distances = {}
+    for _, node_name in ipairs(first_person_probe_nodes) do
+        local source_node = Unit.node(source, node_name)
+        local target_node = Unit.node(target, node_name)
+        local source_position = Unit.world_position(source, source_node)
+        local target_position = Unit.world_position(target, target_node)
+
+        node_distances[#node_distances + 1] = string.format(
+            "%s=%.4f", node_name, Vector3.distance(source_position, target_position))
+    end
+
+    extension._pusfume_first_person_probe_logged = true
+    mod:info(
+        "[pusfume] First-person attachment probe meshes=%d mode=%s shown=%s root=%s scale=%s node_distance(%s)",
+        Unit.num_meshes(target),
+        tostring(extension.first_person_mode),
+        tostring(extension._show_first_person_units),
+        tostring(Unit.local_position(target, 0)),
+        tostring(Unit.local_scale(target, 0)),
+        table.concat(node_distances, ","))
+end
+
 local function install_first_person_hook(registry, config)
     if not config.first_person_unit then
         return true
@@ -966,6 +1007,12 @@ local function install_first_person_hook(registry, config)
     mod:hook_safe(PlayerUnitFirstPerson, "update", function(extension)
         if extension._pusfume_first_person then
             apply_first_person_materials(extension, config)
+            extension._pusfume_first_person_probe_frames =
+                (extension._pusfume_first_person_probe_frames or 0) + 1
+
+            if extension._pusfume_first_person_probe_frames >= 30 then
+                log_first_person_attachment_probe(extension)
+            end
         end
     end)
     state.first_person_hook_installed = true

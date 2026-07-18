@@ -168,15 +168,19 @@ Test-Condition ($nativeBuildText -match 'processed_bundles\.csv' -and `
     $nativeBuildText -match 'units/pusfume/pusfume_1p_arms,unit') `
     "compiled asset manifest" "native build rejects omitted portrait or first-person resources"
 Test-Condition ($assetsText -match 'M\.first_person_attachment' -and `
-    $assetsText -match 'source = "j_spine2", target = "j_spine2"' -and `
+    $assetsText -match 'source = "j_spine2", target = "j_spine1"' -and `
     $assetsText -match '"j_lefthandindex4"' -and `
     $assetsText -match '"j_righthandthumb3"') `
-    "first-person bone bridge" "canonical VT2 parent nodes map to Janfon's 99-bone target"
+    "first-person bone bridge" "Janfon's spine adapter and shared parent nodes map to the 99-bone target"
 Test-Condition ($nativeText -match 'PlayerUnitFirstPerson, "init"' -and `
     $nativeText -match 'PlayerUnitFirstPerson, "update"' -and `
     $nativeText -match 'apply_first_person_materials' -and `
     $nativeText -match 'first_person_attachment') `
     "first-person runtime" "Pusfume arms attach and receive the late skinned material"
+Test-Condition ($nativeText -match 'First-person attachment probe meshes=%d' -and `
+    $nativeText -match 'Unit\.num_meshes\(target\)' -and `
+    $nativeText -match 'Vector3\.distance\(source_position, target_position\)') `
+    "first-person runtime probe" "live logs distinguish render visibility from node alignment"
 Test-Condition ($nativeText -match 'career\.name == registry\.CAREER_NAME' -and `
     $nativeText -match 'extension_init_data\.skin_name = config\.skin_name' -and `
     $nativeText -match 'extension_init_data\.skin_name = donor_skin_name' -and `

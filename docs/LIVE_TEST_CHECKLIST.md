@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.9-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.10-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -58,6 +58,7 @@ ManifestID `441804382456025179` on the current `feat/15-career-kit` branch.
 6. Enable Tweaker: General's third-person camera and confirm the established third-person body still animates and shades correctly.
 7. Run `/pusfume_preflight` after spawning. `native first-person arms` must report PASS; preserve the log if it reports WARN or FAIL.
 8. Treat Janfon's `positioningtest` clip as an unwired diagnostic asset in this candidate, not an expected looping gameplay animation.
+9. Preserve the log line beginning `First-person attachment probe`; v0.6.10 is an A/B visibility test of the spine adapter with the clean bind export.
 
 ## Career-kit smoke test
 
