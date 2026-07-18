@@ -19,20 +19,16 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn('Unit.flow_event(unit, "character_vo_set")', self.native)
         self.assertIn('career.sound_character = "dwarf_slayer"', self.registry)
 
-    def test_first_person_weapons_stay_hidden_for_hand_test(self):
+    def test_first_person_weapons_are_restored_for_prototype_loadout(self):
         self.assertIn('FIRST_PERSON_WEAPON_HIDE_REASON = "pusfume_hands_diagnostic"', self.native)
-        helper = self.native.split("local function hide_first_person_weapons", 1)[1].split(
+        helper = self.native.split("local function restore_first_person_weapons", 1)[1].split(
             "local DONOR_PACKAGE_REFERENCE", 1
-        )[0]
-        init_hook = self.native.split('mod:hook(PlayerUnitFirstPerson, "init"', 1)[1].split(
-            'mod:hook_safe(PlayerUnitFirstPerson, "update"', 1
         )[0]
 
         self.assertIn("if not extension.inventory_extension then", helper)
-        self.assertIn("extension:hide_weapons(FIRST_PERSON_WEAPON_HIDE_REASON, true)", helper)
-        self.assertNotIn("extension:hide_weapons", init_hook)
-        self.assertIn("extension._pusfume_weapon_hide_pending = true", init_hook)
-        self.assertIn("hide_first_person_weapons(extension)", self.native)
+        self.assertIn("extension:hide_weapons(FIRST_PERSON_WEAPON_HIDE_REASON, false)", helper)
+        self.assertIn("extension._pusfume_weapon_hide_pending = false", self.native)
+        self.assertIn("restore_first_person_weapons(extension)", self.native)
 
     def test_selector_name_is_guarded_at_final_write(self):
         self.assertIn('mod:hook(class, "_set_hero_info"', self.ui)
@@ -41,6 +37,10 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn("install_identity_write_guard(CharacterSelectionStateCharacter", self.ui)
         self.assertIn("hero_widget.content.text", self.ui)
         self.assertIn("state.identity_widget_seen = true", self.ui)
+        self.assertIn('mod:hook_safe(CharacterSelectionView, "set_current_hero"', self.ui)
+        self.assertIn('mod:hook_safe(HeroWindowCharacterInfo, "_update_hero_portrait_frame"', self.ui)
+        self.assertIn('mod:hook_safe(HeroViewStateLoot, "_setup_info_window"', self.ui)
+        self.assertNotIn("profile.character_name =", self.ui)
 
     def test_live_hud_reasserts_custom_portrait_after_other_mod_hooks(self):
         self.assertIn('mod:hook_safe(UnitFramesHandler, "_sync_player_stats"', self.ui)

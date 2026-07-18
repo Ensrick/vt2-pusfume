@@ -978,7 +978,7 @@ return {
     first_person_direct_link = $firstPersonDirectLinkValue,
     first_person_unit = $firstPersonUnitValue,
     hero_preview_enabled = $heroPreviewEnabled,
-    hide_donor_weapons = true,
+    hide_donor_weapons = false,
     locomotion_events_enabled = true,
     parent_child_material = $parentChildMaterialValue,
     parent_child_package = $parentChildPackageValue,

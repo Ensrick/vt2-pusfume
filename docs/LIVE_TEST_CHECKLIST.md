@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.23-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.24-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -36,6 +36,10 @@ material baseline while changing the first-person donor bind shape and adding
 explicit hero-identity/live-HUD portrait guards. Its source commit and Workshop
 upload are `6ecf623` and 2026-07-18 16:25 America/Chicago. Steam uploader
 reported success; live verification and a refreshed ManifestID remain pending.
+The v0.6.24 candidate adds fixed Pusfume-only Packmaster hook and Warpfire
+Thrower items, restores weapon visibility, and extends the career-scoped
+Pusfume name guard to selector and inventory surfaces. Its source commit,
+Workshop upload, and live result are pending.
 
 ## Before opening Heroes
 
@@ -62,7 +66,9 @@ reported success; live verification and a refreshed ManifestID remain pending.
 ## Spawn smoke test
 
 1. Run `/pusfume_status` and confirm `active=pusfume`.
-2. Equip a Ranger Veteran-compatible melee and ranged weapon.
+2. Confirm the fixed melee slot resolves **Packmaster Hook (Prototype)** and the
+   ranged slot resolves **Warpfire Thrower (Prototype)**. Ranger weapons should
+   not appear as Pusfume equipment.
 3. Open Talents and verify the temporary Ranger Veteran tree renders.
 4. Confirm ability, passive, and perk text displays normally with no `<pusfume_...>` placeholders.
 5. Use Moulder Ingenuity once. Confirm its 90-second cooldown starts, the armed
@@ -82,13 +88,14 @@ reported success; live verification and a refreshed ManifestID remain pending.
 1. Enter a mission in the normal first-person camera and leave the default weapon equipped for at least ten seconds.
 2. Confirm both arms remain continuously visible while looking up, down, left, and right; blinking is a failure of the LOD-bounds fix.
 3. Before moving, confirm the fingers retain Janfon's modeled proportions and do not appear as long, thin sticks.
-4. Confirm no first-person weapon or weapon light is visible in this diagnostic build, leaving both hands unobstructed.
+4. Confirm the Packmaster hook and Warpfire Thrower are visible, attached to the
+   expected hands, and do not make either arm disappear.
 5. Confirm the arms use Pusfume's direct-UV body textures with no green donor glow, atlas scrambling, or opaque whisker-style cards.
 6. Attack, block, push, reload, swap weapons, interact, revive, crouch, jump, dodge, and move in every direction.
 7. Confirm the arms follow VT2's native first-person poses without remaining in rest pose, separating from the camera rig, changing bone lengths, or stretching fingers.
 8. Enable Tweaker: General's third-person camera and confirm the established third-person body still animates and shades correctly.
 9. Run `/pusfume_preflight` after spawning. `native first-person arms` must report PASS; preserve the log if it reports WARN or FAIL.
-10. Check the log for `First-person donor-rest direct links active`. `First-person rest retarget initialized` must not appear for v0.6.23.
+10. Check the log for `First-person donor-rest direct links active`. `First-person rest retarget initialized` must not appear for v0.6.24.
 11. Check the delayed `First-person attachment probe`; it must report `direct=true`, `retarget=false`, and near-zero source/target node distances. Runtime anchor and limb corrections should remain zero because Blender already matched the compiled donor rest matrices.
 12. Treat Janfon's `positioningtest` clip as an unwired diagnostic asset. His current first-person handoff has no walk cycle; do not expect or report a Janfon-authored first-person walk in this candidate.
 

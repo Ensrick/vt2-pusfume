@@ -103,8 +103,9 @@ function M.refresh_item_permissions()
 
     for _, item in pairs(ItemMasterList or {}) do
         local can_wield = item.can_wield
+        local is_weapon = item.slot_type == "melee" or item.slot_type == "ranged"
 
-        if type(can_wield) == "table"
+        if not is_weapon and type(can_wield) == "table"
                 and can_wield ~= CanWieldAllItemTemplates
                 and contains(can_wield, M.DONOR_CAREER_NAME)
                 and not contains(can_wield, M.CAREER_NAME) then
@@ -125,8 +126,9 @@ function M.item_permission_status()
 
     for _, item in pairs(ItemMasterList or {}) do
         local can_wield = item.can_wield
+        local is_weapon = item.slot_type == "melee" or item.slot_type == "ranged"
 
-        if type(can_wield) == "table"
+        if not is_weapon and type(can_wield) == "table"
                 and can_wield ~= CanWieldAllItemTemplates
                 and contains(can_wield, M.DONOR_CAREER_NAME) then
             status.eligible = status.eligible + 1

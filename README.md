@@ -5,8 +5,8 @@ An experimental, friends-only Vermintide 2 custom-career project by Ensrick and 
 Steam Workshop development item: [Pusfume - Custom Career Prototype](https://steamcommunity.com/sharedfiles/filedetails/?id=3764954245)
 
 The current milestone registers **Pusfume** as Bardin's fifth career. Ranger
-Veteran's talent tree, backend loadout, weapons, and bot behavior remain
-temporary adapters. Pusfume now owns his v2 identity, Aggressive Iteration
+Veteran's talent tree and bot behavior remain temporary adapters. Pusfume now
+owns fixed prototype Packmaster-hook and Warpfire-Thrower items, his v2 identity, Aggressive Iteration
 special-kill capture, Moulder Ingenuity consumable-augmentation state, and
 three career perks. A full-size Pusfume card is placed one virtual UI row above Saltzpyre
 in the five-row selector and keeps the game's normal click, preview, and
@@ -21,16 +21,19 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current friends-only live-test candidate is **v0.6.23-dev**. It keeps the
+The current friends-only live-test candidate is **v0.6.24-dev**. It keeps the
 working v0.6.22 third-person materials, authored idle, and restored original
-walk unchanged. For first person, it bakes Janfon's weighted arm mesh onto the
+walk and v0.6.23 first-person bind unchanged. It replaces the shared Ranger
+weapon loadout with Pusfume-only prototype items that render the playable
+Versus Packmaster hook and Warpfire Thrower. Their action logic remains
+Adventure-safe: Bardin's two-handed-axe and drakegun actions drive Janfon's
+first-person hands instead of the Pactsworn-only Versus state machines.
+For first person, v0.6.23 baked Janfon's weighted arm mesh onto the
 Ranger donor's joint positions before installing the exact donor axes and bind
 matrices, addressing the block-pose warping seen with an unchanged mesh around
 moved pivots. Janfon's current first-person handoff has no walk cycle; VT2's
 native weapon/action poses remain the intended first-person animation source.
-Source commit `6ecf623` was uploaded to the friends-only Workshop item at
-2026-07-18 16:25 America/Chicago; live verification and Steam ManifestID refresh
-remain pending.
+The v0.6.24 source commit and Workshop upload are pending verification.
 Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,
@@ -108,7 +111,9 @@ animation coverage beyond idle/walk remain deferred.
 7. After spawning, enter `/pusfume_gameplay` to inspect poison blocks, Scaredy-rat, Aggressive Iteration, and guarded augmentation state.
 8. If the UI hook is unavailable after a game update, enter `/pusfume` in chat while in the Keep.
 
-Pusfume currently shares Ranger Veteran's equipped items and talents. Changing Pusfume's loadout therefore changes Ranger Veteran's donor loadout until custom persistence is implemented.
+Pusfume currently shares Ranger Veteran's talents and non-weapon backend
+adapters. His melee and ranged slots are fixed to the two Pusfume-only
+prototype items until custom persistence and a larger authored roster exist.
 
 Do not select Pusfume in a multiplayer lobby unless every connected player has the same Pusfume build enabled. The career uses a new synchronized career index; an unmodded peer cannot resolve it.
 

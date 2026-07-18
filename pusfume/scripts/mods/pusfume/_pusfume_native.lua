@@ -48,7 +48,7 @@ local PUSFUME_SOUND_CHARACTER = "dwarf_slayer"
 
 local installed_config
 
-local function hide_first_person_weapons(extension)
+local function restore_first_person_weapons(extension)
     -- VT2 assigns inventory_extension in extensions_ready(), after init.
     -- Calling the native hide API during construction crashes before that
     -- lifecycle boundary, so leave the request pending until it is available.
@@ -56,12 +56,12 @@ local function hide_first_person_weapons(extension)
         return false
     end
 
-    extension:hide_weapons(FIRST_PERSON_WEAPON_HIDE_REASON, true)
-    extension._pusfume_weapons_hidden = true
+    extension:hide_weapons(FIRST_PERSON_WEAPON_HIDE_REASON, false)
+    extension._pusfume_weapons_hidden = false
 
     if not extension._pusfume_weapon_hide_logged then
         extension._pusfume_weapon_hide_logged = true
-        mod:info("[pusfume] First-person weapons hidden for hand deformation testing")
+        mod:info("[pusfume] First-person weapons visible for Pusfume prototype loadout testing")
     end
 
     return true
@@ -1317,7 +1317,8 @@ local function install_first_person_hook(registry, config)
 
             extension_init_data.skin_name = donor_skin_name
             extension._pusfume_first_person = true
-            extension._pusfume_weapon_hide_pending = true
+            extension._pusfume_weapon_hide_pending = false
+            restore_first_person_weapons(extension)
             apply_first_person_materials(extension, config)
             if config.first_person_direct_link then
                 state.first_person_direct_link = true
@@ -1333,9 +1334,8 @@ local function install_first_person_hook(registry, config)
     end)
     mod:hook_safe(PlayerUnitFirstPerson, "update", function(extension)
         if extension._pusfume_first_person then
-            -- Wield and inventory updates can restore weapon visibility after
-            -- init, so keep the native hide reason asserted for this test build.
-            hide_first_person_weapons(extension)
+            -- Clear the old hand-diagnostic hide reason after hot reloads.
+            restore_first_person_weapons(extension)
             apply_first_person_materials(extension, config)
             if not config.first_person_direct_link then
                 update_first_person_retarget(extension)

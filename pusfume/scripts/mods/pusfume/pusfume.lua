@@ -1,6 +1,6 @@
 local mod = get_mod("pusfume")
 
-local MOD_VERSION = "0.6.23-dev"
+local MOD_VERSION = "0.6.24-dev"
 
 mod:info("[pusfume] loading v%s", MOD_VERSION)
 
@@ -9,6 +9,7 @@ local gameplay = mod:dofile("scripts/mods/pusfume/_pusfume_gameplay")
 local assets = mod:dofile("scripts/mods/pusfume/_pusfume_assets")
 local native_config = mod:dofile("scripts/mods/pusfume/_pusfume_native_config")
 local native = mod:dofile("scripts/mods/pusfume/_pusfume_native")
+local weapons = mod:dofile("scripts/mods/pusfume/_pusfume_weapons")
 local backend = mod:dofile("scripts/mods/pusfume/_pusfume_backend")
 local access = mod:dofile("scripts/mods/pusfume/_pusfume_access")
 local compat = mod:dofile("scripts/mods/pusfume/_pusfume_compat")
@@ -17,27 +18,29 @@ local ui = mod:dofile("scripts/mods/pusfume/_pusfume_ui")
 assets.install()
 gameplay.install()
 native.install(registry, native_config)
+weapons.install(registry)
 local career_index = registry.register()
-backend.install(registry)
+backend.install(registry, weapons)
 compat.install(registry)
 ui.install(registry, native)
 access.install(registry, career_index, ui)
-preflight.install(registry, career_index, backend, compat, ui, native)
+preflight.install(registry, career_index, backend, compat, ui, native, weapons)
 
 local function refresh_runtime_integrations()
     registry.refresh_career_color()
     registry.refresh_item_permissions()
     assets.install()
     native.install(registry, native_config)
-    backend.install(registry)
-    backend.install_runtime_guards(registry)
+    weapons.install(registry)
+    backend.install(registry, weapons)
+    backend.install_runtime_guards(registry, weapons)
     compat.install(registry)
     ui.install(registry, native)
 end
 
 mod.on_all_mods_loaded = function()
     refresh_runtime_integrations()
-    preflight.log_summary(registry, career_index, backend, compat, ui, native)
+    preflight.log_summary(registry, career_index, backend, compat, ui, native, weapons)
 end
 
 mod.on_game_state_changed = function()

@@ -10,6 +10,20 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Added the v0.6.24 weapon and identity candidate. Pusfume now owns fixed,
+  synchronized prototype items that render the shipped playable-Versus
+  Packmaster hook and Warpfire Thrower, while retaining Adventure-safe Bardin
+  action logic instead of invoking Pactsworn-only character states.
+- Restricted the two prototype weapons to Pusfume, stopped granting him every
+  Ranger Veteran weapon, and removed the first- and third-person diagnostic
+  seams that hid equipped weapon units.
+- Added career-scoped character-name guards to the selector header, inventory
+  character panel, and loot panel. Bardin's shared profile localization remains
+  unchanged for his four native careers.
+- Added runtime preflight coverage for item/template/network registration,
+  shipped weapon-unit availability, exact default loadout keys, and isolated
+  weapon permissions. Live gameplay and two-peer verification remain pending.
+
 ### Changed
 
 - Added the v0.6.23 first-person deformation and HUD candidate. The v0.6.22

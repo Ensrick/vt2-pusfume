@@ -45,6 +45,7 @@ function Test-ImageDimensions {
 $mainPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\pusfume.lua"
 $configPath = Join-Path $repoRoot "pusfume\itemV2.cfg"
 $backendPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_backend.lua"
+$weaponsPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_weapons.lua"
 $registryPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_registry.lua"
 $preflightPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_preflight.lua"
 $assetsPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_assets.lua"
@@ -81,6 +82,7 @@ $portraitTextureRoot = Join-Path $repoRoot "pusfume\gui\1080p\single_textures\pu
 $mainText = Get-Content -LiteralPath $mainPath -Raw
 $configText = Get-Content -LiteralPath $configPath -Raw
 $backendText = Get-Content -LiteralPath $backendPath -Raw
+$weaponsText = Get-Content -LiteralPath $weaponsPath -Raw
 $registryText = Get-Content -LiteralPath $registryPath -Raw
 $preflightText = Get-Content -LiteralPath $preflightPath -Raw
 $assetsText = Get-Content -LiteralPath $assetsPath -Raw
@@ -396,7 +398,7 @@ Test-Condition ($nativeText -match 'function M\.native_skin_name' -and `
     $uiText -match 'MenuWorldPreviewer, "_spawn_hero_unit"' -and `
     $uiText -match 'optional_skin = native_skin' -and `
     $uiText -match 'Unit\.enable_animation_state_machine\(mesh_unit\)') `
-    "menu preview purity" "menu previewers force the native skin, hide donor weapons, and start the mesh controller"
+    "menu preview purity" "menu previewers force the native skin and start the mesh controller"
 Test-Condition ($nativeConfigText -match 'parent_child_material\s*=\s*false' -and `
     $nativeConfigText -match 'parent_child_package\s*=\s*false' -and `
     $nativeConfigText -match 'whisker_child_material\s*=\s*false' -and `
@@ -499,11 +501,10 @@ Test-Condition ($backendText -match 'mod:hook\(LoadoutUtils, "properties_to_rpc_
     $backendText -notmatch 'wire_guard_enabled') `
     "loadout sync wire guard" "unencodable item properties and traits are stripped sender-side before the vanilla RPC encoder, unconditionally"
 Test-Condition ($nativeConfigText -match 'hide_donor_weapons\s*=\s*false' -and `
-    $nativeBuildText -match 'hide_donor_weapons\s*=\s*true' -and `
-    $nativeText -match 'function hide_donor_weapons' -and `
-    $nativeText -match 'Unit\.set_unit_visibility\(weapon_unit, false\)' -and `
-    $nativeText -match 'right_hand_wielded_unit_3p') `
-    "donor weapon hiding" "staged builds hide Bardin's third-person weapon units every update"
+    $nativeBuildText -match 'hide_donor_weapons\s*=\s*false' -and `
+    $nativeText -match 'hide_weapons\(FIRST_PERSON_WEAPON_HIDE_REASON, false\)' -and `
+    $uiText -notmatch 'Unit\.set_unit_visibility\(weapon_unit, false\)') `
+    "prototype weapon visibility" "staged builds clear the old diagnostic hide seams in first person and previews"
 Test-Condition ($idleFbxToolText -match 'j_tail1' -and `
     $idleFbxToolText -match 'BONE_MOTIONS' -and `
     $idleFbxToolText -match 'max_pose_delta < 0\.02') `
@@ -572,6 +573,23 @@ foreach ($portraitName in @("portrait_pusfume", "medium_portrait_pusfume", "smal
 }
 Test-Condition ($mainText -match 'registry\.refresh_item_permissions\(\)') `
     "item permissions" "late-loaded items are refreshed"
+Test-Condition ($mainText -match 'weapons\.install\(registry\)' -and `
+    $weaponsText -match 'pusfume_packmaster_hook' -and `
+    $weaponsText -match 'pusfume_warpfire_thrower' -and `
+    $weaponsText -match 'vs_packmaster_claw' -and `
+    $weaponsText -match 'vs_warpfire_thrower_gun' -and `
+    $weaponsText -match 'two_handed_axes_template_1' -and `
+    $weaponsText -match 'drakegun_template_1') `
+    "Pusfume weapon templates" "Versus units use Adventure-safe Ranger-compatible actions and attachment routing"
+Test-Condition ($weaponsText -match 'can_wield\s*=\s*\{ registry\.CAREER_NAME \}' -and `
+    $registryText -match 'local is_weapon = item\.slot_type == "melee" or item\.slot_type == "ranged"' -and `
+    $registryText -match 'if not is_weapon and type\(can_wield\)') `
+    "Pusfume weapon isolation" "prototype items are Pusfume-only and Ranger weapons are no longer inherited"
+Test-Condition ($weaponsText -match 'append_lookup\(NetworkLookup\.item_names, item_key\)' -and `
+    $weaponsText -match 'append_lookup\(NetworkLookup\.damage_sources, item_key\)' -and `
+    $backendText -match 'get_all_backend_items' -and `
+    $backendText -match 'weapons\.inject_backend_items') `
+    "Pusfume backend items" "stable owned-item records and synchronized network keys are injected into PlayFab"
 Test-Condition ($registryText -match 'function M\.refresh_career_color\(\)' -and `
     $registryText -match 'color_definitions\[M\.CAREER_NAME\]\s*=\s*deep_clone\(donor_color\)') `
     "career color" "Pusfume owns a distinct donor-derived color table"
@@ -641,14 +659,15 @@ Test-Condition ($nativeBuildText -match '\$cutAlphaEnabled = "false"' -and `
     "whisker alpha" "fractional whisker coverage survives texture compilation for the native alpha shader"
 Test-Condition ($preflightText -match 'add\(checks, "career color"') `
     "career color" "runtime preflight validates the player-list contract"
-Test-Condition ($backendText -match 'mod:hook\(BackendUtils, "get_loadout_item"') `
-    "spawn guard" "BackendUtils item resolution is donor-aliased"
+Test-Condition ($backendText -match 'mod:hook\(BackendUtils, "get_loadout_item"' -and `
+    $backendText -match 'weapons\.item_for_slot\(slot_name\)') `
+    "spawn guard" "BackendUtils resolves Pusfume's fixed weapon items before donor aliases"
 Test-Condition ($backendText -match 'function expose_donor_loadout' -and `
     $backendText -match 'donor_loadout = \{\}') `
     "loadout UI guard" "direct loadout table always exposes an iterable Pusfume entry"
 Test-Condition ($backendText -match 'function M\.refresh_runtime_aliases' -and `
-    $backendText -match 'store\[registry\.CAREER_NAME\] = store\[registry\.DONOR_CAREER_NAME\]') `
-    "loadout UI guard" "backend stores retain the alias across later instance hooks"
+    $backendText -match 'store\[registry\.CAREER_NAME\] = weapons\.overlay_loadout') `
+    "loadout UI guard" "backend stores retain donor cosmetics while overlaying Pusfume's own weapons"
 Test-Condition ($preflightText -match 'direct_loadouts.*item_interface:get_loadout\(\)' -and `
     $preflightText -match 'type\(direct_loadout\) == "table"') `
     "loadout UI guard" "preflight exercises the exact vanilla tooltip table API"
@@ -709,7 +728,7 @@ Test-Condition ($colorsText -match '(?s)dr_ranger\s*=\s*\{\s*255\s*,\s*187\s*,\s
 
 $hookSets = @{
     BackendInterfaceItemPlayfab = @(
-        "get_loadout", "get_bot_loadout", "set_loadout_index", "add_loadout", "delete_loadout",
+        "get_loadout", "get_bot_loadout", "get_all_backend_items", "set_loadout_index", "add_loadout", "delete_loadout",
         "set_default_override", "get_default_override", "get_career_loadouts",
         "get_selected_career_loadout", "get_default_loadouts", "get_loadout_by_career_name",
         "get_loadout_item_id", "get_cosmetic_loadout", "set_loadout_item"

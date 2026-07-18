@@ -23,6 +23,10 @@ local state = {
     donor_preview_suppressed = false,
     hud_hook_installed = false,
     hud_portrait_seen = false,
+    identity_surface_hooks_installed = false,
+    selector_identity_hook_installed = false,
+    character_info_identity_hook_installed = false,
+    loot_identity_hook_installed = false,
     identity_widget_seen = false,
     native_preview_enabled = false,
     selection_seen = false,
@@ -314,6 +318,40 @@ local function sync_pusfume_identity(window, registry, profile_index, career_ind
     end
 end
 
+local function is_pusfume_profile_career(registry, profile_index, career_index)
+    local profile = profile_index and SPProfiles[profile_index]
+
+    if not profile then
+        return false
+    end
+
+    if not career_index then
+        local hero_attributes = Managers.backend and Managers.backend:get_interface("hero_attributes")
+
+        career_index = hero_attributes and hero_attributes:get(profile.display_name, "career")
+    end
+
+    local career = career_index and profile.careers[career_index]
+
+    if career and career.name == registry.CAREER_NAME then
+        return true
+    end
+
+    local hero_attributes = Managers.backend and Managers.backend:get_interface("hero_attributes")
+    local active_index = hero_attributes and hero_attributes:get(profile.display_name, "career")
+
+    career = active_index and profile.careers[active_index]
+
+    return career and career.name == registry.CAREER_NAME
+end
+
+local function mark_identity_surface(surface)
+    if not state.identity_widget_seen then
+        state.identity_widget_seen = true
+        mod:info("[pusfume] Pusfume character name restored on %s", surface)
+    end
+end
+
 local function install_identity_write_guard(class, registry)
     if not class or not class._set_hero_info then
         return
@@ -330,6 +368,56 @@ local function install_identity_write_guard(class, registry)
 
         return func(window, hero_name, career_name, level)
     end)
+end
+
+local function install_identity_surface_hooks(registry)
+    if not state.selector_identity_hook_installed
+            and CharacterSelectionView and CharacterSelectionView.set_current_hero then
+        mod:hook_safe(CharacterSelectionView, "set_current_hero", function(view, profile_index)
+            local params = view._state_machine_params
+            local career_index = params and params.career_index
+
+            if is_pusfume_profile_career(registry, profile_index, career_index)
+                    and view._hero_name_text_widget then
+                view._hero_name_text_widget.content.text = mod:localize("pusfume_character_name")
+                mark_identity_surface("character selector header")
+            end
+        end)
+        state.selector_identity_hook_installed = true
+    end
+
+    if not state.character_info_identity_hook_installed
+            and HeroWindowCharacterInfo and HeroWindowCharacterInfo._update_hero_portrait_frame then
+        mod:hook_safe(HeroWindowCharacterInfo, "_update_hero_portrait_frame", function(window)
+            if is_pusfume_profile_career(registry, window.profile_index, window.career_index) then
+                local widget = window._widgets_by_name and window._widgets_by_name.hero_name
+
+                if widget then
+                    widget.content.text = mod:localize("pusfume_character_name")
+                    mark_identity_surface("inventory character panel")
+                end
+            end
+        end)
+        state.character_info_identity_hook_installed = true
+    end
+
+    if not state.loot_identity_hook_installed
+            and HeroViewStateLoot and HeroViewStateLoot._setup_info_window then
+        mod:hook_safe(HeroViewStateLoot, "_setup_info_window", function(view)
+            if is_pusfume_profile_career(registry, view.profile_index, view.career_index) then
+                local widget = view._widgets_by_name and view._widgets_by_name.info_text_title
+
+                if widget then
+                    widget.content.text = mod:localize("pusfume_character_name")
+                    mark_identity_surface("inventory loot panel")
+                end
+            end
+        end)
+        state.loot_identity_hook_installed = true
+    end
+
+    state.identity_surface_hooks_installed = state.selector_identity_hook_installed
+        and state.character_info_identity_hook_installed and state.loot_identity_hook_installed
 end
 
 local function install_modern_hooks(registry)
@@ -380,7 +468,8 @@ local function install_previewer_purity_hooks(registry, native)
     -- when the previewed career is Pusfume, force the native skin instead of
     -- the equipped donor Ranger skin (the inventory surface resolved the
     -- equipped loadout skin and therefore spawned Bardin), and flag the
-    -- previewer so its weapon and ammo units stay hidden.
+    -- previewer so the native character remains active while its Pusfume-only
+    -- prototype equipment is rendered normally.
     mod:hook(MenuWorldPreviewer, "request_spawn_hero_unit", function(func, previewer,
             profile_name, career_index, state_character, callback, optional_scale,
             camera_move_duration, optional_skin, reset_camera)
@@ -470,21 +559,6 @@ local function install_previewer_purity_hooks(registry, native)
 
         initialize_native_preview(previewer)
 
-        local equipment_units = previewer._equipment_units
-
-        if not equipment_units then
-            return
-        end
-
-        for _, hands in pairs(equipment_units) do
-            if type(hands) == "table" then
-                for _, weapon_unit in pairs(hands) do
-                    if weapon_unit and Unit.alive(weapon_unit) then
-                        Unit.set_unit_visibility(weapon_unit, false)
-                    end
-                end
-            end
-        end
     end)
 
     state.previewer_purity_installed = true
@@ -573,6 +647,7 @@ function M.install(registry, native)
     install_preview_hooks(registry, native)
     install_previewer_purity_hooks(registry, native)
     install_hud_hook(registry)
+    install_identity_surface_hooks(registry)
 
     state.hook_installed = state.modern_hook_installed or state.legacy_hook_installed
 

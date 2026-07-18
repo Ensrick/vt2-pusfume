@@ -8,6 +8,14 @@ return {
     pusfume_description = {
         en = "A Hell Pit survivor with a scheme for every problem and an exit for every scheme.",
     },
+    pusfume_packmaster_hook_name = { en = "Packmaster Hook (Prototype)" },
+    pusfume_packmaster_hook_description = {
+        en = "A recovered Packmaster hook using a temporary Adventure combat pattern.",
+    },
+    pusfume_warpfire_thrower_name = { en = "Warpfire Thrower (Prototype)" },
+    pusfume_warpfire_thrower_description = {
+        en = "A temperamental Warpfire Thrower using a temporary Adventure firing pattern.",
+    },
     pusfume_passive_name = { en = "Aggressive Iteration" },
     pusfume_passive_description = {
         en = "Killing a Special captures a minor form of its power for Pusfume's next ranged attack.",

@@ -34,7 +34,7 @@ local function backend_runtime_check(checks, registry)
     local direct_loadout = direct_loadouts and direct_loadouts[registry.CAREER_NAME]
 
     if donor_loadout and pusfume_loadout and type(direct_loadout) == "table" then
-        add(checks, "backend data", "PASS", "donor loadout is exposed through method and table APIs")
+        add(checks, "backend data", "PASS", "Pusfume loadout is exposed through method and table APIs")
     elseif donor_ok and pusfume_ok then
         add(checks, "backend data", "WARN", "loadout method or table alias is not materialized yet")
     else
@@ -42,7 +42,7 @@ local function backend_runtime_check(checks, registry)
     end
 end
 
-function M.collect(registry, career_index, backend, compat, ui, native)
+function M.collect(registry, career_index, backend, compat, ui, native, weapons)
     local checks = {}
     local career = CareerSettings and CareerSettings[registry.CAREER_NAME]
     local donor = CareerSettings and CareerSettings[registry.DONOR_CAREER_NAME]
@@ -164,6 +164,35 @@ function M.collect(registry, career_index, backend, compat, ui, native)
         string.format("configured=%d eligible=%d missing=%d", permissions.configured,
             permissions.eligible, permissions.missing))
 
+    local weapon_status = weapons.status()
+    local weapon_items_ready = weapon_status.installed
+
+    for _, slot_name in ipairs({ "slot_melee", "slot_ranged" }) do
+        local item_key = weapons.ITEM_KEYS[slot_name]
+        local item = ItemMasterList and rawget(ItemMasterList, item_key)
+        local can_wield = item and item.can_wield
+
+        weapon_items_ready = weapon_items_ready and item
+            and can_wield and #can_wield == 1 and can_wield[1] == registry.CAREER_NAME
+            and NetworkLookup and rawget(NetworkLookup.item_names, item_key)
+            and rawget(NetworkLookup.damage_sources, item_key)
+            and Weapons and rawget(Weapons, weapons.TEMPLATE_NAMES[slot_name])
+    end
+
+    add(checks, "Pusfume weapon registry", weapon_items_ready and "PASS" or "FAIL",
+        weapon_items_ready and "Packmaster hook and Warpfire Thrower are Pusfume-only synchronized items"
+            or "custom item, template, permission, or network lookup is missing")
+
+    local weapon_units_ready = true
+
+    for _, unit_path in pairs(weapons.UNIT_PATHS) do
+        weapon_units_ready = weapon_units_ready and Application.can_get("unit", unit_path)
+    end
+
+    add(checks, "Pusfume weapon units", weapon_units_ready and "PASS" or "FAIL",
+        weapon_units_ready and "shipped Versus Packmaster and Warpfire units resolve"
+            or "a shipped Versus weapon unit is unavailable")
+
     local backend_status = backend.status()
     local backend_hooks_ready = backend_status.installed
         and backend_status.hook_count == backend_status.expected_hook_count
@@ -175,8 +204,8 @@ function M.collect(registry, career_index, backend, compat, ui, native)
             backend_status.expected_hook_count, backend_status.runtime_guard_count,
             backend_status.expected_runtime_guard_count))
 
-    local weapons_ready, weapons_detail = backend.loadout_status(registry)
-    add(checks, "spawn weapons", weapons_ready == nil and "WARN" or weapons_ready and "PASS" or "FAIL",
+    local loadout_ready, weapons_detail = backend.loadout_status(registry, weapons)
+    add(checks, "spawn weapons", loadout_ready == nil and "WARN" or loadout_ready and "PASS" or "FAIL",
         weapons_detail)
 
     local aliases = compat.status().aliases
@@ -329,14 +358,15 @@ function M.summarize(checks)
     return totals
 end
 
-function M.install(registry, career_index, backend, compat, ui, native)
+function M.install(registry, career_index, backend, compat, ui, native, weapons)
     mod:command("pusfume_preflight", "Run Pusfume registration and runtime checks.", function()
         registry.refresh_item_permissions()
-        backend.install_runtime_guards(registry)
+        weapons.install(registry)
+        backend.install_runtime_guards(registry, weapons)
         compat.install(registry)
         ui.install(registry, native)
 
-        local checks = M.collect(registry, career_index, backend, compat, ui, native)
+        local checks = M.collect(registry, career_index, backend, compat, ui, native, weapons)
 
         for _, check in ipairs(checks) do
             mod:echo("%s", string.format(
@@ -351,8 +381,8 @@ function M.install(registry, career_index, backend, compat, ui, native)
     end)
 end
 
-function M.log_summary(registry, career_index, backend, compat, ui, native)
-    local checks = M.collect(registry, career_index, backend, compat, ui, native)
+function M.log_summary(registry, career_index, backend, compat, ui, native, weapons)
+    local checks = M.collect(registry, career_index, backend, compat, ui, native, weapons)
     local totals = M.summarize(checks)
 
     mod:info("[pusfume] preflight summary pass=%d warn=%d fail=%d", totals.PASS, totals.WARN, totals.FAIL)
