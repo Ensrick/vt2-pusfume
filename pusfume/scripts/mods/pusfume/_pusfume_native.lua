@@ -954,6 +954,7 @@ local function initialize_first_person_retarget(extension, source_rest_unit_name
     local retarget_pairs = {}
     local source_anchor_nodes = {}
     local target_anchor_nodes = {}
+    local target_limb_root_nodes = {}
     local target_spine_node
 
     for _, pair in ipairs(pairs) do
@@ -975,6 +976,10 @@ local function initialize_first_person_retarget(extension, source_rest_unit_name
         end
         if pair.target == "j_spine1" then
             target_spine_node = target_node
+        elseif pair.target == "j_leftarm" then
+            target_limb_root_nodes[1] = target_node
+        elseif pair.target == "j_rightarm" then
+            target_limb_root_nodes[2] = target_node
         end
     end
 
@@ -998,22 +1003,34 @@ local function initialize_first_person_retarget(extension, source_rest_unit_name
         target_lod_count = target_lod_count,
         source_anchor_nodes = source_anchor_nodes,
         target_anchor_nodes = target_anchor_nodes,
+        target_limb_root_nodes = target_limb_root_nodes,
+        target_limb_parent_nodes = {
+            Unit.scene_graph_parent(target, target_limb_root_nodes[1]),
+            Unit.scene_graph_parent(target, target_limb_root_nodes[2]),
+        },
         target_spine_node = target_spine_node,
         target_spine_parent_node = target_spine_node
             and Unit.scene_graph_parent(target, target_spine_node),
         anchor_correction = Vector3Box(Vector3.zero()),
         anchor_error = 0,
+        limb_corrections = {
+            Vector3Box(Vector3.zero()),
+            Vector3Box(Vector3.zero()),
+        },
+        limb_errors = { 0, 0 },
+        limb_residuals = { 0, 0 },
         invalid_pose_logged = false,
     }
     state.first_person_retarget_initialized = true
     state.first_person_bounds_copied = bounds_copied
     mod:info(
-        "[pusfume] First-person rest retarget initialized pairs=%d bounds_copied=%s lods=%d/%d anchors=%d",
+        "[pusfume] First-person rest retarget initialized pairs=%d bounds_copied=%s lods=%d/%d anchors=%d limbs=%d",
         #retarget_pairs,
         tostring(bounds_copied),
         source_lod_count,
         target_lod_count,
-        #source_anchor_nodes)
+        #source_anchor_nodes,
+        #target_limb_root_nodes)
 
     return true
 end
@@ -1078,6 +1095,44 @@ local function update_first_person_retarget(extension)
             mod:error("[pusfume] First-person camera-anchor correction produced an invalid pose")
         end
     end
+
+    if #retarget.source_anchor_nodes == 2 and #retarget.target_anchor_nodes == 2
+            and #retarget.target_limb_root_nodes == 2
+            and #retarget.target_limb_parent_nodes == 2 then
+        for index = 1, 2 do
+            local correction = Unit.world_position(source, retarget.source_anchor_nodes[index])
+                - Unit.world_position(target, retarget.target_anchor_nodes[index])
+            local limb_world_pose = Unit.world_pose(target, retarget.target_limb_root_nodes[index])
+
+            Matrix4x4.set_translation(
+                limb_world_pose,
+                Matrix4x4.translation(limb_world_pose) + correction)
+
+            local parent_world_pose = Unit.world_pose(
+                target,
+                retarget.target_limb_parent_nodes[index])
+            local limb_local_pose = Matrix4x4.multiply(
+                limb_world_pose,
+                Matrix4x4.inverse(parent_world_pose))
+
+            if Matrix4x4.is_valid(limb_local_pose) then
+                Unit.set_local_pose(
+                    target,
+                    retarget.target_limb_root_nodes[index],
+                    limb_local_pose)
+                retarget.limb_corrections[index]:store(correction)
+                retarget.limb_errors[index] = Vector3.length(correction)
+                retarget.limb_residuals[index] = Vector3.distance(
+                    Unit.world_position(source, retarget.source_anchor_nodes[index]),
+                    Unit.world_position(target, retarget.target_anchor_nodes[index]))
+            elseif not retarget.invalid_pose_logged then
+                retarget.invalid_pose_logged = true
+                mod:error(
+                    "[pusfume] First-person %s arm-anchor correction produced an invalid pose",
+                    index == 1 and "left" or "right")
+            end
+        end
+    end
 end
 
 local function log_first_person_attachment_probe(extension)
@@ -1105,7 +1160,7 @@ local function log_first_person_attachment_probe(extension)
 
     extension._pusfume_first_person_probe_logged = true
     mod:info(
-        "[pusfume] First-person attachment probe meshes=%d mode=%s shown=%s retarget=%s bounds=%s lods=%s/%s anchor_error=%.4f anchor_delta=%s root=%s scale=%s node_distance(%s)",
+        "[pusfume] First-person attachment probe meshes=%d mode=%s shown=%s retarget=%s bounds=%s lods=%s/%s anchor_error=%.4f anchor_delta=%s limb_error=%.4f/%.4f limb_residual=%.4f/%.4f limb_delta=%s/%s root=%s scale=%s node_distance(%s)",
         Unit.num_meshes(target),
         tostring(extension.first_person_mode),
         tostring(extension._show_first_person_units),
@@ -1120,6 +1175,18 @@ local function log_first_person_attachment_probe(extension)
             and extension._pusfume_first_person_retarget.anchor_error or 0,
         tostring(extension._pusfume_first_person_retarget
             and extension._pusfume_first_person_retarget.anchor_correction:unbox()),
+        extension._pusfume_first_person_retarget
+            and extension._pusfume_first_person_retarget.limb_errors[1] or 0,
+        extension._pusfume_first_person_retarget
+            and extension._pusfume_first_person_retarget.limb_errors[2] or 0,
+        extension._pusfume_first_person_retarget
+            and extension._pusfume_first_person_retarget.limb_residuals[1] or 0,
+        extension._pusfume_first_person_retarget
+            and extension._pusfume_first_person_retarget.limb_residuals[2] or 0,
+        tostring(extension._pusfume_first_person_retarget
+            and extension._pusfume_first_person_retarget.limb_corrections[1]:unbox()),
+        tostring(extension._pusfume_first_person_retarget
+            and extension._pusfume_first_person_retarget.limb_corrections[2]:unbox()),
         tostring(Unit.local_position(target, 0)),
         tostring(Unit.local_scale(target, 0)),
         table.concat(node_distances, ","))

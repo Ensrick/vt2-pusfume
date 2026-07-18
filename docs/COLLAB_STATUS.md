@@ -11,6 +11,12 @@ architecture and reproduction contract are in
 
 ## Latest shipment
 
+- 2026-07-17 22:05 local: v0.6.13 LIVE RESULT / v0.6.14 CANDIDATE - one mesh
+  was shown with materials, identity root scale, disabled culling, and a
+  `0.0044m` midpoint error, but each hand remained about `0.18m` from its live
+  donor hand and only two tiny black specks were visible. Blender independently
+  verified a `1.104m` mesh width and `0.827m` authored hand span. v0.6.14 adds
+  rigid per-arm-root corrections and residual diagnostics. Pending build/upload.
 - 2026-07-17 21:44 local: v0.6.12 LIVE RESULT / v0.6.13 SHIPPED - the
   retarget initialized all 53 pairs but reported `bounds_copied=false`; no hand
   model was visible. Live hand-node separation remained 0.50-0.66m, proving the

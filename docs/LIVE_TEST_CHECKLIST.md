@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.13-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.14-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -13,6 +13,9 @@ into blinking sticks. Current rest-relative retarget candidate: commit
 all pairs but placed the clean arm rig outside the first-person view. v0.6.13
 adds rigid hand-midpoint camera anchoring and disables mesh-bound culling:
 source commit `ccaec5a`, Workshop ManifestID `299222409316147201`.
+That live test showed only two tiny black specks: midpoint error was `0.0044m`,
+but each hand retained about `0.18m` error. v0.6.14 rigidly corrects each arm
+root after midpoint alignment; its source commit and manifest are pending.
 
 ## Before opening Heroes
 
@@ -65,7 +68,7 @@ source commit `ccaec5a`, Workshop ManifestID `299222409316147201`.
 7. Enable Tweaker: General's third-person camera and confirm the established third-person body still animates and shades correctly.
 8. Run `/pusfume_preflight` after spawning. `native first-person arms` must report PASS; preserve the log if it reports WARN or FAIL.
 9. Check the log for `First-person rest retarget initialized`; it must report a nonzero pair count, `lods=0/0`, and `anchors=2`. `bounds_copied=false` is expected for the generated attachment.
-10. Check the delayed `First-person attachment probe`; it must report `retarget=true`, `lods=0/0`, and a finite `anchor_error`/`anchor_delta` with no invalid-pose error. `bounds=false` is expected because neither first-person unit exposes an LOD object.
+10. Check the delayed `First-person attachment probe`; it must report `retarget=true`, `lods=0/0`, finite midpoint and limb corrections, and near-zero `limb_residual` values with no invalid-pose error. `bounds=false` is expected because neither first-person unit exposes an LOD object.
 11. Treat Janfon's `positioningtest` clip as an unwired diagnostic asset in this candidate, not an expected looping gameplay animation.
 
 ## Career-kit smoke test

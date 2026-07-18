@@ -12,6 +12,14 @@ request rather than in release notes.
 
 ### Changed
 
+- Added the v0.6.14-dev per-arm anchor candidate after v0.6.13 rendered two
+  tiny black specks. The live probe proved the mesh was shown, midpoint error
+  fell to `0.0044m`, but each hand remained about `0.18m` from its donor hand.
+- Added independent rigid translations at `j_leftarm` and `j_rightarm` after
+  midpoint alignment. Each complete arm now follows its corresponding VT2 hand
+  without scaling bones or returning to the collapsing absolute-node bridge.
+- Added per-side correction and residual diagnostics to distinguish successful
+  hand placement from remaining orientation, clipping, or material failures.
 - Added the v0.6.13-dev first-person camera-anchor candidate after v0.6.12
   initialized all 53 retarget pairs but rendered no visible hand model. Its
   live hand nodes remained `0.50-0.66m` from VT2's animated hand locations.
