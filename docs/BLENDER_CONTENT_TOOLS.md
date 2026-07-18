@@ -1,7 +1,7 @@
 # VT2 Content Tools for Blender 5.2
 
 VT2 Content Tools is the supported no-Maya authoring path for Janfon's Pusfume
-models and animations. Release `0.4.0` is acceptance-tested against **Blender
+models and animations. Release `0.5.0` is acceptance-tested against **Blender
 5.2.0 LTS** on Windows. Its extension manifest permits Blender 4.3 or newer,
 but 5.2.0 LTS is the project's primary tested version.
 
@@ -17,7 +17,7 @@ Build the installable package from the repository root:
 py -3 tools\package_blender_addon.py
 ```
 
-This writes `.build/dist/vt2_content_tools-0.4.0.zip`. In Blender 5.2:
+This writes `.build/dist/vt2_content_tools-0.5.0.zip`. In Blender 5.2:
 
 1. Open **Edit > Preferences > Get Extensions**.
 2. Open the menu and choose **Install from Disk**.
@@ -53,33 +53,42 @@ Transforms and n-gons are warnings rather than automatic edits. Apply or
 triangulate them deliberately after confirming the rest pose; the extension
 will not destructively guess at an artist's intent.
 
+### Animator rig versus game rig
+
+Janfon's `pusfume_unit_untouchedrig.blend` contains two intentionally different
+armatures: a 490-bone Rigify control rig for comfortable authoring and a
+138-bone `pusfume_slaverat_untouched` game rig carrying the original Skaven
+`j_*` hierarchy and dynamic/physics nodes. Keep both in the `.blend`, but export
+only the game rig and its bound `p_mainbody` mesh. With those two objects
+selected, use **Selected Character**; do not use **Whole Scene**. The extension
+then excludes the control rig, widget meshes, camera, light, and Blender's
+default cube. Janfon's hand-exported untouched FBX included that camera, light,
+and cube, so it is useful as a visual reference but not as the canonical game
+handoff.
+
+Keep the untouched version as the compatibility baseline for testing native
+Skaven clips. A second rig may add or remove authoring bones, but it is no
+longer a drop-in animation skeleton: existing-bone names, parents, rest
+matrices, and orientation must still be compared with the compiled donor, and
+custom deform bones require explicit retarget/link behavior. Dynamic bone
+names alone do not install VT2 physics; the compiled unit also needs matching
+physics/flow metadata.
+
 ## VT2 pose mirroring
 
 In Pose Mode, the **Pose Mirroring** panel pairs VT2 names such as
 `j_leftarm`/`j_rightarm` and `j_lefthand`/`j_righthand` without renaming the
 rig. Common `.L/.R`, `_L/_R`, and `-L/-R` pairs are also recognized.
 
-Choose **Left to Right** or **Right to Left**, select source-side bones, and
-press **Mirror VT2 Pose**. The default X axis is correct for the validated
-Pusfume scene; Y and Z remain available for rigs authored in another local
-orientation. The operator reflects each source pose in armature space, removes
-the reflected source rest transform, and reapplies the result to the actual
-destination rest transform. This preserves intentional asymmetry in the rest
-rig better than copying Euler values.
-
 Blender's native **X-Axis Mirror** does not pair names such as `j_leftarm` and
-`j_rightarm`. Enable **Live VT2 Mirror** in the VT2 sidebar instead. Choose the
-source direction and X axis, keep **Selected Source Bones Only** enabled, then
-transform a selected source bone in Pose Mode. The partner updates continuously
-without renaming the skeleton. Disable the toggle before intentionally editing
-the destination side. Live mirroring does not insert keys automatically; use
-**Mirror VT2 Pose** with **Insert Keyframes** for deliberate keyed poses.
-
-**Selected Source Bones Only** prevents accidental whole-rig changes. Enable
-**Insert Keyframes** when the mirrored destination should be keyed at the
-current frame. Destination constraints can override the result; the operator
-reports how many mirrored bones have constraints so the artist can inspect
-them rather than silently baking an unexpected pose.
+`j_rightarm`. Enable **Live VT2 Mirror** in the VT2 sidebar instead, then
+transform a selected bone on either side. The extension detects the changed
+side, reflects it across armature-local X, removes the reflected source rest
+transform, and reapplies the result to the actual partner rest transform. This
+preserves intentional rest-rig asymmetry better than copying Euler values and
+does not require a direction switch. When Blender **Auto Key** is enabled, the
+mirrored destination channels are keyed at the current frame automatically.
+Disable the toggle only when intentionally posing the two sides independently.
 
 ## Animation setup
 
@@ -111,6 +120,11 @@ the folder contains:
 - `textures/`: optional copies of external or packed images referenced by the
   exported Blender materials.
 
+The FBX deliberately does not embed textures. **Collect Textures** creates an
+explicit, inspectable handoff folder instead; turn it off when the receiving
+project already has the identical Pusfume body maps. The final SDK build
+deduplicates resources by their VT2 paths rather than relying on FBX packing.
+
 The JSON records only source basenames, never absolute local paths. Material
 tags are authoring metadata; they do not pretend to be compiled Stingray
 shaders. Skinned alpha cards still require the proven VT2 cutout material path
@@ -124,7 +138,7 @@ Run the normal tests, package validation, and the real Blender 5.2 fixture:
 py -3 -m unittest discover -s tests -v
 py -3 tools\package_blender_addon.py
 & "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" `
-  --command extension validate .build\dist\vt2_content_tools-0.4.0.zip
+  --command extension validate .build\dist\vt2_content_tools-0.5.0.zip
 & "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" `
   --background --factory-startup --disable-autoexec `
   --python tools\test_vt2_content_tools_blender.py -- `
@@ -132,8 +146,8 @@ py -3 tools\package_blender_addon.py
 ```
 
 The fixture intentionally creates five weights per vertex. A passing run must
-detect that failure, repair it to four normalized weights, mirror a VT2 arm
-pair accurately in both directions, reach zero errors, and produce both FBXs
+detect that failure, repair it to four normalized weights, seamlessly mirror a
+VT2 arm pair from either side with Auto Key propagation, reach zero errors, and produce both FBXs
 plus the handoff JSON under Blender `5.2.0 LTS`.
 
 ## Provenance boundary

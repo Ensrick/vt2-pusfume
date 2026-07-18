@@ -41,16 +41,10 @@ class VT2_PT_content_tools(bpy.types.Panel):
 
         mirror = layout.box()
         mirror.label(text="Pose Mirroring", icon="ARROW_LEFTRIGHT")
-        mirror.prop(settings, "mirror_direction", expand=True)
-        row = mirror.row(align=True)
-        row.prop(settings, "mirror_axis", expand=True)
-        mirror.prop(settings, "mirror_selected_only")
-        mirror.prop(settings, "mirror_insert_keyframes")
         live = mirror.row()
         live.prop(settings, "live_mirror_enabled", toggle=True, icon="CONSTRAINT_BONE")
         if settings.live_mirror_enabled:
-            mirror.label(text="Live mirror follows the selected source side.", icon="INFO")
-        mirror.operator("vt2.mirror_pose", icon="MOD_MIRROR")
+            mirror.label(text="Move either side; X mirror and Auto Key are automatic.", icon="INFO")
 
         export = layout.box()
         export.label(text="Export", icon="EXPORT")

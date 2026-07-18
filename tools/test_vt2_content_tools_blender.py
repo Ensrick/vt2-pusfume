@@ -83,6 +83,13 @@ def create_fixture(texture_path, reset_factory=True):
     pose_bone.keyframe_insert("rotation_quaternion", frame=1)
     pose_bone.rotation_quaternion = (0.995, 0.0, 0.1, 0.0)
     pose_bone.keyframe_insert("rotation_quaternion", frame=10)
+    constant_bone = armature.pose.bones["j_leftarm"]
+    constant_bone.location = (0.0, 0.0, 0.0)
+    constant_bone.scale = (1.0, 1.0, 1.0)
+    constant_bone.keyframe_insert("location", frame=1)
+    constant_bone.keyframe_insert("location", frame=10)
+    constant_bone.keyframe_insert("scale", frame=1)
+    constant_bone.keyframe_insert("scale", frame=10)
 
     bpy.context.scene.render.fps = 30
     bpy.ops.object.select_all(action="SELECT")
@@ -107,7 +114,8 @@ def expected_mirror(source, target, axis="X"):
     return mirrored_pose @ mirrored_rest.inverted_safe() @ target.bone.matrix_local
 
 
-def test_pose_mirroring(armature, settings, operators):
+def test_pose_mirroring(armature, settings, operators, live_mirror):
+    live_mirror.unregister_handlers()
     bpy.ops.object.select_all(action="DESELECT")
     armature.select_set(True)
     bpy.context.view_layer.objects.active = armature
@@ -144,20 +152,45 @@ def test_pose_mirroring(armature, settings, operators):
     if matrix_error(left.matrix, expected_left) > 1e-5:
         raise RuntimeError("Right-to-left VT2 pose mirror produced the wrong matrix")
 
-    for pose_bone in armature.pose.bones:
-        pose_bone.matrix_basis.identity()
-        pose_bone.select = False
-    right.select = True
-    armature.data.bones.active = right.bone
-    right.rotation_mode = "QUATERNION"
-    right.rotation_quaternion = Quaternion((0.0, 0.0, 1.0), 0.27)
-    bpy.context.view_layer.update()
-    expected_left = expected_mirror(right, left)
-    settings.live_mirror_enabled = True
-    live = operators.apply_pose_mirror(bpy.context, settings, changed_only=True)
-    if live["changed"] != 1 or matrix_error(left.matrix, expected_left) > 1e-5:
-        raise RuntimeError("Live j_right-to-j_left VT2 pose mirror failed")
-    settings.live_mirror_enabled = False
+    try:
+        for pose_bone in armature.pose.bones:
+            pose_bone.matrix_basis.identity()
+            pose_bone.select = False
+        right.select = True
+        armature.data.bones.active = right.bone
+        settings.live_mirror_enabled = True
+        live_mirror.reset_live_mirror_state(armature)
+        live_mirror.apply_live_pose_mirror(bpy.context)
+
+        right.rotation_mode = "QUATERNION"
+        right.rotation_quaternion = Quaternion((0.0, 0.0, 1.0), 0.27)
+        bpy.context.view_layer.update()
+        expected_left = expected_mirror(right, left)
+        live = live_mirror.apply_live_pose_mirror(bpy.context)
+        if live["changed"] != 1 or matrix_error(left.matrix, expected_left) > 1e-5:
+            raise RuntimeError("Live j_right-to-j_left VT2 pose mirror failed")
+
+        right.select = False
+        left.select = True
+        armature.data.bones.active = left.bone
+        left.rotation_quaternion = Quaternion((1.0, 0.0, 0.0), 0.31)
+        bpy.context.view_layer.update()
+        expected_right = expected_mirror(left, right)
+        live = live_mirror.apply_live_pose_mirror(bpy.context)
+        if live["changed"] != 1 or matrix_error(right.matrix, expected_right) > 1e-5:
+            raise RuntimeError("Live j_left-to-j_right VT2 pose mirror failed")
+
+        bpy.context.scene.tool_settings.use_keyframe_insert_auto = True
+        left.rotation_quaternion = Quaternion((0.0, 1.0, 0.0), -0.23)
+        bpy.context.view_layer.update()
+        live = live_mirror.apply_live_pose_mirror(bpy.context)
+        if live["keyed"] != 1:
+            raise RuntimeError("Live VT2 mirror did not honor Blender Auto Key")
+    finally:
+        bpy.context.scene.tool_settings.use_keyframe_insert_auto = False
+        settings.live_mirror_enabled = False
+        live_mirror.reset_live_mirror_state(armature)
+        live_mirror.register_handlers()
 
     for pose_bone in armature.pose.bones:
         pose_bone.matrix_basis.identity()
@@ -177,11 +210,15 @@ def main(repo_root, output_root, installed=False):
         operators = importlib.import_module(
             "bl_ext.user_default.vt2_content_tools.operators"
         )
+        live_mirror = importlib.import_module(
+            "bl_ext.user_default.vt2_content_tools.live_mirror"
+        )
     else:
         sys.path.insert(0, str(Path(repo_root) / "blender_addon"))
         vt2_content_tools = importlib.import_module("vt2_content_tools")
         validation = importlib.import_module("vt2_content_tools.validation")
         operators = importlib.import_module("vt2_content_tools.operators")
+        live_mirror = importlib.import_module("vt2_content_tools.live_mirror")
 
     output_root = Path(output_root)
     texture_path = output_root.parent / f"{output_root.name}-source" / "fixture_df.png"
@@ -199,7 +236,9 @@ def main(repo_root, output_root, installed=False):
     if None in collected:
         raise RuntimeError("Unbound Armature modifier injected None into export scope")
     mesh.modifiers.remove(mesh.modifiers["unbound_armature_reference"])
-    test_pose_mirroring(bpy.data.objects["fixture_rig"], settings, operators)
+    test_pose_mirroring(
+        bpy.data.objects["fixture_rig"], settings, operators, live_mirror
+    )
 
     bpy.ops.object.select_all(action="DESELECT")
     armature.select_set(True)
@@ -223,6 +262,9 @@ def main(repo_root, output_root, installed=False):
     after = validation.validate(bpy.context, settings)
     if after["summary"]["errors"]:
         raise RuntimeError(f"Fixture validation failed after repair: {after}")
+    noisy_channels = {"animated_scale", "non_root_translation"}
+    if noisy_channels.intersection(issue["code"] for issue in after["issues"]):
+        raise RuntimeError(f"Constant FBX bake channels produced warnings: {after}")
     if bpy.ops.vt2.export_handoff() != {"FINISHED"}:
         raise RuntimeError("VT2 handoff export operator failed")
 
@@ -254,7 +296,7 @@ def main(repo_root, output_root, installed=False):
                 "blender": bpy.app.version_string,
                 "files": sorted(expected),
                 "pre_repair_errors": before["summary"]["errors"],
-                "pose_mirror": "one-shot and live left-right/right-left",
+                "pose_mirror": "automatic bidirectional live mirror with Auto Key",
                 "warnings": after["summary"]["warnings"],
             },
             sort_keys=True,

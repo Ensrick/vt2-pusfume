@@ -109,8 +109,8 @@ class VT2ContentToolsSettings(bpy.types.PropertyGroup):
     live_mirror_enabled: bpy.props.BoolProperty(
         name="Live VT2 Mirror",
         description=(
-            "Continuously mirror selected j_left/j_right source bones in Pose Mode "
-            "without renaming the VT2 skeleton"
+            "Mirror whichever selected j_left/j_right partner is transformed in "
+            "Pose Mode and honor Blender Auto Key"
         ),
         default=False,
     )

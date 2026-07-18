@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 
 
-VERSION = (0, 4, 0)
+VERSION = (0, 5, 0)
 VERSION_STRING = ".".join(str(part) for part in VERSION)
 SAFE_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 POSE_PATH_PATTERN = re.compile(
@@ -19,6 +19,7 @@ MIRROR_MARKERS = (
     ("_L", "_R"),
     ("-L", "-R"),
 )
+VT2_BONE_PREFIX_EXCEPTIONS = {"aim_target", "root_point"}
 
 
 def safe_name(value, fallback="vt2_asset"):
@@ -55,6 +56,16 @@ def mirrored_bone_name(name, direction):
         )
         if source in name:
             return name.replace(source, target, 1)
+    return None
+
+
+def mirrored_partner_name(name):
+    """Return either side's partner without imposing an authoring direction."""
+    for left_marker, right_marker in MIRROR_MARKERS:
+        if left_marker in name:
+            return name.replace(left_marker, right_marker, 1)
+        if right_marker in name:
+            return name.replace(right_marker, left_marker, 1)
     return None
 
 

@@ -18,6 +18,7 @@ class PackageBlenderAddonTests(unittest.TestCase):
             self.assertEqual(result["id"], "vt2_content_tools")
             self.assertIn("blender_manifest.toml", names)
             self.assertIn("__init__.py", names)
+            self.assertIn("live_mirror.py", names)
             self.assertFalse(any("__pycache__" in name for name in names))
 
     def test_package_is_byte_deterministic(self):

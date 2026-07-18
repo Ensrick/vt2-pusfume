@@ -198,14 +198,22 @@ def _mirrored_pose_matrix(source_pose, source_rest, target_rest, axis):
 
 
 def _insert_pose_keys(pose_bone):
-    pose_bone.keyframe_insert(data_path="location")
+    options = {"INSERTKEY_NEEDED"}
+    keyed = pose_bone.keyframe_insert(data_path="location", options=options)
     if pose_bone.rotation_mode == "QUATERNION":
-        pose_bone.keyframe_insert(data_path="rotation_quaternion")
+        keyed = pose_bone.keyframe_insert(
+            data_path="rotation_quaternion", options=options
+        ) or keyed
     elif pose_bone.rotation_mode == "AXIS_ANGLE":
-        pose_bone.keyframe_insert(data_path="rotation_axis_angle")
+        keyed = pose_bone.keyframe_insert(
+            data_path="rotation_axis_angle", options=options
+        ) or keyed
     else:
-        pose_bone.keyframe_insert(data_path="rotation_euler")
-    pose_bone.keyframe_insert(data_path="scale")
+        keyed = pose_bone.keyframe_insert(
+            data_path="rotation_euler", options=options
+        ) or keyed
+    keyed = pose_bone.keyframe_insert(data_path="scale", options=options) or keyed
+    return keyed
 
 
 def _matrix_error(first, second):
@@ -216,8 +224,46 @@ def _matrix_error(first, second):
     )
 
 
+def apply_pose_pairs(context, pairs, *, axis="X", insert_keyframes=False):
+    """Mirror explicit source/target pairs in dependency-safe hierarchy order."""
+    armature = context.object
+    snapshots = {
+        source_name: armature.pose.bones[source_name].matrix.copy()
+        for source_name, _ in pairs
+    }
+    pairs.sort(key=lambda pair: len(armature.pose.bones[pair[0]].parent_recursive))
+
+    changed = 0
+    constrained = 0
+    keyed = 0
+    for source_name, target_name in pairs:
+        source = armature.pose.bones[source_name]
+        target = armature.pose.bones[target_name]
+        mirrored = _mirrored_pose_matrix(
+            snapshots[source_name],
+            source.bone.matrix_local,
+            target.bone.matrix_local,
+            axis,
+        )
+        if _matrix_error(target.matrix, mirrored) <= 1e-6:
+            continue
+        target.matrix = mirrored
+        context.view_layer.update()
+        changed += 1
+        if target.constraints:
+            constrained += 1
+        if insert_keyframes:
+            keyed += int(_insert_pose_keys(target))
+    return {
+        "pairs": len(pairs),
+        "changed": changed,
+        "constrained": constrained,
+        "keyed": keyed,
+    }
+
+
 def apply_pose_mirror(context, settings, *, insert_keyframes=False, changed_only=False):
-    """Apply configured VT2 bone-pair mirroring and return operation statistics."""
+    """Apply the legacy configured one-shot mirror for saved-file compatibility."""
     armature = context.object
     selected = (
         {bone.name for bone in armature.pose.bones if bone.select}
@@ -229,33 +275,27 @@ def apply_pose_mirror(context, settings, *, insert_keyframes=False, changed_only
         settings.mirror_direction,
         selected_names=selected,
     )
-    snapshots = {
-        source_name: armature.pose.bones[source_name].matrix.copy()
-        for source_name, _ in pairs
-    }
-    pairs.sort(key=lambda pair: len(armature.pose.bones[pair[0]].parent_recursive))
-
-    changed = 0
-    constrained = 0
-    for source_name, target_name in pairs:
-        source = armature.pose.bones[source_name]
-        target = armature.pose.bones[target_name]
-        mirrored = _mirrored_pose_matrix(
-            snapshots[source_name],
-            source.bone.matrix_local,
-            target.bone.matrix_local,
-            settings.mirror_axis,
-        )
-        if changed_only and _matrix_error(target.matrix, mirrored) <= 1e-6:
-            continue
-        target.matrix = mirrored
-        context.view_layer.update()
-        changed += 1
-        if target.constraints:
-            constrained += 1
-        if insert_keyframes:
-            _insert_pose_keys(target)
-    return {"pairs": len(pairs), "changed": changed, "constrained": constrained}
+    if changed_only:
+        pairs = [
+            pair
+            for pair in pairs
+            if _matrix_error(
+                armature.pose.bones[pair[1]].matrix,
+                _mirrored_pose_matrix(
+                    armature.pose.bones[pair[0]].matrix,
+                    armature.pose.bones[pair[0]].bone.matrix_local,
+                    armature.pose.bones[pair[1]].bone.matrix_local,
+                    settings.mirror_axis,
+                ),
+            )
+            > 1e-6
+        ]
+    return apply_pose_pairs(
+        context,
+        pairs,
+        axis=settings.mirror_axis,
+        insert_keyframes=insert_keyframes,
+    )
 
 
 class VT2_OT_validate(bpy.types.Operator):

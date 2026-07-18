@@ -93,17 +93,30 @@ def armatures_for_objects(objects):
     return sorted(armatures, key=lambda item: item.name)
 
 
-def action_data_paths(action):
+def action_fcurves(action):
     if action is None:
         return []
     if hasattr(action, "fcurves"):
-        return [curve.data_path for curve in action.fcurves]
+        return list(action.fcurves)
 
-    paths = []
+    curves = []
     for layer in getattr(action, "layers", ()):
         for strip in getattr(layer, "strips", ()):
             for channelbag in getattr(strip, "channelbags", ()):
-                paths.extend(curve.data_path for curve in channelbag.fcurves)
+                curves.extend(channelbag.fcurves)
+    return curves
+
+
+def action_data_paths(action):
+    return [curve.data_path for curve in action_fcurves(action)]
+
+
+def varying_action_data_paths(action, tolerance=1e-6):
+    paths = []
+    for curve in action_fcurves(action):
+        values = [point.co[1] for point in curve.keyframe_points]
+        if values and max(values) - min(values) > tolerance:
+            paths.append(curve.data_path)
     return paths
 
 
@@ -132,6 +145,26 @@ def _weight_rows(mesh, bone_names):
                 unknown_groups.add(name)
         rows.append(weights)
     return rows, sorted(name for name in unknown_groups if name)
+
+
+def _vertices_by_material(mesh, vertex_indices):
+    requested = set(vertex_indices)
+    material_vertices = {}
+    for polygon in mesh.data.polygons:
+        matched = requested.intersection(polygon.vertices)
+        if not matched:
+            continue
+        material = (
+            mesh.data.materials[polygon.material_index]
+            if polygon.material_index < len(mesh.data.materials)
+            else None
+        )
+        name = material.name if material else f"slot_{polygon.material_index}"
+        material_vertices.setdefault(name, set()).update(matched)
+    return {
+        name: len(vertices)
+        for name, vertices in sorted(material_vertices.items())
+    }
 
 
 def _mesh_record(mesh, armature, settings, issues):
@@ -237,11 +270,23 @@ def _mesh_record(mesh, armature, settings, issues):
         "unweighted": len(weights["unweighted"]),
     }
     if weights["unweighted"]:
+        unweighted_by_material = _vertices_by_material(
+            mesh, weights["unweighted"]
+        )
+        record["weights"]["unweighted_by_material"] = unweighted_by_material
+        distribution = ", ".join(
+            f"{name}={count}"
+            for name, count in sorted(
+                unweighted_by_material.items(),
+                key=lambda item: (-item[1], item[0]),
+            )[:4]
+        )
         issues.append(
             core.issue(
                 "ERROR",
                 "unweighted_vertices",
-                f"{len(weights['unweighted'])} vertices have no exported bone weight.",
+                f"{len(weights['unweighted'])} vertices have no exported bone weight"
+                + (f" ({distribution})." if distribution else "."),
                 mesh.name,
             )
         )
@@ -344,7 +389,9 @@ def validate(context, settings):
             unexpected = [
                 bone.name
                 for bone in bones
-                if bone.use_deform and not bone.name.startswith(settings.bone_prefix)
+                if bone.use_deform
+                and not bone.name.startswith(settings.bone_prefix)
+                and bone.name not in core.VT2_BONE_PREFIX_EXCEPTIONS
             ]
             if unexpected:
                 issues.append(
@@ -374,8 +421,14 @@ def validate(context, settings):
                 )
             else:
                 paths = action_data_paths(action)
+                varying_paths = varying_action_data_paths(action)
                 classified = core.classify_action_paths(
                     paths,
+                    {bone.name for bone in bones},
+                    {bone.name for bone in roots},
+                )
+                varying = core.classify_action_paths(
+                    varying_paths,
                     {bone.name for bone in bones},
                     {bone.name for bone in roots},
                 )
@@ -384,6 +437,7 @@ def validate(context, settings):
                     "frame_end": float(action.frame_range[1]),
                     "frame_start": float(action.frame_range[0]),
                     "name": action.name,
+                    "varying_channels": len(varying_paths),
                 }
                 if classified["unknown_bones"]:
                     issues.append(
@@ -395,21 +449,21 @@ def validate(context, settings):
                             armature.name,
                         )
                     )
-                if classified["scale"]:
+                if varying["scale"]:
                     issues.append(
                         core.issue(
                             "WARNING",
                             "animated_scale",
-                            f"Action animates scale on {len(classified['scale'])} bones; rotation-only clips are safest.",
+                            f"Action changes scale on {len(varying['scale'])} bones; rotation-only clips are safest.",
                             armature.name,
                         )
                     )
-                if classified["non_root_location"]:
+                if varying["non_root_location"]:
                     issues.append(
                         core.issue(
                             "WARNING",
                             "non_root_translation",
-                            f"Action translates {len(classified['non_root_location'])} non-root bones; verify Stingray playback.",
+                            f"Action translates {len(varying['non_root_location'])} non-root bones; verify Stingray playback.",
                             armature.name,
                         )
                     )

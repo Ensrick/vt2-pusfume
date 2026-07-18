@@ -71,6 +71,12 @@ class Vt2ContentToolsCoreTests(unittest.TestCase):
         )
         self.assertIsNone(core.mirrored_bone_name("j_spine", "LEFT_TO_RIGHT"))
 
+    def test_mirrored_partner_is_bidirectional(self):
+        self.assertEqual(core.mirrored_partner_name("j_leftarm"), "j_rightarm")
+        self.assertEqual(core.mirrored_partner_name("j_rightarm"), "j_leftarm")
+        self.assertEqual(core.mirrored_partner_name("finger.L"), "finger.R")
+        self.assertIsNone(core.mirrored_partner_name("j_spine"))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -16,9 +16,9 @@ Pusfume native-character pipeline and exports predictable FBX handoffs.
 - A JSON handoff manifest with validation results, file sizes, and SHA-256
   hashes, but no absolute machine paths.
 - Material tags for opaque skin, skinned alpha cards, and eye/emissive surfaces.
-- One-shot and live Pose Mode mirroring for VT2 `j_left*`/`j_right*` names
-  without renaming bones, with either direction, selectable mirror axis,
-  selected-only scope, and optional one-shot keyframe insertion.
+- Seamless live Pose Mode mirroring for VT2 `j_left*`/`j_right*` names without
+  renaming bones. Transform either selected side; X reflection and destination
+  keyframes follow automatically when Blender Auto Key is enabled.
 
 ## Boundary
 
