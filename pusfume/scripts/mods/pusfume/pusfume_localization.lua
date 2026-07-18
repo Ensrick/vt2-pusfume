@@ -8,13 +8,33 @@ return {
     pusfume_description = {
         en = "A Hell Pit survivor with a scheme for every problem and an exit for every scheme.",
     },
-    pusfume_packmaster_hook_name = { en = "Packmaster Hook (Prototype)" },
-    pusfume_packmaster_hook_description = {
-        en = "A recovered Packmaster hook using a temporary Adventure combat pattern.",
+    pusfume_packmaster_claw_name = { en = "Packmaster Hook (Versus Test)" },
+    pusfume_packmaster_claw_description = {
+        en = "A Pusfume-only clone of the playable Versus Packmaster weapon contract.",
     },
-    pusfume_warpfire_thrower_name = { en = "Warpfire Thrower (Prototype)" },
+    pusfume_packmaster_hook_name = { en = "Packmaster Hook (Versus Test)" },
+    pusfume_packmaster_hook_description = {
+        en = "A Pusfume-only clone of the playable Versus Packmaster weapon contract.",
+    },
+    pusfume_gutter_runner_claws_name = { en = "Gutter Runner Claws (Versus Test)" },
+    pusfume_gutter_runner_claws_description = {
+        en = "A Pusfume-only clone of the playable Versus Gutter Runner weapon contract.",
+    },
+    pusfume_poison_wind_globe_name = { en = "Poison Wind Globe (Versus Test)" },
+    pusfume_poison_wind_globe_description = {
+        en = "A Pusfume-only clone of the playable Versus Poison Wind Globadier weapon contract.",
+    },
+    pusfume_ratling_gun_name = { en = "Ratling Gun (Versus Test)" },
+    pusfume_ratling_gun_description = {
+        en = "A Pusfume-only clone of the playable Versus Ratling Gunner weapon contract.",
+    },
+    pusfume_warpfire_thrower_name = { en = "Warpfire Thrower (Versus Test)" },
     pusfume_warpfire_thrower_description = {
-        en = "A temperamental Warpfire Thrower using a temporary Adventure firing pattern.",
+        en = "A Pusfume-only clone of the playable Versus Warpfire Thrower weapon contract.",
+    },
+    pusfume_rat_ogre_hands_name = { en = "Rat Ogre Hands (Versus Test)" },
+    pusfume_rat_ogre_hands_description = {
+        en = "A Pusfume-only clone of the playable Versus Rat Ogre weapon contract.",
     },
     pusfume_passive_name = { en = "Aggressive Iteration" },
     pusfume_passive_description = {

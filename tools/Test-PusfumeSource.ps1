@@ -574,13 +574,19 @@ foreach ($portraitName in @("portrait_pusfume", "medium_portrait_pusfume", "smal
 Test-Condition ($mainText -match 'registry\.refresh_item_permissions\(\)') `
     "item permissions" "late-loaded items are refreshed"
 Test-Condition ($mainText -match 'weapons\.install\(registry\)' -and `
-    $weaponsText -match 'pusfume_packmaster_hook' -and `
+    $weaponsText -match 'M\.TEST_WEAPON_ORDER' -and `
+    $weaponsText -match 'pusfume_packmaster_claw' -and `
+    $weaponsText -match 'vs_gutter_runner_claws' -and `
     $weaponsText -match 'pusfume_warpfire_thrower' -and `
     $weaponsText -match 'vs_packmaster_claw' -and `
+    $weaponsText -match 'vs_poison_wind_globadier_orb' -and `
+    $weaponsText -match 'vs_ratling_gunner_gun' -and `
     $weaponsText -match 'vs_warpfire_thrower_gun' -and `
-    $weaponsText -match 'two_handed_axes_template_1' -and `
-    $weaponsText -match 'drakegun_template_1') `
-    "Pusfume weapon templates" "Versus units use Adventure-safe Ranger-compatible actions and attachment routing"
+    $weaponsText -match 'vs_rat_ogre_hands' -and `
+    $weaponsText -notmatch 'vs_chaos_troll_axe' -and `
+    $weaponsText -notmatch 'two_handed_axes_template_1' -and `
+    $weaponsText -notmatch 'drakegun_template_1') `
+    "Pusfume weapon templates" "six true Versus rat weapon contracts are cloned for Janfon hand testing"
 Test-Condition ($weaponsText -match 'can_wield\s*=\s*\{ registry\.CAREER_NAME \}' -and `
     $registryText -match 'local is_weapon = item\.slot_type == "melee" or item\.slot_type == "ranged"' -and `
     $registryText -match 'if not is_weapon and type\(can_wield\)') `
