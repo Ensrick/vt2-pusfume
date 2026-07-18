@@ -21,8 +21,9 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current local and uploaded live-test candidate is **v0.6.16-dev**, source
-commit `1b35b11`, Steam ManifestID `3075372935869158668`.
+The current local live-test candidate is **v0.6.17-dev**. The previous uploaded
+candidate is v0.6.16-dev, source commit `1b35b11`, Steam ManifestID
+`3075372935869158668`.
 Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,
@@ -62,14 +63,21 @@ runtime correction entirely: Blender rebinds Janfon's mesh to the exact rest
 matrices extracted from VT2's compiled Ranger Veteran first-person unit, and
 the game uses its normal direct node links.
 
+Offline analysis then found the remaining defect after that rebind: the VT2
+SDK preserved donor bone positions but compiled every Blender bone basis at
+approximately `100x`. v0.6.17 counter-scales the armature data without moving
+the mesh and rejects the compiled unit unless all 54 donor-linked transforms
+match. It also adopts Janfon's new untouched 138-bone body, integrated fur, and
+96-frame baked animation in place of the normalized 82-bone placeholder.
+
 The first-person material uses the same proven compiled skinned-child technique
 as the working third-person model. Animation cannot yet use the identical
 root-controller path because third person has Pusfume-authored idle/walk clips,
 while first person must inherit VT2's full weapon-action set from a donor with a
-different rest rig. v0.6.16 implements the durable path: the build parses the
+different rest rig. v0.6.17 implements the durable path: the build parses the
 compiled donor unit, rebinds Janfon's arm mesh offline to its exact
 first-person rest skeleton, and rejects matrix drift or rest-mesh deformation
-before compilation.
+both before and after Stingray compilation.
 
 Moulder Ingenuity currently arms the next consumable selection and starts its
 cooldown, but it does not yet transform inventory. Aggressive Iteration records

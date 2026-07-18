@@ -64,6 +64,8 @@ $nativeExporterPath = Join-Path $repoRoot "tools\export_blender_bsi.py"
 $animatedFbxToolPath = Join-Path $repoRoot "tools\prepare_animated_pusfume_fbx.py"
 $idleFbxToolPath = Join-Path $repoRoot "tools\generate_idle_pusfume_fbx.py"
 $firstPersonFbxToolPath = Join-Path $repoRoot "tools\prepare_pusfume_1p_blend.py"
+$compiledFirstPersonRestPath = Join-Path $repoRoot "tools\validate_compiled_1p_rest.py"
+$untouchedBodyToolPath = Join-Path $repoRoot "tools\prepare_pusfume_untouched_3p.py"
 $firstPersonDiagnosticPath = Join-Path $repoRoot "tools\diagnose_pusfume_1p_blend.py"
 $firstPersonUnitScenePath = Join-Path $repoRoot "tools\stingray_unit_scene.py"
 $changelogPath = Join-Path $repoRoot "CHANGELOG.md"
@@ -98,6 +100,8 @@ $nativeExporterText = Get-Content -LiteralPath $nativeExporterPath -Raw
 $animatedFbxToolText = Get-Content -LiteralPath $animatedFbxToolPath -Raw
 $idleFbxToolText = Get-Content -LiteralPath $idleFbxToolPath -Raw
 $firstPersonFbxToolText = Get-Content -LiteralPath $firstPersonFbxToolPath -Raw
+$compiledFirstPersonRestText = Get-Content -LiteralPath $compiledFirstPersonRestPath -Raw
+$untouchedBodyToolText = Get-Content -LiteralPath $untouchedBodyToolPath -Raw
 $firstPersonDiagnosticText = Get-Content -LiteralPath $firstPersonDiagnosticPath -Raw
 $firstPersonUnitSceneText = Get-Content -LiteralPath $firstPersonUnitScenePath -Raw
 $portraitToolText = Get-Content -LiteralPath $portraitToolPath -Raw
@@ -153,9 +157,11 @@ Test-Condition ($firstPersonFbxToolText -match 'REQUIRED_GROUPS' -and `
     $firstPersonFbxToolText -match 'rebind_to_donor_rest' -and `
     $firstPersonFbxToolText -match 'maximum_matrix_delta > 0\.0001' -and `
     $firstPersonFbxToolText -match 'maximum_mesh_delta > 0\.00001' -and `
+    $firstPersonFbxToolText -match 'apply_stingray_basis_counter_scale' -and `
+    $firstPersonFbxToolText -match 'factor=100\.0' -and `
     $firstPersonFbxToolText -match 'source blend is never overwritten' -and `
     $firstPersonFbxToolText -match 'bake_anim=False') `
-    "first-person Blender preparation" "donor-rest rebind preserves Janfon's mesh and validates every mapped matrix"
+    "first-person Blender preparation" "donor-rest rebind and guarded Stingray counter-scale preserve Janfon's mesh"
 Test-Condition ($firstPersonUnitSceneText -match 'version != 189' -and `
     $firstPersonUnitSceneText -match 'channel_count \* 17' -and `
     $firstPersonUnitSceneText -match 'world_matrices' -and `
@@ -177,8 +183,19 @@ Test-Condition ($nativeBuildText -match '\[string\]\$FirstPersonBlend' -and `
     "first-person native build" "direct-UV arms use a dedicated spliced skin binding"
 Test-Condition ($nativeBuildText -match 'processed_bundles\.csv' -and `
     $nativeBuildText -match 'medium_portrait_pusfume,texture' -and `
-    $nativeBuildText -match 'units/pusfume/pusfume_1p_arms,unit') `
-    "compiled asset manifest" "native build rejects omitted portrait or first-person resources"
+    $nativeBuildText -match 'units/pusfume/pusfume_1p_arms,unit' -and `
+    $nativeBuildText -match 'validate_compiled_1p_rest\.py' -and `
+    $compiledFirstPersonRestText -match 'MINIMUM_SHARED_NODES = 53' -and `
+    $compiledFirstPersonRestText -match 'TOLERANCE = 0\.001') `
+    "compiled asset manifest" "native build rejects omitted resources and post-compiler skeleton drift"
+Test-Condition ($untouchedBodyToolText -match 'EXPECTED_UNWEIGHTED = \{"p_glob": 670, "p_main": 12\}' -and `
+    $untouchedBodyToolText -match 'j_lefthandpinky4.*j_lefthandpinky3' -and `
+    $untouchedBodyToolText -match 'backpack\.add\(by_material\["p_glob"\], 1\.0' -and `
+    $untouchedBodyToolText -match 'distance > 0\.00001' -and `
+    $untouchedBodyToolText -match 'bake_anim_use_all_actions=False' -and `
+    $nativeBuildText -match '\[switch\]\$IntegratedFur' -and `
+    $nativeBuildText -match 'LegacyFur and IntegratedFur are mutually exclusive') `
+    "untouched-rig body" "known missing weights are narrowly repaired and integrated fur is not duplicated"
 Test-Condition ($assetsText -match 'M\.first_person_retarget_pairs' -and `
     $assetsText -match 'source = "j_spine2", target = "j_spine1"' -and `
     $assetsText -match '"j_lefthandindex4"' -and `
@@ -341,7 +358,7 @@ Test-Condition ($nativeBuildText -match '\[switch\]\$LegacyFur' -and `
     $animatedFbxToolText -match 'Transferred action did not deform legacy fur' -and `
     $nativeBuildText -match '\[double\]\$BodyDiffuseGain = 1\.2' -and `
     $nativeBuildText -match '\[double\]\$FurDiffuseGain = 0\.55' -and `
-    $nativeBuildText -match '\$furMaterialEntry = if \(\$LegacyFur\)' -and `
+    $nativeBuildText -match '\$furMaterialEntry = if \(\$furEnabled\)' -and `
     $nativeBuildText -match 'p_fur = "materials/pusfume/pusfume_fur"' -and `
     $nativeBuildText -match '\$furRenderableEntry = if \(\$LegacyFur\)' -and `
     $nativeBuildText -match 'child_materials/pusfume/pusfume_fur_child' -and `

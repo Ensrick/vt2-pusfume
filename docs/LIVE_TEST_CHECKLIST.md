@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.16-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.17-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -26,6 +26,11 @@ source commit is `ecbddd0` and Workshop ManifestID is
 stretched the mesh into two strands. v0.6.16 rebinds the mesh offline to the
 compiled donor rest skeleton and removes runtime retargeting: source commit
 `1b35b11`, Workshop ManifestID `3075372935869158668`.
+That build was not visually verified and its compiled bones retained a `100x`
+basis despite correct donor positions. v0.6.17 counter-scales the exported
+armature and hard-fails unless 54 transforms in the compiled custom unit match
+the compiled donor; offline maximum error is now `0.00000263`. It also replaces
+the old body with Janfon's repaired 138-bone untouched-rig model.
 
 ## Before opening Heroes
 
@@ -61,8 +66,8 @@ compiled donor rest skeleton and removes runtime retargeting: source commit
 6. Switch to another Bardin career, then back to Pusfume, checking that neither loadout nor talents disappear.
 7. Use `/pusfume` once as a fallback test. The command should print the host request and a `success` response.
 8. Open the in-game player list and keep it visible long enough for the portrait to refresh; confirm the close-up Pusfume portrait renders inside the frame with no clipping or Ranger Veteran art.
-9. Stand still and confirm the placeholder idle deforms the spine, head, tail, and whiskers.
-10. Walk and confirm the controller blends into Janfon's walk cycle, then returns to idle after stopping.
+9. Stand still and confirm the new 138-bone body deforms the spine, head, tail, integrated fur, and whiskers.
+10. Walk and confirm the controller blends into Janfon's 96-frame untouched-rig action, then returns to idle after stopping.
 11. Confirm Pusfume's atlas remains correctly aligned, no whole-body or dark-region green emissive glow returns, and the whisker cards have no tape-like lighting rectangle.
 12. Turn, crouch, jump, dodge, attack, and use the career ability while watching the third-person model. These actions do not yet have dedicated Pusfume clips; record translation without matching pose as missing animation coverage, not a skinning regression.
 13. Note any rest-pose offset, detached region, inverted limb, or extreme stretch.
@@ -77,7 +82,7 @@ compiled donor rest skeleton and removes runtime retargeting: source commit
 6. Confirm the arms follow VT2's native first-person poses without remaining in rest pose, separating from the camera rig, changing bone lengths, or stretching fingers.
 7. Enable Tweaker: General's third-person camera and confirm the established third-person body still animates and shades correctly.
 8. Run `/pusfume_preflight` after spawning. `native first-person arms` must report PASS; preserve the log if it reports WARN or FAIL.
-9. Check the log for `First-person donor-rest direct links active`. `First-person rest retarget initialized` must not appear for v0.6.16.
+9. Check the log for `First-person donor-rest direct links active`. `First-person rest retarget initialized` must not appear for v0.6.17.
 10. Check the delayed `First-person attachment probe`; it must report `direct=true`, `retarget=false`, and near-zero source/target node distances. Runtime anchor and limb corrections should remain zero because Blender already matched the compiled donor rest matrices.
 11. Treat Janfon's `positioningtest` clip as an unwired diagnostic asset in this candidate, not an expected looping gameplay animation.
 

@@ -11,6 +11,14 @@ architecture and reproduction contract are in
 
 ## Latest shipment
 
+- 2026-07-18 local: v0.6.17 CANDIDATE - post-compiler inspection proved
+  v0.6.16's donor positions were correct but all custom bone bases were about
+  `100x`, explaining the remaining sticks/strands. The counter-scaled FBX
+  preserves the authored mesh and compiles 54 donor-linked transforms with
+  maximum error `0.00000263` instead of `99.0`. The same candidate adopts
+  Janfon's 138-bone untouched body, repairs its asserted 682 missing weights,
+  retains integrated fur, and packages its deforming 96-frame action. Pending
+  source commit, Workshop upload, and live test.
 - 2026-07-17 23:40 local: v0.6.15 LIVE RESULT / v0.6.16 CANDIDATE - the
   newest probe closed the hand errors to `0.0181/0.0119m`, but the arm roots
   remained `0.4647/0.5126m` from the donor and the mesh rendered as two tiny

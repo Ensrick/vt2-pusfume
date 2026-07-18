@@ -12,6 +12,22 @@ request rather than in release notes.
 
 ### Changed
 
+- Replaced the 82-bone normalized placeholder body with Janfon's new
+  138-bone untouched Skaven rig. The guarded Blender preparation keeps only
+  `p_mainbody` and the game rig, transfers the one stray pinky weight, assigns
+  the three unweighted Globadier equipment shells to `j_backpack`, and copies
+  12 coincident tail-tip weights without modifying the source `.blend`.
+- Added an integrated-fur native build mode so Janfon's body-owned fur geometry
+  uses the proven skinned-cutout material without duplicating dalokraff's 510
+  separate legacy cards.
+- Preserved Janfon's 96-frame baked action on the untouched skeleton as the
+  current locomotion test clip. Blender measured `0.154m` sampled vertex
+  deformation before the VT2 SDK accepted the 138-bone character.
+
+- Added a post-compiler first-person rest-skeleton gate. It compares 54 linked
+  world transforms in the compiled custom `.unit` against the installed
+  compiled Ranger Veteran donor and rejects drift above `0.001`.
+
 - Replaced the failed first-person runtime translation/retarget experiment with
   an offline exact-rest rebind. v0.6.15's latest live probe placed each hand
   within `0.0181/0.0119m` of the donor while the shoulder roots remained
@@ -85,6 +101,13 @@ request rather than in release notes.
   `1380279707573289085` after local build and deployment verification.
 
 ### Fixed
+
+- Fixed the unresolved first-person stick/strand deformation at its actual
+  source: Stingray compiled Blender's otherwise correct hand skeleton with a
+  `100x` bone basis. A guarded armature-data counter-scale preserves Janfon's
+  world-space mesh within `0.00000042m` and bone positions within
+  `0.00000020m`; after compilation all donor-linked transforms now match with
+  maximum error `0.00000263`, down from `99.0`.
 
 - Fixed the v0.6.10-dev crash in the delayed first-person probe. Its target
   lookup now follows the actual `j_spine2 -> j_spine1` attachment pair instead

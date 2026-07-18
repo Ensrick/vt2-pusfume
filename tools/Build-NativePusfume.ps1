@@ -10,6 +10,7 @@ param(
     [string]$GameBundleDir = "C:\Program Files (x86)\Steam\steamapps\common\Warhammer Vermintide 2\bundle",
     [string]$UnpackerExe = "C:\Tools\vt2_bundle_unpacker\target\release\unpacker.exe",
     [switch]$LegacyFur,
+    [switch]$IntegratedFur,
     [string]$LegacyFurRoot = ".build\reference_legacy_pusfume",
     [double]$BodyDiffuseGain = 1.2,
     [double]$FurDiffuseGain = 0.55,
@@ -28,8 +29,12 @@ if ($BodyDiffuseGain -lt 0.5 -or $BodyDiffuseGain -gt 2.0) {
 if ($FurDiffuseGain -lt 0.25 -or $FurDiffuseGain -gt 1.5) {
     throw "FurDiffuseGain must be between 0.25 and 1.5"
 }
-# Legacy fur uses the same proven Laurel skinned-cutout contract as whiskers.
-if ($LegacyFur) {
+# Both fur layouts use the same proven Laurel skinned-cutout material binding.
+if ($LegacyFur -and $IntegratedFur) {
+    throw "LegacyFur and IntegratedFur are mutually exclusive"
+}
+$furEnabled = $LegacyFur.IsPresent -or $IntegratedFur.IsPresent
+if ($furEnabled) {
     $SplicedGameChild = $true
 }
 # Track D: ship the -ParentChildMaterial staging, then replace the compiled
@@ -76,7 +81,7 @@ if ($firstPersonEnabled) {
 $legacyFurPath = $null
 $legacyBodyPath = $null
 $legacyFurTextureRoot = $null
-if ($LegacyFur) {
+if ($furEnabled) {
     $legacyFurRootPath = if ([IO.Path]::IsPathRooted($LegacyFurRoot)) {
         (Resolve-Path $LegacyFurRoot).Path
     } else {
@@ -86,10 +91,10 @@ if ($LegacyFur) {
     $legacyBodyPath = Join-Path $legacyFurRootPath "units\pusfume\pusfume_inn.fbx"
     $legacyFurTextureRoot = Join-Path $legacyFurRootPath "textures\pusfume\inn"
     $legacyLicense = Join-Path $legacyFurRootPath "LICENSE"
-    if (-not (Test-Path -LiteralPath $legacyFurPath -PathType Leaf)) {
+    if ($LegacyFur -and -not (Test-Path -LiteralPath $legacyFurPath -PathType Leaf)) {
         throw "Dalokraff legacy fur FBX is missing: $legacyFurPath"
     }
-    if (-not (Test-Path -LiteralPath $legacyBodyPath -PathType Leaf)) {
+    if ($LegacyFur -and -not (Test-Path -LiteralPath $legacyBodyPath -PathType Leaf)) {
         throw "Dalokraff legacy body FBX is missing: $legacyBodyPath"
     }
     if (-not (Test-Path -LiteralPath $legacyLicense -PathType Leaf) -or
@@ -634,7 +639,7 @@ function Write-NativeMaterial {
 foreach ($textureName in $textureNames) {
     Write-NativeTexture $textureName
 }
-if ($LegacyFur) {
+if ($furEnabled) {
     Write-LegacyFurTexture "pusfume_fur_df" "psf_fur_d_rein.png" $true $FurDiffuseGain
     Write-LegacyFurTexture "pusfume_fur_nm" "psf_fur_n.tga" $false
     Write-LegacyFurTexture "pusfume_fur_s" "psf_fur_s.tga" $false
@@ -667,7 +672,7 @@ if (-not $NoDonorTextureShadow) {
     Write-NativeMaterial "pusfume_ammo_box" "pusfume_atlas_df" "pusfume_atlas_nm" "pusfume_atlas_s" 0.62
 }
 Write-NativeMaterial "pusfume_whiskers" "pusfume_whiskers_df" "pusfume_whiskers_nm" "pusfume_whiskers_s" 0.74 -Opacity
-if ($LegacyFur) {
+if ($furEnabled) {
     Write-NativeMaterial "pusfume_fur" "pusfume_fur_df" "pusfume_fur_nm" "pusfume_fur_s" 0.78 -Opacity
 }
 
@@ -763,7 +768,7 @@ material = [
             "resource_packages\pusfume\native_1p_child.package") -Encoding utf8
     }
 
-    if ($LegacyFur) {
+    if ($furEnabled) {
         $furChildTemplate = Get-Content -LiteralPath (Join-Path $repoRoot `
             "tools\material_templates\character_skinned_cutout.material") -Raw
         $furChildTemplate = $furChildTemplate.Replace(
@@ -782,7 +787,7 @@ material = [
         '    "child_materials/pusfume/pusfume_outfit_child"',
         '    "child_materials/pusfume/pusfume_whiskers_child"'
     )
-    if ($LegacyFur) {
+    if ($furEnabled) {
         $nativeChildMaterialEntries += '    "child_materials/pusfume/pusfume_fur_child"'
     }
 
@@ -793,7 +798,7 @@ $($nativeChildMaterialEntries -join "`n")
 "@ | Set-Content -LiteralPath (Join-Path $stageMod "resource_packages\pusfume\native_child.package") -Encoding utf8
 }
 
-$furMaterialEntry = if ($LegacyFur) {
+$furMaterialEntry = if ($furEnabled) {
     '    p_fur = "materials/pusfume/pusfume_fur"'
 } else {
     ""
@@ -881,7 +886,7 @@ $whiskerChildMaterialValue = if ($SplicedGameChild) {
 } else {
     "false"
 }
-$furChildMaterialValue = if ($SplicedGameChild -and $LegacyFur) {
+$furChildMaterialValue = if ($SplicedGameChild -and $furEnabled) {
     '"child_materials/pusfume/pusfume_fur_child"'
 } else {
     "false"
@@ -1034,6 +1039,26 @@ foreach ($resource in $requiredCompiledResources) {
     }
 }
 Write-Host "Compiled portrait and first-person resource manifest passed"
+
+if ($firstPersonEnabled) {
+    $debugIndexPath = Join-Path $stageRoot ".temp\pusfumeV2\compile\debug_file_index.sjson"
+    $debugIndexText = Get-Content -LiteralPath $debugIndexPath -Raw
+    $firstPersonCompiledMatch = [regex]::Match(
+        $debugIndexText,
+        '"(data/[^"\r\n]+)"\s*=\s*"units/pusfume/pusfume_1p_arms\.unit"')
+    if (-not $firstPersonCompiledMatch.Success) {
+        throw "Compiled debug index omitted the first-person arms unit"
+    }
+
+    $compiledFirstPersonUnit = Join-Path $stageRoot (
+        ".temp\pusfumeV2\compile\" +
+        $firstPersonCompiledMatch.Groups[1].Value.Replace('/', '\'))
+    $compiledRestTool = Join-Path $repoRoot "tools\validate_compiled_1p_rest.py"
+    & py $compiledRestTool $compiledFirstPersonUnit $firstPersonDonorUnitPath
+    if ($LASTEXITCODE -ne 0) {
+        throw "Compiled first-person rest-skeleton validation failed"
+    }
+}
 
 if ($ParentChildMaterial) {
     # The compiled stub parent rides into a bundle at the game's resource path
@@ -1249,7 +1274,7 @@ if ($SplicedGameChild) {
     }
 
     Write-Host "Spliced Laurel feather payload (128 bytes, Pusfume whisker maps) into $($whiskerSplicedInto[0])"
-    if ($LegacyFur) {
+    if ($furEnabled) {
         # Reuse the same proven skinned alpha-card binding for fur, but patch
         # all three channels to the licensed dalokraff texture set.
         $furPayload = Join-Path $generatedRoot "spliced_fur_payload.bin"
@@ -1403,7 +1428,7 @@ $nativeSource = if ($useFbxDcc) { $animatedModelFbxPath } else { $inputPath }
 $nativeSourceKind = if ($useFbxDcc) { "FBX/DCC" } else { "BSI fallback" }
 $nativeSourceSize = (Get-Item -LiteralPath $nativeSource).Length
 $bundles = @(Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)
-$materialCount = if ($LegacyFur) { 8 } else { 7 }
+$materialCount = if ($furEnabled) { 8 } else { 7 }
 Write-Host "Native Pusfume build passed: source=$nativeSourceKind bytes=$nativeSourceSize bundles=$($bundles.Count)"
 Write-Host "Native Pusfume materials passed: textures=$($textureNames.Count) materials=$materialCount"
 Write-Host "Native Pusfume animation package passed: controller=pusfume_3p clips=pusfume_3p_idle,pusfume_3p_walk"
