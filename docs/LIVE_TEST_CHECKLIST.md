@@ -15,7 +15,8 @@ adds rigid hand-midpoint camera anchoring and disables mesh-bound culling:
 source commit `ccaec5a`, Workshop ManifestID `299222409316147201`.
 That live test showed only two tiny black specks: midpoint error was `0.0044m`,
 but each hand retained about `0.18m` error. v0.6.14 rigidly corrects each arm
-root after midpoint alignment; its source commit and manifest are pending.
+root after midpoint alignment: source commit `ee26fcf`, Workshop ManifestID
+`3997686606515825820`.
 
 ## Before opening Heroes
 

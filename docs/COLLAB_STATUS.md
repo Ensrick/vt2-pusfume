@@ -16,7 +16,8 @@ architecture and reproduction contract are in
   `0.0044m` midpoint error, but each hand remained about `0.18m` from its live
   donor hand and only two tiny black specks were visible. Blender independently
   verified a `1.104m` mesh width and `0.827m` authored hand span. v0.6.14 adds
-  rigid per-arm-root corrections and residual diagnostics. Pending build/upload.
+  rigid per-arm-root corrections and residual diagnostics. Source commit
+  `ee26fcf`; Workshop ManifestID `3997686606515825820`; pending live test.
 - 2026-07-17 21:44 local: v0.6.12 LIVE RESULT / v0.6.13 SHIPPED - the
   retarget initialized all 53 pairs but reported `bounds_copied=false`; no hand
   model was visible. Live hand-node separation remained 0.50-0.66m, proving the

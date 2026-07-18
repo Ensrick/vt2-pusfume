@@ -20,6 +20,9 @@ request rather than in release notes.
   without scaling bones or returning to the collapsing absolute-node bridge.
 - Added per-side correction and residual diagnostics to distinguish successful
   hand placement from remaining orientation, clipping, or material failures.
+- Uploaded the hash-verified v0.6.14-dev build from source commit `ee26fcf` to
+  friends-only Workshop item `3764954245` as ManifestID
+  `3997686606515825820`.
 - Added the v0.6.13-dev first-person camera-anchor candidate after v0.6.12
   initialized all 53 retarget pairs but rendered no visible hand model. Its
   live hand nodes remained `0.50-0.66m` from VT2's animated hand locations.
