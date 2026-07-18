@@ -23,6 +23,11 @@ request rather than in release notes.
 - Added a runtime action-hand invariant and source regression test. Preflight
   now fails before selection if any Pusfume action could start without its
   corresponding wielded unit.
+- Built and hash-verified the v0.6.25 native package from source commit
+  `c59ab62`, deployed all eight files locally, and uploaded the friends-only
+  Workshop candidate. Steam's persistent log confirmed ManifestID
+  `1817442651143246521` for item `3764954245` at 2026-07-18 17:45
+  America/Chicago. Live gameplay validation remains pending.
 
 - Added the v0.6.24 weapon and identity candidate. Pusfume now owns fixed,
   synchronized prototype items that render the shipped playable-Versus

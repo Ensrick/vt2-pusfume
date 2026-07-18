@@ -36,8 +36,11 @@ Ranger donor's joint positions before installing the exact donor axes and bind
 matrices, addressing the block-pose warping seen with an unchanged mesh around
 moved pivots. Janfon's current first-person handoff has no walk cycle; VT2's
 native weapon/action poses remain the intended first-person animation source.
-The v0.6.25 action-hand adapter corrects the crash found in v0.6.24 and awaits
-live gameplay verification.
+Source commit `c59ab62` was compiled, hash-verified, deployed locally, and
+uploaded to the friends-only Workshop item at 2026-07-18 17:45
+America/Chicago. Steam recorded ManifestID `1817442651143246521`; the v0.6.25
+action-hand adapter corrects the crash found in v0.6.24 and awaits live
+gameplay verification.
 Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,
