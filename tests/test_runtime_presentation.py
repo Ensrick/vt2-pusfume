@@ -21,10 +21,18 @@ class RuntimePresentationTests(unittest.TestCase):
 
     def test_first_person_weapons_stay_hidden_for_hand_test(self):
         self.assertIn('FIRST_PERSON_WEAPON_HIDE_REASON = "pusfume_hands_diagnostic"', self.native)
-        self.assertGreaterEqual(
-            self.native.count("extension:hide_weapons(FIRST_PERSON_WEAPON_HIDE_REASON, true)"),
-            2,
-        )
+        helper = self.native.split("local function hide_first_person_weapons", 1)[1].split(
+            "local DONOR_PACKAGE_REFERENCE", 1
+        )[0]
+        init_hook = self.native.split('mod:hook(PlayerUnitFirstPerson, "init"', 1)[1].split(
+            'mod:hook_safe(PlayerUnitFirstPerson, "update"', 1
+        )[0]
+
+        self.assertIn("if not extension.inventory_extension then", helper)
+        self.assertIn("extension:hide_weapons(FIRST_PERSON_WEAPON_HIDE_REASON, true)", helper)
+        self.assertNotIn("extension:hide_weapons", init_hook)
+        self.assertIn("extension._pusfume_weapon_hide_pending = true", init_hook)
+        self.assertIn("hide_first_person_weapons(extension)", self.native)
 
     def test_selector_name_is_guarded_at_final_write(self):
         self.assertIn('mod:hook(class, "_set_hero_info"', self.ui)

@@ -12,6 +12,12 @@ request rather than in release notes.
 
 ### Changed
 
+- Added the v0.6.20 lifecycle crash fix after v0.6.19 attempted to hide
+  first-person weapons during `PlayerUnitFirstPerson.init`. VT2 does not assign
+  `inventory_extension` until `extensions_ready`, so the diagnostic hide now
+  remains pending through construction and is applied only from the guarded
+  update path once inventory exists. Weapon hiding still persists after wield
+  updates without dereferencing an unavailable extension.
 - Added the v0.6.19 presentation and hand-inspection candidate. Hero-selection
   name writes are now career-scoped at the final UI boundary so the shared
   Bardin profile cannot restore `Bardin Goreksson` over `Pusfume`.

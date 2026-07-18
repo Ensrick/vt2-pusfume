@@ -21,7 +21,7 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current local live-test candidate is **v0.6.19-dev**. The previous uploaded
+The current local live-test candidate is **v0.6.20-dev**. The previous uploaded
 candidate is v0.6.17-dev from source commit `d0d7893`; Steam accepted the
 eight-file package, while its refreshed manifest ID remains pending.
 Live logs have confirmed mod startup, zero-failure
