@@ -159,9 +159,11 @@ Test-Condition ($firstPersonFbxToolText -match 'REQUIRED_GROUPS' -and `
     $firstPersonFbxToolText -match 'maximum_mesh_delta > 0\.00001' -and `
     $firstPersonFbxToolText -match 'apply_stingray_basis_counter_scale' -and `
     $firstPersonFbxToolText -match 'factor=100\.0' -and `
+    $firstPersonFbxToolText -match 'global_scale=0\.01' -and `
+    $firstPersonFbxToolText -match 'apply_scale_options="FBX_SCALE_ALL"' -and `
     $firstPersonFbxToolText -match 'source blend is never overwritten' -and `
     $firstPersonFbxToolText -match 'bake_anim=False') `
-    "first-person Blender preparation" "donor-rest rebind and guarded Stingray counter-scale preserve Janfon's mesh"
+    "first-person Blender preparation" "donor-rest rebind and guarded 0.01 FBX position scale preserve Janfon's mesh and unit bone bases"
 Test-Condition ($firstPersonUnitSceneText -match 'version != 189' -and `
     $firstPersonUnitSceneText -match 'channel_count \* 17' -and `
     $firstPersonUnitSceneText -match 'world_matrices' -and `

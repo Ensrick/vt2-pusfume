@@ -11,6 +11,18 @@ architecture and reproduction contract are in
 
 ## Latest shipment
 
+- 2026-07-18 local: v0.6.18 LIVE RESULT / v0.6.19 CANDIDATE - the newest log
+  reached normal shutdown with direct links, identity attachment root, and zero
+  mapped-node distances, while the visible hands remained long and thin. A
+  Blender re-import found the remaining contradiction: the mesh bounds were
+  correct, but local arm bones were roughly `20m` behind armature scale `0.01`.
+  Five isolated FBX encodings and four Stingray compiler runs separated basis
+  from translation scaling. Pre-scaling positions by `100` and exporting at
+  `global_scale=0.01` preserves the full-size mesh, compiles donor-sized
+  translations and unit bone bases, and passes the 54-node rest check at
+  maximum error `0.00000263`. The same candidate adds career-scoped Pusfume
+  UI identity, playable Globadier combat VO routing, and diagnostic first-
+  person weapon hiding. Pending source commit, Workshop upload, and live test.
 - 2026-07-18 local: v0.6.17 CANDIDATE - post-compiler inspection proved
   v0.6.16's donor positions were correct but all custom bone bases were about
   `100x`, explaining the remaining sticks/strands. The counter-scaled FBX

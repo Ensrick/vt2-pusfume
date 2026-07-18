@@ -42,6 +42,9 @@ local state = {
 
 local WALK_ENTER_SPEED = 0.5
 local IDLE_ENTER_SPEED = 0.2
+local FIRST_PERSON_WEAPON_HIDE_REASON = "pusfume_hands_diagnostic"
+local PUSFUME_CHARACTER_VO = "vs_poison_wind_globadier"
+local PUSFUME_SOUND_CHARACTER = "dwarf_slayer"
 
 local installed_config
 
@@ -707,6 +710,18 @@ local function initialize_link_probe(extension, unit, config)
     extension._pusfume_native_config = config
     apply_donor_material(extension, config)
 
+    -- Versus Pactsworn profiles drive their rat vocalizations through the
+    -- character_vo flow switch. Apply it to this Pusfume unit only; mutating
+    -- the shared dwarf profile would also change every Bardin career.
+    Unit.set_flow_variable(unit, "character_vo", PUSFUME_CHARACTER_VO)
+    Unit.set_flow_variable(unit, "sound_character", PUSFUME_SOUND_CHARACTER)
+    Unit.flow_event(unit, "character_vo_set")
+
+    if not extension._pusfume_voice_switch_logged then
+        extension._pusfume_voice_switch_logged = true
+        mod:info("[pusfume] Playable Globadier vocal switch applied: %s", PUSFUME_CHARACTER_VO)
+    end
+
     local has_state_machine = Unit.has_animation_state_machine(mesh)
     local has_enable_event = has_state_machine and Unit.has_animation_event(mesh, "enable")
     local initial_bone_mode = Unit.animation_bone_mode(mesh)
@@ -1283,6 +1298,9 @@ local function install_first_person_hook(registry, config)
 
             extension_init_data.skin_name = donor_skin_name
             extension._pusfume_first_person = true
+            extension:hide_weapons(FIRST_PERSON_WEAPON_HIDE_REASON, true)
+            extension._pusfume_weapons_hidden = true
+            mod:info("[pusfume] First-person weapons hidden for hand deformation testing")
             apply_first_person_materials(extension, config)
             if config.first_person_direct_link then
                 state.first_person_direct_link = true
@@ -1298,6 +1316,9 @@ local function install_first_person_hook(registry, config)
     end)
     mod:hook_safe(PlayerUnitFirstPerson, "update", function(extension)
         if extension._pusfume_first_person then
+            -- Wield and inventory updates can restore weapon visibility after
+            -- init, so keep the native hide reason asserted for this test build.
+            extension:hide_weapons(FIRST_PERSON_WEAPON_HIDE_REASON, true)
             apply_first_person_materials(extension, config)
             if not config.first_person_direct_link then
                 update_first_person_retarget(extension)

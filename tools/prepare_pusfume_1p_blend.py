@@ -301,7 +301,7 @@ def rebind_to_donor_rest(mesh_object, armature, donor_unit_path):
 
 
 def apply_stingray_basis_counter_scale(mesh_object, armature, factor=100.0):
-    """Counter the SDK DCC importer's 100x compiled Blender bone basis."""
+    """Pre-scale positions for a 0.01 FBX without scaling bone bases."""
     before_vertices = evaluated_vertex_positions(mesh_object)
     before_bone_positions = {
         bone.name: (armature.matrix_world @ bone.matrix_local).translation.copy()
@@ -316,13 +316,12 @@ def apply_stingray_basis_counter_scale(mesh_object, armature, factor=100.0):
         edit_bone.head *= factor
         edit_bone.tail *= factor
     bpy.ops.object.mode_set(mode="OBJECT")
-    armature.scale = tuple(value / factor for value in armature.scale)
     bpy.context.view_layer.update()
 
     after_vertices = evaluated_vertex_positions(mesh_object)
     maximum_mesh_delta = max(
         (
-            (after_vertices[index] - before_vertices[index]).length
+            (after_vertices[index] - before_vertices[index] * factor).length
             for index in range(len(before_vertices))
         ),
         default=0,
@@ -331,15 +330,17 @@ def apply_stingray_basis_counter_scale(mesh_object, armature, factor=100.0):
         (
             (
                 (armature.matrix_world @ bone.matrix_local).translation
-                - before_bone_positions[bone.name]
+                - before_bone_positions[bone.name] * factor
             ).length
             for bone in armature.data.bones
         ),
         default=0,
     )
-    if maximum_mesh_delta > 0.00001 or maximum_bone_position_delta > 0.00001:
+    # Scaling metre-space float coordinates by 100 amplifies the donor rebind's
+    # sub-micrometre float noise. Keep the bound well below one millimetre.
+    if maximum_mesh_delta > 0.0001 or maximum_bone_position_delta > 0.0001:
         raise RuntimeError(
-            "Stingray basis counter-scale changed world-space content: "
+            "Stingray FBX position pre-scale changed relative content: "
             "mesh=%.8f bones=%.8f"
             % (maximum_mesh_delta, maximum_bone_position_delta)
         )
@@ -398,9 +399,9 @@ def main():
         if scene_object not in (armature, mesh):
             bpy.data.objects.remove(scene_object, do_unlink=True)
 
-    # Stingray consumes FBX scene units when building bone world matrices. An
-    # untagged Blender scene compiles with a 100x root/bone basis even though
-    # its translations look correct, collapsing the skinned arms in game.
+    # Stingray's DCC importer multiplies Blender's unit-scale bone bases by 100.
+    # Encode the FBX at 0.01 while pre-scaling positions by 100: translations
+    # and mesh dimensions remain donor-sized, but compiled bone bases stay 1x.
     bpy.context.scene.unit_settings.system = "METRIC"
     bpy.context.scene.unit_settings.length_unit = "METERS"
     bpy.context.scene.unit_settings.scale_length = 1.0
@@ -416,8 +417,9 @@ def main():
         primary_bone_axis="Y",
         secondary_bone_axis="X",
         bake_anim=False,
+        global_scale=0.01,
         apply_unit_scale=True,
-        apply_scale_options="FBX_SCALE_UNITS",
+        apply_scale_options="FBX_SCALE_ALL",
         path_mode="AUTO",
         embed_textures=False,
     )

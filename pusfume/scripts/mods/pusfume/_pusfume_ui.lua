@@ -294,6 +294,24 @@ local function sync_pusfume_identity(window, registry, profile_index, career_ind
         level)
 end
 
+local function install_identity_write_guard(class, registry)
+    if not class or not class._set_hero_info then
+        return
+    end
+
+    mod:hook(class, "_set_hero_info", function(func, window, hero_name, career_name, level)
+        local pusfume_career_name = mod:localize("pusfume_career_name")
+
+        if career_name == pusfume_career_name
+                or is_pusfume_selection(window, registry) then
+            hero_name = mod:localize("pusfume_character_name")
+            career_name = pusfume_career_name
+        end
+
+        return func(window, hero_name, career_name, level)
+    end)
+end
+
 local function install_modern_hooks(registry)
     if state.modern_hook_installed or not HeroWindowCharacterSelectionConsole then
         return
@@ -307,6 +325,8 @@ local function install_modern_hooks(registry)
         sync_preview_visibility(window, track_selection(registry, profile_index, career_index))
         sync_pusfume_identity(window, registry, profile_index, career_index)
     end)
+
+    install_identity_write_guard(HeroWindowCharacterSelectionConsole, registry)
 
     state.modern_hook_installed = true
 end
@@ -324,6 +344,8 @@ local function install_legacy_hooks(registry)
         sync_preview_visibility(window, track_selection(registry, profile_index, career_index))
         sync_pusfume_identity(window, registry, profile_index, career_index)
     end)
+
+    install_identity_write_guard(CharacterSelectionStateCharacter, registry)
 
     state.legacy_hook_installed = true
 end

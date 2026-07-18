@@ -21,7 +21,7 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current local live-test candidate is **v0.6.18-dev**. The previous uploaded
+The current local live-test candidate is **v0.6.19-dev**. The previous uploaded
 candidate is v0.6.17-dev from source commit `d0d7893`; Steam accepted the
 eight-file package, while its refreshed manifest ID remains pending.
 Live logs have confirmed mod startup, zero-failure
@@ -65,9 +65,12 @@ the game uses its normal direct node links.
 
 Offline analysis then found the remaining defect after that rebind: the VT2
 SDK preserved donor bone positions but compiled every Blender bone basis at
-approximately `100x`. v0.6.17 counter-scales the armature data without moving
-the mesh and rejects the compiled unit unless all 54 donor-linked transforms
-match. It also adopts Janfon's new untouched 138-bone body, integrated fur, and
+approximately `100x`. v0.6.17-v0.6.18 counter-scaled the armature object, which
+matched scene nodes but left the skin's local bones oversized and still visibly
+stretched. v0.6.19 instead pre-scales only positions and exports the FBX at
+`0.01`; Stingray then preserves donor-sized translations and unit bone bases.
+The build rejects the compiled unit unless all 54 donor-linked transforms
+match. It also uses Janfon's untouched 138-bone body, integrated fur, and
 96-frame baked animation in place of the normalized 82-bone placeholder.
 
 The first-person material uses the same proven compiled skinned-child technique
@@ -133,7 +136,8 @@ py -m unittest discover -s tests -v
 See [LIVE_TEST_CHECKLIST.md](docs/LIVE_TEST_CHECKLIST.md) for the in-game pass,
 [CAREER_SYSTEM.md](docs/CAREER_SYSTEM.md) for the reverse-engineered career
 architecture, and [ASSET_PIPELINE.md](docs/ASSET_PIPELINE.md) for Janfon's art
-handoff.
+handoff. Janfon's source-referenced production inventory is maintained in the
+[Pusfume Career Asset Checklist](outputs/pusfume-career-assets/Pusfume_Career_Asset_Checklist.xlsx).
 
 Active work is tracked in [native integration issue #6](https://github.com/Ensrick/vt2-pusfume/issues/6),
 [career-kit issue #15](https://github.com/Ensrick/vt2-pusfume/issues/15),

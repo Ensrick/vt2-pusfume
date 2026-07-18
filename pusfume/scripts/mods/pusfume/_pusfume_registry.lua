@@ -191,6 +191,9 @@ function M.register()
     career.display_name = M.CAREER_NAME
     career.description = "pusfume_description"
     career.profile_name = M.PROFILE_NAME
+    -- Versus rat careers use this Wwise routing value while character_vo is
+    -- applied per spawned Pusfume unit to avoid mutating Bardin's profile.
+    career.sound_character = "dwarf_slayer"
     career.playfab_name = nil
     career.required_dlc = nil
     career.sort_order = 5

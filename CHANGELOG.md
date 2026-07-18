@@ -12,6 +12,27 @@ request rather than in release notes.
 
 ### Changed
 
+- Added the v0.6.19 presentation and hand-inspection candidate. Hero-selection
+  name writes are now career-scoped at the final UI boundary so the shared
+  Bardin profile cannot restore `Bardin Goreksson` over `Pusfume`.
+- Applied the playable Poison Wind Globadier `character_vo` flow switch only
+  to spawned Pusfume units, replacing Bardin combat vocal routing without
+  mutating the shared dwarf profile. Full bespoke dialogue remains future work.
+- Hid Pusfume's first-person weapons and weapon lights through VT2's native
+  persistent hide-reason API, including after wield updates, so the next live
+  test can inspect Janfon's hands without weapon geometry obscuring them.
+- Replaced the v0.6.17-v0.6.18 armature-object counter-scale with a compiler-
+  measured FBX unit contract. The build now pre-scales mesh and bone positions
+  by `100`, exports at `global_scale=0.01`, and leaves the armature object at
+  identity. Stingray retains donor-sized translations while all 54 compared
+  bone bases compile at unit scale with maximum rest error `0.00000263`; this
+  targets the remaining long, thin first-person arm deformation.
+- Deployed and hash-verified the v0.6.19-dev eight-file package locally and
+  uploaded it to friends-only Workshop item `3764954245`. Steam recorded
+  ManifestID `8719688784520429489` at 2026-07-18 12:27 America/Chicago.
+- Added the source-referenced Pusfume career production workbook for Janfon:
+  823 checklist items across animation, models/rigging/physics, materials, UI,
+  audio, VFX/gameplay, export validation, and a 34-entry VT2 source map.
 - Uploaded the locally hash-verified v0.6.18-dev eight-file package from source
   commit `eaf7ae8` to friends-only Workshop item `3764954245`; Steam's UGC
   uploader reported `Upload finished` at 2026-07-18 11:39 America/Chicago.
