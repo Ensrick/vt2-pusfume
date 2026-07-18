@@ -64,6 +64,7 @@ $nativeExporterPath = Join-Path $repoRoot "tools\export_blender_bsi.py"
 $animatedFbxToolPath = Join-Path $repoRoot "tools\prepare_animated_pusfume_fbx.py"
 $idleFbxToolPath = Join-Path $repoRoot "tools\generate_idle_pusfume_fbx.py"
 $firstPersonFbxToolPath = Join-Path $repoRoot "tools\prepare_pusfume_1p_blend.py"
+$firstPersonBsiToolPath = Join-Path $repoRoot "tools\prepare_pusfume_1p_bsi.py"
 $compiledFirstPersonRestPath = Join-Path $repoRoot "tools\validate_compiled_1p_rest.py"
 $untouchedBodyToolPath = Join-Path $repoRoot "tools\prepare_pusfume_untouched_3p.py"
 $firstPersonDiagnosticPath = Join-Path $repoRoot "tools\diagnose_pusfume_1p_blend.py"
@@ -100,6 +101,7 @@ $nativeExporterText = Get-Content -LiteralPath $nativeExporterPath -Raw
 $animatedFbxToolText = Get-Content -LiteralPath $animatedFbxToolPath -Raw
 $idleFbxToolText = Get-Content -LiteralPath $idleFbxToolPath -Raw
 $firstPersonFbxToolText = Get-Content -LiteralPath $firstPersonFbxToolPath -Raw
+$firstPersonBsiToolText = Get-Content -LiteralPath $firstPersonBsiToolPath -Raw
 $compiledFirstPersonRestText = Get-Content -LiteralPath $compiledFirstPersonRestPath -Raw
 $untouchedBodyToolText = Get-Content -LiteralPath $untouchedBodyToolPath -Raw
 $firstPersonDiagnosticText = Get-Content -LiteralPath $firstPersonDiagnosticPath -Raw
@@ -164,6 +166,13 @@ Test-Condition ($firstPersonFbxToolText -match 'REQUIRED_GROUPS' -and `
     $firstPersonFbxToolText -match 'source blend is never overwritten' -and `
     $firstPersonFbxToolText -match 'bake_anim=False') `
     "first-person Blender preparation" "donor-rest rebind and guarded 0.01 FBX position scale preserve Janfon's mesh and unit bone bases"
+Test-Condition ($firstPersonBsiToolText -match 'rebind_to_donor_rest' -and `
+    $firstPersonBsiToolText -match 'build_skin\(' -and `
+    $firstPersonBsiToolText -match 'build_geometry\(' -and `
+    $firstPersonBsiToolText -match 'bsi_format\.write' -and `
+    $firstPersonBsiToolText -match 'material_names != \["p_main"\]' -and `
+    $firstPersonBsiToolText -notmatch 'apply_stingray_basis_counter_scale') `
+    "first-person direct BSI preparation" "scene nodes and inverse binds share the exact donor-rebound coordinate space"
 Test-Condition ($firstPersonUnitSceneText -match 'version != 189' -and `
     $firstPersonUnitSceneText -match 'channel_count \* 17' -and `
     $firstPersonUnitSceneText -match 'world_matrices' -and `
@@ -175,7 +184,10 @@ Test-Condition ($firstPersonDiagnosticText -match 'def edge_stretch' -and `
     "first-person Blender diagnostics" "bind deformation remains independently measurable"
 Test-Condition ($nativeBuildText -match '\[string\]\$FirstPersonBlend' -and `
     $nativeBuildText -match '\[string\]\$FirstPersonDonorUnit' -and `
+    $nativeBuildText -match '\[ValidateSet\("bsi", "fbx"\)\]' -and `
+    $nativeBuildText -match '\[string\]\$FirstPersonFormat = "bsi"' -and `
     $nativeBuildText -match 'FirstPersonBlend requires -FirstPersonDonorUnit' -and `
+    $nativeBuildText -match 'prepare_pusfume_1p_bsi\.py' -and `
     $nativeBuildText -match 'prepare_pusfume_1p_blend\.py' -and `
     $nativeBuildText -match 'pusfume_1p_arms\.unit' -and `
     $nativeBuildText -match 'native_1p_child\.package' -and `
@@ -196,7 +208,8 @@ Test-Condition ($untouchedBodyToolText -match 'EXPECTED_UNWEIGHTED = \{"p_glob":
     $untouchedBodyToolText -match 'distance > 0\.00001' -and `
     $untouchedBodyToolText -match 'bake_anim_use_all_actions=False' -and `
     $nativeBuildText -match '\[switch\]\$IntegratedFur' -and `
-    $nativeBuildText -match 'LegacyFur and IntegratedFur are mutually exclusive') `
+    $nativeBuildText -match 'LegacyFur and IntegratedFur are mutually exclusive' -and `
+    $nativeBuildText -match 'model contains p_fur; rebuild with -IntegratedFur') `
     "untouched-rig body" "known missing weights are narrowly repaired and integrated fur is not duplicated"
 Test-Condition ($assetsText -match 'M\.first_person_retarget_pairs' -and `
     $assetsText -match 'source = "j_spine2", target = "j_spine1"' -and `

@@ -12,6 +12,17 @@ request rather than in release notes.
 
 ### Changed
 
+- Added the v0.6.21 material and first-person deformation candidate after the
+  v0.6.20 live test reached a normal shutdown but showed malformed finger curls
+  and a corrupted-looking third-person surface. The log decoded the failed
+  third-person material slot as `p_fur`; the build now rejects integrated-fur
+  models unless `-IntegratedFur` packages their dedicated Laurel-derived cutout
+  material instead of allowing Stingray's default-material fallback.
+- Replaced the default first-person FBX hop with a direct Blender-to-BSI skin
+  export. Scene nodes and inverse bind matrices now come from the same exact
+  donor-rebound scene, avoiding FBX's split unit-scale behavior. The SDK probe
+  compiled 99 bones, 1,980 triangles, and all 54 donor-linked transforms with
+  maximum rest error `0.00000310`; FBX remains an explicit diagnostic fallback.
 - Added the v0.6.20 lifecycle crash fix after v0.6.19 attempted to hide
   first-person weapons during `PlayerUnitFirstPerson.init`. VT2 does not assign
   `inventory_extension` until `extensions_ready`, so the diagnostic hide now

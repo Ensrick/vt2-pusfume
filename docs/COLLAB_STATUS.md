@@ -11,6 +11,14 @@ architecture and reproduction contract are in
 
 ## Latest shipment
 
+- 2026-07-18 local: v0.6.20 LIVE RESULT / v0.6.21 CANDIDATE - the game
+  shut down normally, but fingers curled incorrectly and the third-person body
+  looked UV-corrupted. The log proved all first-person attachment node distances
+  were zero while Stingray rejected `p_fur` and assigned a default material.
+  v0.6.21 enables the dedicated integrated-fur material and moves first-person
+  skin compilation to direct BSI, where scene nodes and inverse binds share the
+  donor-rebound Blender space. The SDK candidate compiles 54 linked transforms
+  at maximum rest error `0.00000310`; live verification remains pending.
 - 2026-07-18 local: v0.6.19 CRASH / v0.6.20 SHIPPED - selecting Pusfume
   reached first-person skin substitution, then crashed in vanilla
   `PlayerUnitFirstPerson.hide_weapons` because the v0.6.19 init hook called it

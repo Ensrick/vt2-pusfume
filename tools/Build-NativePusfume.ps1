@@ -5,6 +5,8 @@ param(
     [string]$BlenderExe = "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe",
     [string]$FirstPersonBlend = "",
     [string]$FirstPersonDonorUnit = "",
+    [ValidateSet("bsi", "fbx")]
+    [string]$FirstPersonFormat = "bsi",
     [string]$TextureSource = ".build\pusfume_handoff\textures conv",
     [string]$WorkshopPath = "C:\Program Files (x86)\Steam\steamapps\workshop\content\552500\3764954245",
     [string]$GameBundleDir = "C:\Program Files (x86)\Steam\steamapps\common\Warhammer Vermintide 2\bundle",
@@ -126,6 +128,15 @@ $modelFbxPath = if ([IO.Path]::IsPathRooted($ModelFbx)) {
 if ($useFbxDcc -and (Get-Item -LiteralPath $modelFbxPath).Length -lt 1024) {
     throw "The native model FBX is unexpectedly small: $modelFbxPath"
 }
+$modelFbxText = [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($modelFbxPath))
+$modelContainsIntegratedFur = $modelFbxText.Contains("p_fur")
+$modelFbxText = $null
+if ($modelContainsIntegratedFur -and -not $furEnabled) {
+    throw "The model contains p_fur; rebuild with -IntegratedFur so Stingray cannot assign a default material"
+}
+if ($IntegratedFur -and -not $modelContainsIntegratedFur) {
+    throw "IntegratedFur was requested but the model has no p_fur material slot"
+}
 $animationFbxPath = if ([IO.Path]::IsPathRooted($AnimationFbx)) {
     (Resolve-Path $AnimationFbx).Path
 } else {
@@ -138,24 +149,29 @@ $blenderExePath = (Resolve-Path $BlenderExe).Path
 $generatedRoot = Join-Path $repoRoot ".build\generated-native"
 New-Item -ItemType Directory -Path $generatedRoot -Force | Out-Null
 
-$firstPersonFbxPath = $null
+$firstPersonAssetPath = $null
 if ($firstPersonEnabled) {
-    $firstPersonFbxPath = Join-Path $generatedRoot "pusfume_1p_arms.fbx"
-    $firstPersonTool = Join-Path $repoRoot "tools\prepare_pusfume_1p_blend.py"
+    $firstPersonExtension = if ($FirstPersonFormat -eq "bsi") { "bsi" } else { "fbx" }
+    $firstPersonAssetPath = Join-Path $generatedRoot "pusfume_1p_arms.$firstPersonExtension"
+    $firstPersonTool = if ($FirstPersonFormat -eq "bsi") {
+        Join-Path $repoRoot "tools\prepare_pusfume_1p_bsi.py"
+    } else {
+        Join-Path $repoRoot "tools\prepare_pusfume_1p_blend.py"
+    }
     $sourceBlendHash = (Get-FileHash -LiteralPath $firstPersonBlendPath -Algorithm SHA256).Hash
 
     & $blenderExePath --background --factory-startup --disable-autoexec `
         --python $firstPersonTool -- `
-        $firstPersonBlendPath $firstPersonDonorUnitPath $firstPersonFbxPath
+        $firstPersonBlendPath $firstPersonDonorUnitPath $firstPersonAssetPath
     if ($LASTEXITCODE -ne 0) {
-        throw "First-person Pusfume FBX preparation failed with exit code $LASTEXITCODE"
+        throw "First-person Pusfume $($FirstPersonFormat.ToUpperInvariant()) preparation failed with exit code $LASTEXITCODE"
     }
     if ((Get-FileHash -LiteralPath $firstPersonBlendPath -Algorithm SHA256).Hash -ne $sourceBlendHash) {
         throw "First-person preparation modified its source blend: $firstPersonBlendPath"
     }
-    if (-not (Test-Path -LiteralPath $firstPersonFbxPath -PathType Leaf) -or `
-            (Get-Item -LiteralPath $firstPersonFbxPath).Length -lt 1024) {
-        throw "First-person Pusfume FBX preparation produced no usable output"
+    if (-not (Test-Path -LiteralPath $firstPersonAssetPath -PathType Leaf) -or `
+            (Get-Item -LiteralPath $firstPersonAssetPath).Length -lt 1024) {
+        throw "First-person Pusfume $($FirstPersonFormat.ToUpperInvariant()) preparation produced no usable output"
     }
 }
 
@@ -245,8 +261,13 @@ extension = ".fbx"
     Copy-Item -LiteralPath $inputPath -Destination (Join-Path $unitRoot "pusfume_3p.bsi") -Force
 }
 if ($firstPersonEnabled) {
-    Copy-Item -LiteralPath $firstPersonFbxPath `
-        -Destination (Join-Path $unitRoot "pusfume_1p_arms.fbx") -Force
+    Copy-Item -LiteralPath $firstPersonAssetPath `
+        -Destination (Join-Path $unitRoot "pusfume_1p_arms.$FirstPersonFormat") -Force
+    if ($FirstPersonFormat -eq "bsi") {
+        $firstPersonBonesPath = [IO.Path]::ChangeExtension($firstPersonAssetPath, ".bones")
+        Copy-Item -LiteralPath $firstPersonBonesPath `
+            -Destination (Join-Path $unitRoot "pusfume_1p_arms.bones") -Force
+    } else {
     @'
 _data_root_version = 1
 _id = "9eb2b5d6-ad5e-4a6c-9fb9-19e75c35ebd0"
@@ -254,6 +275,7 @@ _name = "units/pusfume/pusfume_1p_arms"
 asset = "units/pusfume/pusfume_1p_arms"
 extension = ".fbx"
 '@ | Set-Content -LiteralPath (Join-Path $unitRoot "pusfume_1p_arms.dcc_asset") -Encoding utf8
+    }
 }
 Copy-Item -LiteralPath $inputBonesPath -Destination (Join-Path $unitRoot "pusfume_3p.bones") -Force
 Copy-Item -LiteralPath $animationFbxPath `
@@ -1433,4 +1455,4 @@ Write-Host "Native Pusfume build passed: source=$nativeSourceKind bytes=$nativeS
 Write-Host "Native Pusfume materials passed: textures=$($textureNames.Count) materials=$materialCount"
 Write-Host "Native Pusfume animation package passed: controller=pusfume_3p clips=pusfume_3p_idle,pusfume_3p_walk"
 Write-Host "Native Pusfume hero preview enabled: $($HeroPreview.IsPresent)"
-Write-Host "Native Pusfume first-person arms enabled: $firstPersonEnabled"
+Write-Host "Native Pusfume first-person arms enabled: $firstPersonEnabled format=$FirstPersonFormat"

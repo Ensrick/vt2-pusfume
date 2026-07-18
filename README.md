@@ -21,9 +21,8 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current local live-test candidate is **v0.6.20-dev**. The previous uploaded
-candidate is v0.6.17-dev from source commit `d0d7893`; Steam accepted the
-eight-file package, while its refreshed manifest ID remains pending.
+The current local live-test candidate is **v0.6.21-dev**. v0.6.20 was uploaded
+from source commit `b578b23` as Workshop ManifestID `627079647267377713`.
 Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,
@@ -65,13 +64,13 @@ the game uses its normal direct node links.
 
 Offline analysis then found the remaining defect after that rebind: the VT2
 SDK preserved donor bone positions but compiled every Blender bone basis at
-approximately `100x`. v0.6.17-v0.6.18 counter-scaled the armature object, which
-matched scene nodes but left the skin's local bones oversized and still visibly
-stretched. v0.6.19 instead pre-scales only positions and exports the FBX at
-`0.01`; Stingray then preserves donor-sized translations and unit bone bases.
-The build rejects the compiled unit unless all 54 donor-linked transforms
-match. It also uses Janfon's untouched 138-bone body, integrated fur, and
-96-frame baked animation in place of the normalized 82-bone placeholder.
+approximately `100x`. v0.6.17-v0.6.18 counter-scaled the armature object, while
+v0.6.19 corrected compiled scene nodes but still produced malformed live finger
+deformation. v0.6.21 bypasses that FBX unit conversion: its direct BSI export
+writes scene nodes and inverse binds from one donor-rebound Blender scene. The
+build rejects the compiled unit unless all 54 donor-linked transforms match. It
+also requires the dedicated fur material whenever Janfon's untouched 138-bone
+body contains the integrated `p_fur` geometry.
 
 The first-person material uses the same proven compiled skinned-child technique
 as the working third-person model. Animation cannot yet use the identical
@@ -128,7 +127,7 @@ game tooling present, the known-good native build is:
 ```powershell
 py -m unittest discover -s tests -v
 .\tools\Test-PusfumeSource.ps1
-.\tools\Build-NativePusfume.ps1 -HeroPreview -SplicedGameChild `
+.\tools\Build-NativePusfume.ps1 -HeroPreview -IntegratedFur `
   -FirstPersonBlend ".build\janfon_1p_20260717\pusfume_1p_arms 2.blend" `
   -FirstPersonDonorUnit ".build\donor_1p_extract\units\beings\player\dwarf_ranger\first_person_base\chr_first_person_mesh.unit"
 ```
