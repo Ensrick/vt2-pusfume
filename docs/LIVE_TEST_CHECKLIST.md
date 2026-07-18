@@ -20,7 +20,8 @@ root after midpoint alignment: source commit `ee26fcf`, Workshop ManifestID
 That test exposed vague transparent strands and a parent/child double
 translation of about `0.441m`. v0.6.15 subtracts the inherited midpoint shift
 from each arm-root correction and delays residual measurement by one frame; its
-source commit and manifest are pending.
+source commit is `ecbddd0` and Workshop ManifestID is
+`5051999329694268825`.
 
 ## Before opening Heroes
 

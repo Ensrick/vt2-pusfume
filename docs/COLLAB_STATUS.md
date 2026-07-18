@@ -16,7 +16,8 @@ architecture and reproduction contract are in
   per-hand errors `0.4408/0.4419m`, and identical residuals; midpoint and arm
   roots were double-applying the shared translation before Stingray refreshed
   child world poses. v0.6.15 subtracts inherited midpoint motion and measures
-  resolved residuals on the following frame. Pending build/upload.
+  resolved residuals on the following frame. Source commit `ecbddd0`; Workshop
+  ManifestID `5051999329694268825`; pending live test.
 - 2026-07-17 22:05 local: v0.6.13 LIVE RESULT / v0.6.14 CANDIDATE - one mesh
   was shown with materials, identity root scale, disabled culling, and a
   `0.0044m` midpoint error, but each hand remained about `0.18m` from its live

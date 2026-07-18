@@ -20,6 +20,9 @@ request rather than in release notes.
   from the spine and apply only the side-specific remainder. Residuals are
   measured from the resolved prior frame rather than stale same-update world
   poses.
+- Uploaded the hash-verified v0.6.15-dev build from source commit `ecbddd0` to
+  friends-only Workshop item `3764954245` as ManifestID
+  `5051999329694268825`.
 - Added the v0.6.14-dev per-arm anchor candidate after v0.6.13 rendered two
   tiny black specks. The live probe proved the mesh was shown, midpoint error
   fell to `0.0044m`, but each hand remained about `0.18m` from its donor hand.
