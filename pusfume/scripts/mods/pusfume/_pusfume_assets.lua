@@ -118,7 +118,7 @@ local first_person_bones = {
 
 M.first_person_attachment = {
     { source = "root_point", target = "root_point" },
-    { source = "j_spine2", target = "j_spine1" },
+    { source = "j_spine2", target = "j_spine2" },
 }
 for index, bone_name in ipairs(first_person_bones) do
     M.first_person_attachment[index + 2] = {

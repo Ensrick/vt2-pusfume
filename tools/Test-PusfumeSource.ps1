@@ -64,6 +64,7 @@ $nativeExporterPath = Join-Path $repoRoot "tools\export_blender_bsi.py"
 $animatedFbxToolPath = Join-Path $repoRoot "tools\prepare_animated_pusfume_fbx.py"
 $idleFbxToolPath = Join-Path $repoRoot "tools\generate_idle_pusfume_fbx.py"
 $firstPersonFbxToolPath = Join-Path $repoRoot "tools\prepare_pusfume_1p_blend.py"
+$firstPersonDiagnosticPath = Join-Path $repoRoot "tools\diagnose_pusfume_1p_blend.py"
 $changelogPath = Join-Path $repoRoot "CHANGELOG.md"
 $contributingPath = Join-Path $repoRoot "CONTRIBUTING.md"
 $nativeMilestonePath = Join-Path $repoRoot "docs\NATIVE_CHARACTER_MILESTONE.md"
@@ -96,6 +97,7 @@ $nativeExporterText = Get-Content -LiteralPath $nativeExporterPath -Raw
 $animatedFbxToolText = Get-Content -LiteralPath $animatedFbxToolPath -Raw
 $idleFbxToolText = Get-Content -LiteralPath $idleFbxToolPath -Raw
 $firstPersonFbxToolText = Get-Content -LiteralPath $firstPersonFbxToolPath -Raw
+$firstPersonDiagnosticText = Get-Content -LiteralPath $firstPersonDiagnosticPath -Raw
 $portraitToolText = Get-Content -LiteralPath $portraitToolPath -Raw
 $changelogText = Get-Content -LiteralPath $changelogPath -Raw
 $contributingText = Get-Content -LiteralPath $contributingPath -Raw
@@ -143,9 +145,16 @@ Test-Condition ($nativeConfigText -match 'first_person_unit\s*=\s*false' -and `
     "first-person source default" "private handoff remains disabled in public source"
 Test-Condition ($firstPersonFbxToolText -match 'REQUIRED_GROUPS' -and `
     $firstPersonFbxToolText -match 'MAXIMUM_ORPHAN_WEIGHT\s*=\s*0\.05' -and `
+    $firstPersonFbxToolText -match 'reset_bind_pose' -and `
+    $firstPersonFbxToolText -match 'armature\.animation_data_clear\(\)' -and `
+    $firstPersonFbxToolText -match 'maximum_delta > 0\.00001' -and `
     $firstPersonFbxToolText -match 'source blend is never overwritten' -and `
     $firstPersonFbxToolText -match 'bake_anim=False') `
-    "first-person Blender preparation" "selective, bounded, non-destructive export"
+    "first-person Blender preparation" "rest-pose reset, selective, bounded, non-destructive export"
+Test-Condition ($firstPersonDiagnosticText -match 'def edge_stretch' -and `
+    $firstPersonDiagnosticText -match 'maximum_vertex_delta' -and `
+    $firstPersonDiagnosticText -match 'nonidentity_pose_bones') `
+    "first-person Blender diagnostics" "bind deformation remains independently measurable"
 Test-Condition ($nativeBuildText -match '\[string\]\$FirstPersonBlend' -and `
     $nativeBuildText -match 'prepare_pusfume_1p_blend\.py' -and `
     $nativeBuildText -match 'pusfume_1p_arms\.unit' -and `
@@ -159,10 +168,10 @@ Test-Condition ($nativeBuildText -match 'processed_bundles\.csv' -and `
     $nativeBuildText -match 'units/pusfume/pusfume_1p_arms,unit') `
     "compiled asset manifest" "native build rejects omitted portrait or first-person resources"
 Test-Condition ($assetsText -match 'M\.first_person_attachment' -and `
-    $assetsText -match 'source = "j_spine2", target = "j_spine1"' -and `
+    $assetsText -match 'source = "j_spine2", target = "j_spine2"' -and `
     $assetsText -match '"j_lefthandindex4"' -and `
     $assetsText -match '"j_righthandthumb3"') `
-    "first-person bone bridge" "native 1P parent maps to Janfon's 99-bone target"
+    "first-person bone bridge" "canonical VT2 parent nodes map to Janfon's 99-bone target"
 Test-Condition ($nativeText -match 'PlayerUnitFirstPerson, "init"' -and `
     $nativeText -match 'PlayerUnitFirstPerson, "update"' -and `
     $nativeText -match 'apply_first_person_materials' -and `

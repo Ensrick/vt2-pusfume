@@ -55,6 +55,66 @@ def find_arms_and_rig():
     return candidates[0]
 
 
+def evaluated_vertex_positions(mesh_object):
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    evaluated_object = mesh_object.evaluated_get(depsgraph)
+    evaluated_mesh = evaluated_object.to_mesh()
+    try:
+        return [
+            evaluated_object.matrix_world @ vertex.co
+            for vertex in evaluated_mesh.vertices
+        ]
+    finally:
+        evaluated_object.to_mesh_clear()
+
+
+def reset_bind_pose(mesh_object, armature):
+    """Remove saved animation without changing Janfon's authored rest mesh."""
+    armature.data.pose_position = "REST"
+    bpy.context.view_layer.update()
+    rest_positions = evaluated_vertex_positions(mesh_object)
+
+    animation_data = armature.animation_data
+    action_name = animation_data.action.name if animation_data and animation_data.action else None
+    nla_strips = (
+        sum(len(track.strips) for track in animation_data.nla_tracks)
+        if animation_data
+        else 0
+    )
+    if animation_data:
+        armature.animation_data_clear()
+
+    reset_bones = 0
+    for pose_bone in armature.pose.bones:
+        if not pose_bone.matrix_basis.is_identity:
+            reset_bones += 1
+        pose_bone.matrix_basis.identity()
+
+    armature.data.pose_position = "POSE"
+    bpy.context.scene.frame_set(bpy.context.scene.frame_start)
+    bpy.context.view_layer.update()
+    posed_positions = evaluated_vertex_positions(mesh_object)
+    maximum_delta = max(
+        (
+            (posed_positions[index] - rest_positions[index]).length
+            for index in range(len(rest_positions))
+        ),
+        default=0,
+    )
+    if maximum_delta > 0.00001:
+        raise RuntimeError(
+            "First-person bind reset still deforms the rest mesh by %.8f"
+            % maximum_delta
+        )
+
+    return {
+        "action_removed": action_name,
+        "maximum_rest_delta": maximum_delta,
+        "nla_strips_removed": nla_strips,
+        "pose_bones_reset": reset_bones,
+    }
+
+
 def orphan_group_stats(mesh_object, bone_names):
     stats = {}
     for group in mesh_object.vertex_groups:
@@ -137,6 +197,7 @@ def main():
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     bpy.ops.wm.open_mainfile(filepath=input_path, load_ui=False)
     mesh, armature = find_arms_and_rig()
+    bind_reset = reset_bind_pose(mesh, armature)
 
     bone_names = {bone.name for bone in armature.data.bones}
     orphan_stats = orphan_group_stats(mesh, bone_names)
@@ -183,6 +244,7 @@ def main():
         "PUSFUME_1P_PREPARE_RESULT="
         + json.dumps(
             {
+                "bind_reset": bind_reset,
                 "bones": len(armature.data.bones),
                 "materials": material_names,
                 "mesh": mesh.name,

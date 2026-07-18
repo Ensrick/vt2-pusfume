@@ -12,6 +12,13 @@ request rather than in release notes.
 
 ### Fixed
 
+- Reset Janfon's first-person armature to its authored rest pose before static
+  export, removing the saved `positioningtest` NLA strip and 45 non-identity
+  pose transforms that made the hands appear as stretched sticks in game.
+- Restored VT2's canonical `j_spine2` first-person attachment mapping instead
+  of driving Pusfume's upper-spine node from Bardin's `j_spine1`.
+- Added a Blender deformation diagnostic and a build-time rest-pose assertion.
+  The corrected FBX holds edge stretch to `1.00003x`, down from `3.58596x`.
 - Imported VT2's canonical buff-perk lookup in both gameplay registration and
   preflight, preventing the v2 no-hit-slow perk from dereferencing an undefined
   `buff_perks` global during startup.

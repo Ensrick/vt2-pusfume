@@ -300,7 +300,9 @@ can reproduce the required character shader binding.
   attacks, ability actions, ledge states, downed, death, and weapon poses need
   authored or safely retargeted clips.
 - The placeholder armature and mesh still need Janfon's planned overhaul.
-- First-person arms are not implemented.
+- Janfon's first-person arms are compiled and attached; v0.6.9 resets their
+  saved NLA pose before export. Full in-game animation coverage still requires
+  live verification.
 - Pusfume still borrows Ranger Veteran gameplay, talents, ability, inventory,
   and persistence.
 - Bardin's donor weapon bodies are hidden rather than integrated with custom
@@ -319,8 +321,8 @@ can reproduce the required character shader binding.
    dodge, crouch, weapon, and action states.
 4. Test a host and remote client with identical builds, including death,
    rescue, bot takeover, and reconnect.
-5. Request separate first-person arms and weapon hand poses after third-person
-   locomotion is stable.
+5. Author and validate weapon-specific first-person hand poses after the
+   corrected rest-pose attachment is verified in game.
 6. Replace Ranger Veteran backend persistence with Pusfume-specific local data.
 7. Complete provenance review before changing Workshop visibility.
 
@@ -329,6 +331,8 @@ can reproduce the required character shader binding.
 - `tools/Build-NativePusfume.ps1`: canonical private native build and deploy.
 - `tools/prepare_animated_pusfume_fbx.py`: model, animation, and atlas merge.
 - `tools/generate_idle_pusfume_fbx.py`: deterministic placeholder idle.
+- `tools/prepare_pusfume_1p_blend.py`: guarded static first-person bind export.
+- `tools/diagnose_pusfume_1p_blend.py`: Blender deformation and rig evidence.
 - `tools/make_spliced_child.py`: texture and reflected-variable material patch.
 - `tools/splice_bundle_resource.py`: size-aware bundle payload replacement.
 - `tools/pusfume_atlas_layout.json`: atlas source and tile contract.

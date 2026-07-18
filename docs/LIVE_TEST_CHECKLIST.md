@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.8-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.9-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -51,12 +51,13 @@ ManifestID `441804382456025179` on the current `feat/15-career-kit` branch.
 ## First-person arms
 
 1. Enter a mission in the normal first-person camera and confirm both Pusfume arms and hands are visible.
-2. Confirm the arms use Pusfume's direct-UV body textures with no green donor glow, atlas scrambling, or opaque whisker-style cards.
-3. Attack, block, push, reload, swap weapons, interact, revive, crouch, jump, dodge, and move in every direction.
-4. Confirm the arms follow VT2's native first-person poses without remaining in rest pose, separating from the camera rig, or stretching fingers.
-5. Enable Tweaker: General's third-person camera and confirm the established third-person body still animates and shades correctly.
-6. Run `/pusfume_preflight` after spawning. `native first-person arms` must report PASS; preserve the log if it reports WARN or FAIL.
-7. Treat Janfon's `positioningtest` clip as an unwired diagnostic asset in this candidate, not an expected looping gameplay animation.
+2. Before moving, confirm the fingers retain their modeled proportions and do not appear as long, thin sticks.
+3. Confirm the arms use Pusfume's direct-UV body textures with no green donor glow, atlas scrambling, or opaque whisker-style cards.
+4. Attack, block, push, reload, swap weapons, interact, revive, crouch, jump, dodge, and move in every direction.
+5. Confirm the arms follow VT2's native first-person poses without remaining in rest pose, separating from the camera rig, or stretching fingers.
+6. Enable Tweaker: General's third-person camera and confirm the established third-person body still animates and shades correctly.
+7. Run `/pusfume_preflight` after spawning. `native first-person arms` must report PASS; preserve the log if it reports WARN or FAIL.
+8. Treat Janfon's `positioningtest` clip as an unwired diagnostic asset in this candidate, not an expected looping gameplay animation.
 
 ## Career-kit smoke test
 
