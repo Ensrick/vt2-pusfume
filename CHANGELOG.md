@@ -10,6 +10,11 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Corrected the live material-probe channel contract. The runtime donor-atlas
+  fallback now preserves the Globadier donor's black emissive slot
+  (`texture_map_27b67fd2`) and only probes diffuse plus normal/gloss, matching
+  the empirically verified Track D/E spliced-child material binding.
+
 - Corrected the v0.6.24 prototype weapon adapter after crash
   `c6fadfc5-d61e-4eaf-9d19-ced33b4d75ae`. Both models now resolve directly
   from Fatshark's base playable-Versus item records instead of substitute

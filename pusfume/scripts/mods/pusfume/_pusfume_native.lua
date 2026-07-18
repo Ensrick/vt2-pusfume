@@ -71,8 +71,10 @@ local DONOR_PACKAGE_REFERENCE = "pusfume_globadier_material"
 local WHISKER_DONOR_PACKAGE_REFERENCE = "pusfume_laurel_material"
 local DONOR_TEXTURE_CHANNELS = {
     color = "texture_map_02af90f8",
-    normal = "texture_map_27b67fd2",
-    response = "texture_map_8bf37d8e",
+    -- Proven from donor channel statistics and the spliced child build:
+    -- texture_map_27b67fd2 is the donor's black emissive map. Do not write
+    -- Pusfume normals into it during live material probes.
+    normal_gloss = "texture_map_8bf37d8e",
 }
 local DONOR_MATERIAL_SLOTS = {
     "p_main",
@@ -88,8 +90,7 @@ local WHISKER_MATERIAL_SLOT = "p_whiskers"
 local FUR_MATERIAL_SLOT = "p_fur"
 local DONOR_ATLAS_TEXTURES = {
     color = "pusfume_atlas_df",
-    normal = "pusfume_atlas_nm",
-    response = "pusfume_atlas_s",
+    normal_gloss = "pusfume_atlas_nm",
 }
 
 local MATERIAL_PROBE_MODES = {
@@ -423,11 +424,8 @@ local function apply_donor_material_to_unit(unit, config)
                     (set_material_texture(material, DONOR_TEXTURE_CHANNELS.color,
                         DONOR_ATLAS_TEXTURES.color) and 1 or 0)
                 texture_assignments = texture_assignments +
-                    (set_material_texture(material, DONOR_TEXTURE_CHANNELS.normal,
-                        DONOR_ATLAS_TEXTURES.normal) and 1 or 0)
-                texture_assignments = texture_assignments +
-                    (set_material_texture(material, DONOR_TEXTURE_CHANNELS.response,
-                        DONOR_ATLAS_TEXTURES.response) and 1 or 0)
+                    (set_material_texture(material, DONOR_TEXTURE_CHANNELS.normal_gloss,
+                        DONOR_ATLAS_TEXTURES.normal_gloss) and 1 or 0)
             end
         end
     end

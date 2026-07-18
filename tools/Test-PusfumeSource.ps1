@@ -428,6 +428,11 @@ Test-Condition ($nativeText -match 'pusfume_material_probe' -and `
     $nativeText -match 'split\s*=\s*true' -and `
     $nativeText -match 'assignments=%s') `
     "live material A/B probe" "one session can compare donor, atlas override, child, and split-slot deformation"
+Test-Condition ($nativeText -match 'normal_gloss\s*=\s*"texture_map_8bf37d8e"' -and `
+    $nativeText -notmatch 'normal\s*=\s*"texture_map_27b67fd2"' -and `
+    $nativeText -notmatch 'DONOR_TEXTURE_CHANNELS\.emissive' -and `
+    $nativeText -notmatch 'DONOR_TEXTURE_CHANNELS\.response') `
+    "live material probe channel contract" "runtime probes preserve the donor black emissive slot and write only diffuse plus normal/gloss"
 Test-Condition ((Test-Path (Join-Path $repoRoot "tools\strip_bundle_resource.py")) -and `
     (Test-Path (Join-Path $repoRoot "tests\test_strip_bundle_resource.py")) -and `
     $nativeBuildText -match 'strip_bundle_resource\.py' -and `
