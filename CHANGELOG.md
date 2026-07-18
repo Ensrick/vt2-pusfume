@@ -18,6 +18,8 @@ request rather than in release notes.
   `j_spine2 -> j_spine1` donor adapter as the single deformation variable.
 - Added a delayed runtime probe for first-person mesh count, mode, root
   transform, scale, and linked source/target node distances.
+- Uploaded the v0.6.10-dev friends-only test as Steam ManifestID
+  `1380279707573289085` after local build and deployment verification.
 
 ### Fixed
 

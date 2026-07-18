@@ -5,8 +5,8 @@ intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
 Known-good native body/animation baseline: commit `0ffdf5a`, Workshop ManifestID
-`2405082174877027150`. Current localization/whisker candidate: Workshop
-ManifestID `441804382456025179` on the current `feat/15-career-kit` branch.
+`2405082174877027150`. Current first-person A/B candidate: commit `2ac6c29`,
+Workshop ManifestID `1380279707573289085` on `feat/22-first-person-arms`.
 
 ## Before opening Heroes
 

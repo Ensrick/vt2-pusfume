@@ -9,6 +9,14 @@ This file is the chronological experiment log. The consolidated successful
 architecture and reproduction contract are in
 [`NATIVE_CHARACTER_MILESTONE.md`](NATIVE_CHARACTER_MILESTONE.md).
 
+## Latest shipment
+
+- 2026-07-17 20:30 local: FIRST-PERSON A/B TEST SHIPPED - v0.6.10-dev,
+  commit `2ac6c29`, ManifestID `1380279707573289085`. v0.6.9 loaded the
+  custom 1P unit/material but rendered no arms. This candidate retains the
+  clean bind export, restores only Janfon's `j_spine2 -> j_spine1` adapter,
+  and logs mesh/root/node-distance evidence after 30 update frames.
+
 ## Ground rules
 
 - Pull before editing; the working tree is shared. Claim files below before
