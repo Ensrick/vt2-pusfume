@@ -1,68 +1,59 @@
 # Pusfume Career Kit
 
-This document records the first implementation contract for Pusfume's career
-gameplay. The mod remains Adventure-only, friends-only, and requires the same
-version on every peer.
-
-Current uploaded test build: v0.6.5-dev, Steam ManifestID
-`441804382456025179`, uploaded 2026-07-16 at 16:37:25 local time.
-
-The v0.6.4 live log confirmed selection, player spawn, native model/material
-attachment, controller startup, weapon setup, and session stability. v0.6.5
-adds global gameplay localization and a skinned native-alpha whisker material;
-both await live acceptance.
+This is the runtime contract for Pusfume's v2 career prototype. The complete
+design and deferred content inventory are recorded in
+[`PUSFUME_CAREER_SPEC_V2.md`](PUSFUME_CAREER_SPEC_V2.md). The mod remains
+Adventure-only, friends-only, and requires the same version on every peer.
 
 ## Identity
 
 - Character: **Pusfume**
 - Career: **Under-Empire Reject**
-- Passive: **The Great Scheme**
-- Activated ability: **Skaven Ingenuity**
+- Health: **100**
+- Passive: **Aggressive Iteration**
+- Activated ability: **Moulder Ingenuity**, 90-second cooldown
 
 The selector overrides Bardin's displayed character name only while Pusfume is
 selected. It does not mutate the shared Bardin profile or other Bardin careers.
 
 ## Implemented Gameplay
 
-The Great Scheme creates two host-owned placeholder challenges per mission:
+Aggressive Iteration listens for Special kills, records the killed breed, maps
+supported Specials to their future payload, and adds a synchronized ready-state
+buff. Applying that payload to Pusfume's next ranged attack is intentionally
+guarded until each effect has a tested damage, projectile, and network contract.
 
-- Kill 40 Skaven for a strength potion.
-- Kill 5 Skaven specials for a speed potion.
+Moulder Ingenuity consumes the career charge and arms the next consumable
+selection. It does not yet replace an inventory item. Healing, potion, bomb,
+and incendiary transformations remain guarded pending item definitions,
+networked replacement rules, effects, and first-person assets.
 
-Challenge, reward, and category identifiers are appended to the engine network
-lookups deterministically. All peers therefore need the same mod version.
-
-The initial perks are implemented through stock synchronized systems:
+The base perks use stock VT2 contracts:
 
 - **Hell Pit Native** rejects known poison damage types and Poison Wind sources
-  before health damage and `on_damage_taken` procs occur.
-- **Scaredy-rat** grants a refreshable 1.2 movement multiplier for 3 seconds
-  after real damage.
-- **Insider Knowledge** applies one server-controlled `power_level_skaven`
-  stack worth 0.05 to the hero side.
+  before health damage and damage-taken procs occur.
+- **Scaredy-rat** applies VT2's `no_moveslow_on_hit` perk and grants a
+  refreshable 1.2 movement multiplier for 3 seconds after an enemy light or
+  heavy melee attack deals damage.
+- **Swift Claws** applies the stock `reload_speed` stat with Fatshark's `-0.15`
+  convention for 15% faster reloads.
 
-## Skaven Ingenuity Boundary
+Run `/pusfume_gameplay` to report poison blocks, Scaredy-rat triggers, captured
+Special/effect state, augmentation activations, and guarded payload status.
 
-The activated ability no longer uses Ranger Veteran's smoke bomb. It records a
-20-second station at Pusfume's position, starts a 60-second cooldown, and emits
-diagnostics. The visible bag, interaction prompt, potion enchantments, gas-bomb
-item, and gas traps are deliberately guarded rather than simulated with unsafe
-inventory writes.
+## Deferred Systems
 
-Before inventory conversion is enabled, the host must validate the station,
-requesting player, range, slot contents, one-use state, and replacement item.
-Custom gas payloads also need stable item, pickup, projectile, damage-profile,
-and network lookup definitions.
-
-Run `/pusfume_gameplay` to report poison blocks, station deployments, active
-station state, and the guarded inventory status.
+Pusfume still uses Ranger Veteran's talent tree and weapons. The v2 six-row
+talent design, custom weapons, Aggressive Iteration attack payloads, and
+consumable transformations must not be presented as functional until they have
+engine-backed implementations, synchronized lookups, assets, and multiplayer
+regression coverage.
 
 ## Visual Contract
 
 The whisker diffuse preserves Janfon's fractional DXT5 coverage alpha with
-texture preprocessing thresholding disabled. At build time the canonical
-private pipeline extracts the installed game's 128-byte Laurel feather
-material, verifies its diffuse/normal/combined channel contract, patches only
-those three resource IDs to the Pusfume whisker maps, and splices it over a
-mod-owned child. This keeps native character skinning and alpha-card behavior
-without redistributing the extracted source payload in Git.
+texture preprocessing thresholding disabled. At build time the private pipeline
+extracts the installed game's Laurel feather material, verifies its diffuse,
+normal, and packed-response channels, patches only those resource IDs to
+Pusfume maps, and splices it over a mod-owned child. This keeps native character
+skinning and alpha-card behavior without redistributing extracted source data.

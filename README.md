@@ -6,9 +6,9 @@ Steam Workshop development item: [Pusfume - Custom Career Prototype](https://ste
 
 The current milestone registers **Pusfume** as Bardin's fifth career. Ranger
 Veteran's talent tree, backend loadout, weapons, and bot behavior remain
-temporary adapters, while Pusfume now owns his identity, placeholder Great
-Scheme quests, three career perks, and a guarded Skaven Ingenuity station
-scaffold. A full-size Pusfume card is placed one virtual UI row above Saltzpyre
+temporary adapters. Pusfume now owns his v2 identity, Aggressive Iteration
+special-kill capture, Moulder Ingenuity consumable-augmentation state, and
+three career perks. A full-size Pusfume card is placed one virtual UI row above Saltzpyre
 in the five-row selector and keeps the game's normal click, preview, and
 confirmation flow. The friends-only native build renders and deforms Janfon's
 textured third-person placeholder in the selector and in game, with a generated
@@ -21,7 +21,7 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current local live-test candidate is **v0.6.7-dev**. The latest uploaded
+The current local live-test candidate is **v0.6.8-dev**. The latest uploaded
 friends-only build remains v0.6.5-dev, Steam ManifestID
 `441804382456025179`. Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
@@ -32,12 +32,15 @@ career-kit string into vanilla's global localization path and gives
 fractional coverage alpha. v0.6.7 makes Janfon's dedicated first-person arms
 replace the equipped Ranger Veteran attachment before vanilla spawns it; their
 visibility, deformation, and direct-UV material now require live verification
-before upload.
+before upload. v0.6.8 adopts the authoritative career specification v2.0 with
+100 HP, a 90-second Moulder Ingenuity cooldown, Aggressive Iteration capture,
+melee-only Scaredy-rat activation, and Swift Claws reload speed.
 
-Skaven Ingenuity currently records a 20-second station and starts its cooldown,
-but it does not yet spawn an interactable bag or modify inventory. Potion
-enchantments, gas bombs, gas traps, final quest rewards, and animation coverage
-beyond idle/walk remain guarded or deferred.
+Moulder Ingenuity currently arms the next consumable selection and starts its
+cooldown, but it does not yet transform inventory. Aggressive Iteration records
+the killed Special and displays its ready state, while its ranged-shot payloads
+remain guarded. The custom talent rows, weapons, consumable assets, and
+animation coverage beyond idle/walk remain deferred.
 
 ## Install and test
 
@@ -47,7 +50,7 @@ beyond idle/walk remain guarded or deferred.
 4. Enter `/pusfume_preflight` in the Adventure Keep. The unopened-card warning is expected; failures are not.
 5. Open Heroes and click the gold-trimmed Pusfume card at the top right of the career grid.
 6. Enter `/pusfume_status` to confirm `UI(card=true selected=true)` and then rerun `/pusfume_preflight`.
-7. After spawning, enter `/pusfume_gameplay` to inspect poison blocks and the guarded station state.
+7. After spawning, enter `/pusfume_gameplay` to inspect poison blocks, Scaredy-rat, Aggressive Iteration, and guarded augmentation state.
 8. If the UI hook is unavailable after a game update, enter `/pusfume` in chat while in the Keep.
 
 Pusfume currently shares Ranger Veteran's equipped items and talents. Changing Pusfume's loadout therefore changes Ranger Veteran's donor loadout until custom persistence is implemented.

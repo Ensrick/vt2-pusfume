@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.7-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.8-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -35,10 +35,10 @@ ManifestID `441804382456025179` on the current `feat/15-career-kit` branch.
 1. Run `/pusfume_status` and confirm `active=pusfume`.
 2. Equip a Ranger Veteran-compatible melee and ranged weapon.
 3. Open Talents and verify the temporary Ranger Veteran tree renders.
-4. Confirm ability, passive, perk, and Great Scheme text displays normally with no `<pusfume_...>` placeholders.
-5. Use the career ability once. Confirm the cooldown starts, the station
-   placeholder message appears, and `/pusfume_gameplay` reports one deployment;
-   no visible or interactable bag is expected yet.
+4. Confirm ability, passive, and perk text displays normally with no `<pusfume_...>` placeholders.
+5. Use Moulder Ingenuity once. Confirm its 90-second cooldown starts, the armed
+   placeholder message appears, and `/pusfume_gameplay` reports one activation;
+   no consumable transformation is expected yet.
 6. Switch to another Bardin career, then back to Pusfume, checking that neither loadout nor talents disappear.
 7. Use `/pusfume` once as a fallback test. The command should print the host request and a `success` response.
 8. Open the in-game player list and keep it visible long enough for the portrait to refresh; confirm the close-up Pusfume portrait renders inside the frame with no clipping or Ranger Veteran art.
@@ -60,15 +60,16 @@ ManifestID `441804382456025179` on the current `feat/15-career-kit` branch.
 
 ## Career-kit smoke test
 
-1. Remain spawned as Pusfume for at least 30 seconds and confirm Insider
-   Knowledge no longer raises a `BuffExtension.add_buff` error.
-2. Take non-poison damage and verify Scaredy-rat grants 20% movement speed for
-   3 seconds, then expires.
+1. Remain spawned as Pusfume for at least 30 seconds and confirm the v2 passive
+   buffs register without a `BuffExtension.add_buff` error.
+2. Take an enemy melee hit and verify Scaredy-rat grants 20% movement speed for
+   3 seconds, then expires. Confirm a ranged hit does not trigger the speed buff.
 3. Enter Poison Wind gas and verify Hell Pit Native blocks its poison damage.
-4. Damage a Skaven enemy with and without Pusfume present to validate the
-   party-wide 5% Skaven power modifier.
-5. Confirm The Great Scheme shows its two placeholder Skaven objectives and
-   advances only for the intended kill categories.
+4. Reload a ranged weapon and compare timing with Ranger Veteran to verify
+   Swift Claws grants 15% faster reload speed.
+5. Kill a supported Special and confirm `/pusfume_gameplay` reports its breed
+   and mapped Aggressive Iteration effect. The next shot does not apply that
+   payload yet.
 
 ## Failure capture
 

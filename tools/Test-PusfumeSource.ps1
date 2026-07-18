@@ -497,34 +497,38 @@ Test-Condition ($registryText -notmatch 'career\.display_name\s*=\s*"pusfume_car
     "profile request identity" "display_name remains the internal career token required by career_index_from_name"
 Test-Condition ($mainText -match 'gameplay\.install\(\)' -and `
     $gameplayText -match 'CareerAbilityPusfumeIngenuity' -and `
-    $gameplayText -match 'inventory_upgrades=guarded') `
-    "Skaven Ingenuity" "donor smoke bomb is replaced by an explicitly guarded station scaffold"
+    $gameplayText -match 'augmentation_armed\s*=\s*true' -and `
+    $gameplayText -match 'local ACTIVE_COOLDOWN\s*=\s*90') `
+    "Moulder Ingenuity" "v2 tool bag arms the next consumable with a 90-second cooldown"
 Test-Condition ($preflightText -match 'add\(checks, "career kit"' -and `
-    $preflightText -match 'add\(checks, "Great Scheme network lookups"') `
-    "career-kit preflight" "live diagnostics validate custom ability and quest registration"
+    $preflightText -match 'add\(checks, "Aggressive Iteration proc"' -and `
+    $preflightText -match 'add\(checks, "v2 passive perks"') `
+    "career-kit preflight" "live diagnostics validate the v2 ability and passive registration"
 Test-Condition ($gameplayText -match 'poison_damage_types' -and `
     $gameplayText -match 'skaven_poison_wind_globadier\s*=\s*true' -and `
     $gameplayText -match 'PlayerUnitHealthExtension, "add_damage"') `
     "Hell Pit Native" "poison immunity is career-scoped before damage procs"
 Test-Condition ($gameplayText -match 'duration\s*=\s*3' -and `
     $gameplayText -match 'multiplier\s*=\s*1\.2' -and `
-    $gameplayText -match 'path_to_movement_setting_to_modify\s*=\s*\{ "move_speed" \}') `
-    "Scaredy-rat" "damage grants 20 percent move speed for three seconds"
+    $gameplayText -match 'path_to_movement_setting_to_modify\s*=\s*\{ "move_speed" \}' -and `
+    $gameplayText -match 'buff_perks\.no_moveslow_on_hit' -and `
+    $gameplayText -match 'attack_type == "light_attack"' -and `
+    $gameplayText -match 'attack_type == "heavy_attack"') `
+    "Scaredy-rat" "hit slowdown is suppressed and enemy melee damage grants 20 percent speed for three seconds"
 Test-Condition ($gameplayText -notmatch 'mod:add_proc_function' -and `
     $gameplayText -notmatch 'mod:add_buff_template' -and `
-    $gameplayText -match 'ProcFunctions\.pusfume_scaredy_rat_proc\s*=\s*function' -and `
+    $gameplayText -match 'ProcFunctions\.pusfume_aggressive_iteration_proc\s*=\s*function' -and `
     $gameplayText -match 'BuffTemplates\[name\]\s*=\s*\{' -and `
     $gameplayText -match 'definition\.name\s*=\s*name' -and `
     $gameplayText -match 'append_lookup\(NetworkLookup\.buff_templates, name\)' -and `
     $gameplayText -match 'rawget\(lookup, name\)' -and `
     $gameplayText -match 'rawset\(lookup, name, index\)' -and `
-    $preflightText -match 'add\(checks, "Scaredy-rat proc"' -and `
     $preflightText -match 'add\(checks, "career buff registry"') `
-    "career buff APIs" "normalizes late templates and uses synchronized VT2 registries"
-Test-Condition ($gameplayText -match 'stat_buff\s*=\s*"power_level_skaven"' -and `
-    $gameplayText -match 'multiplier\s*=\s*0\.05' -and `
+    "career buff APIs" "normalizes v2 templates and uses synchronized VT2 registries"
+Test-Condition ($gameplayText -match 'stat_buff\s*=\s*"reload_speed"' -and `
+    $gameplayText -match 'multiplier\s*=\s*-0\.15' -and `
     $gameplayText -match 'max_stacks\s*=\s*1') `
-    "Insider Knowledge" "team Skaven damage uses the stock synchronized stat at five percent"
+    "Swift Claws" "reload time uses the stock stacking multiplier at fifteen percent faster"
 Test-Condition ($accessText -match 'mod:dofile\("scripts/mods/pusfume/pusfume_localization"\)' -and `
     $accessText -match 'for key, translations in pairs\(localization\)' -and `
     $accessText -match 'global_strings\[key\] = translations\.en' -and `
@@ -532,11 +536,14 @@ Test-Condition ($accessText -match 'mod:dofile\("scripts/mods/pusfume/pusfume_lo
     $preflightText -match 'add\(checks, "career localization"' -and `
     $preflightText -match 'value == "<" \.\. key \.\. ">"') `
     "career localization" "global Localize derives every career string from the VMF localization table"
-Test-Condition ($gameplayText -match 'append_lookup\(NetworkLookup\.challenges' -and `
-    $gameplayText -match 'append_lookup\(NetworkLookup\.challenge_rewards' -and `
-    $gameplayText -match 'append_lookup\(NetworkLookup\.challenge_categories' -and `
-    $gameplayText -match 'breed\.race == "skaven"') `
-    "The Great Scheme" "placeholder Skaven quests have deterministic peer lookups"
+Test-Condition ($gameplayText -match 'event\s*=\s*"on_kill"' -and `
+    $gameplayText -match 'breed\.special' -and `
+    $gameplayText -match 'pusfume_aggressive_iteration_ready' -and `
+    $gameplayText -match 'buff_system:add_buff\(owner_unit, buff_name, owner_unit, false\)' -and `
+    $gameplayText -notmatch 'pusfume_scheme_kill_skaven') `
+    "Aggressive Iteration" "special kills capture a mapped power and synchronize readiness"
+Test-Condition ($registryText -match 'career\.attributes\.max_hp\s*=\s*100') `
+    "career health" "v2 specification fixes Pusfume at 100 maximum health"
 Test-Condition ($nativeBuildText -match '\$cutAlphaEnabled = "false"' -and `
     $nativeBuildText -match 'enable_cut_alpha_threshold = \$cutAlphaEnabled' -and `
     $nativeBuildText -notmatch '\$Name -eq "pusfume_whiskers_df"') `

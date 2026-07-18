@@ -206,6 +206,8 @@ function M.register()
     career.portrait_thumbnail = "small_portrait_pusfume"
     career.activated_ability = ActivatedAbilitySettings.pusfume
     career.passive_ability = PassiveAbilitySettings.pusfume
+    career.attributes = career.attributes or {}
+    career.attributes.max_hp = 100
 
     CareerSettingsOriginal[M.CAREER_NAME] = deep_clone(career)
 

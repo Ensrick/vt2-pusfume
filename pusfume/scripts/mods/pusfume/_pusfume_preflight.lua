@@ -1,4 +1,5 @@
 local mod = get_mod("pusfume")
+local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/settings/buff_perk_names")
 
 local M = {}
 
@@ -76,10 +77,17 @@ function M.collect(registry, career_index, backend, compat, ui, native)
     local talent_tree = talent_trees and talent_trees[career.talent_tree_index]
     local active_ability = career and career.activated_ability and career.activated_ability[1]
     local passive_ability = career and career.passive_ability
+    local passive_class = passive_ability and passive_ability.passive_ability_classes
+        and passive_ability.passive_ability_classes[1]
     local has_gameplay = active_ability and active_ability.ability_class == CareerAbilityPusfumeIngenuity
-        and passive_ability == PassiveAbilitySettings.pusfume and talent_tree
+        and active_ability.cooldown == 90
+        and passive_ability == PassiveAbilitySettings.pusfume
+        and passive_class and passive_class.ability_class == PassiveAbilityPusfumeAggressiveIteration
+        and talent_tree
     add(checks, "career kit", has_gameplay and "PASS" or "FAIL",
-        "Skaven Ingenuity, The Great Scheme, perks, and donor talent tree")
+        "v2 Aggressive Iteration, Moulder Ingenuity, perks, and current talent tree")
+    add(checks, "career health", career and career.attributes and career.attributes.max_hp == 100 and "PASS" or "FAIL",
+        "v2 specification requires 100 maximum health")
 
     local localization_keys = {
         "pusfume_character_name",
@@ -92,14 +100,9 @@ function M.collect(registry, career_index, backend, compat, ui, native)
         "pusfume_hell_pit_native_description",
         "pusfume_scaredy_rat_name",
         "pusfume_scaredy_rat_description",
-        "pusfume_insider_knowledge_name",
-        "pusfume_insider_knowledge_description",
-        "pusfume_scheme_kill_skaven",
-        "pusfume_scheme_kill_skaven_description",
-        "pusfume_scheme_kill_skaven_specials",
-        "pusfume_scheme_kill_specials_description",
-        "pusfume_scheme_reward_strength",
-        "pusfume_scheme_reward_speed",
+        "pusfume_swift_claws_name",
+        "pusfume_swift_claws_description",
+        "pusfume_ingenuity_armed_placeholder",
     }
     local unresolved_localization
 
@@ -116,17 +119,18 @@ function M.collect(registry, career_index, backend, compat, ui, native)
         unresolved_localization and "global Localize missed " .. unresolved_localization
             or "identity, abilities, perks, and quests resolve through global Localize")
 
-    local scaredy_rat_proc_ready = ProcFunctions
-        and type(ProcFunctions.pusfume_scaredy_rat_proc) == "function"
-    add(checks, "Scaredy-rat proc", scaredy_rat_proc_ready and "PASS" or "FAIL",
-        scaredy_rat_proc_ready and "native ProcFunctions callback is registered"
-            or "damage callback is missing from the engine proc registry")
+    local iteration_proc_ready = ProcFunctions
+        and type(ProcFunctions.pusfume_aggressive_iteration_proc) == "function"
+    add(checks, "Aggressive Iteration proc", iteration_proc_ready and "PASS" or "FAIL",
+        iteration_proc_ready and "special-kill capture callback is registered"
+            or "special-kill callback is missing from the engine proc registry")
 
     local custom_buffs = {
+        "pusfume_aggressive_iteration_listener",
+        "pusfume_aggressive_iteration_ready",
         "pusfume_scaredy_rat_listener",
         "pusfume_scaredy_rat_speed",
-        "pusfume_insider_knowledge_aura",
-        "pusfume_insider_knowledge_team",
+        "pusfume_swift_claws",
     }
     local custom_buffs_ready = true
 
@@ -142,17 +146,17 @@ function M.collect(registry, career_index, backend, compat, ui, native)
     end
 
     add(checks, "career buff registry", custom_buffs_ready and "PASS" or "FAIL",
-        custom_buffs_ready and "four normalized templates have synchronized native lookup IDs"
+        custom_buffs_ready and "five v2 normalized templates have synchronized native lookup IDs"
             or "a custom template name or network lookup is missing")
 
-    local challenge_lookup_ready = NetworkLookup and NetworkLookup.challenges
-        and NetworkLookup.challenges.pusfume_scheme_kill_skaven
-        and NetworkLookup.challenges.pusfume_scheme_kill_skaven_specials
-        and NetworkLookup.challenge_rewards.pusfume_scheme_reward_strength
-        and NetworkLookup.challenge_rewards.pusfume_scheme_reward_speed
-        and NetworkLookup.challenge_categories.pusfume_scheme
-    add(checks, "Great Scheme network lookups", challenge_lookup_ready and "PASS" or "FAIL",
-        "challenge, reward, and category identifiers are registered")
+    local scaredy_template = BuffTemplates and BuffTemplates.pusfume_scaredy_rat_listener
+    local scaredy_perks = scaredy_template and scaredy_template.buffs[1].perks
+    local swift_template = BuffTemplates and BuffTemplates.pusfume_swift_claws
+    local swift_multiplier = swift_template and swift_template.buffs[1].multiplier
+    local v2_perks_ready = scaredy_perks and scaredy_perks[1] == buff_perks.no_moveslow_on_hit
+        and swift_multiplier == -0.15
+    add(checks, "v2 passive perks", v2_perks_ready and "PASS" or "FAIL",
+        "Scaredy-rat ignores hit slowdown and Swift Claws grants 15% faster reload")
 
     local permissions = registry.item_permission_status()
     local permission_status = permissions.eligible > 0 and permissions.missing == 0 and "PASS" or "FAIL"

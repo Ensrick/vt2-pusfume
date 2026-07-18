@@ -12,6 +12,12 @@ request rather than in release notes.
 
 ### Fixed
 
+- Imported VT2's canonical buff-perk lookup in both gameplay registration and
+  preflight, preventing the v2 no-hit-slow perk from dereferencing an undefined
+  `buff_perks` global during startup.
+- Moved Scaredy-rat's speed trigger to the player damage hook, where VT2 still
+  exposes `light_attack` and `heavy_attack`, so ranged damage no longer
+  incorrectly activates the melee-only perk.
 - Fixed v0.6.6-dev spawning the equipped Ranger Veteran first-person skin
   before its post-init Pusfume check. The career-scoped hook now substitutes
   the native Pusfume skin during vanilla attachment creation and immediately
@@ -52,6 +58,11 @@ request rather than in release notes.
 
 ### Added
 
+- Added the authoritative v2.0 career contract derived from the current design
+  document, plus focused regression tests for identity, retired v1 systems,
+  passive registration, and guarded ability boundaries.
+- Added Aggressive Iteration Special-kill capture/readiness diagnostics and
+  Moulder Ingenuity's guarded next-consumable state.
 - Added Janfon's canonical Pusfume portrait as dedicated selector, HUD/score,
   and compact UI assets, using the proven vanilla frame masks from Dynamic
   Cosmetic Portraits and standalone renderer injection for every supported UI.
@@ -100,7 +111,12 @@ request rather than in release notes.
 
 ### Changed
 
-- Advanced the local live-test candidate to v0.6.7-dev for first-person arms.
+- Advanced the local live-test candidate to v0.6.8-dev for the v2 career kit.
+  The career now has explicit 100 HP, a 90-second Moulder Ingenuity cooldown,
+  no-hit-slow and melee-only Scaredy-rat behavior, and 15% Swift Claws reload
+  speed. The old Great Scheme, station, and Insider Knowledge prototypes are
+  retired.
+- v0.6.7-dev added first-person arms.
   Janfon's `positioningtest` action remains a diagnostic handoff clip; this
   candidate instead links the arms to VT2's native first-person animation rig.
 - Updated the README, career-kit contract, and live-test checklist to identify
