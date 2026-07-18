@@ -976,6 +976,7 @@ return {
     first_person_material_package = $firstPersonMaterialPackageValue,
     first_person_materials = $firstPersonMaterialsValue,
     first_person_direct_link = $firstPersonDirectLinkValue,
+    native_skaven_first_person = true,
     first_person_unit = $firstPersonUnitValue,
     hero_preview_enabled = $heroPreviewEnabled,
     hide_donor_weapons = false,

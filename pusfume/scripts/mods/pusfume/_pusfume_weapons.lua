@@ -164,39 +164,33 @@ local function item_definitions(registry)
         return nil
     end
 
+    -- Start from Fatshark's complete records so future Pusfume variants retain
+    -- every native unit and presentation field. Only ownership, identity, the
+    -- Adventure slot adapter, and our isolated templates differ from Versus.
+    local melee = deep_clone(packmaster_item)
+    melee.can_wield = { registry.CAREER_NAME }
+    melee.description = "pusfume_packmaster_hook_description"
+    melee.display_name = "pusfume_packmaster_hook_name"
+    melee.mechanisms = nil
+    melee.name = M.ITEM_KEYS.slot_melee
+    melee.source_item = M.VERSUS_ITEM_KEYS.slot_melee
+    melee.template = M.TEMPLATE_NAMES.slot_melee
+
+    local ranged = deep_clone(warpfire_item)
+    ranged.can_wield = { registry.CAREER_NAME }
+    ranged.description = "pusfume_warpfire_thrower_description"
+    ranged.display_name = "pusfume_warpfire_thrower_name"
+    ranged.mechanisms = nil
+    ranged.name = M.ITEM_KEYS.slot_ranged
+    ranged.property_table_name = "ranged"
+    ranged.slot_type = "ranged"
+    ranged.source_item = M.VERSUS_ITEM_KEYS.slot_ranged
+    ranged.template = M.TEMPLATE_NAMES.slot_ranged
+    ranged.trait_table_name = "ranged_heat"
+
     return {
-        [M.ITEM_KEYS.slot_melee] = {
-            can_wield = { registry.CAREER_NAME },
-            description = "pusfume_packmaster_hook_description",
-            display_name = "pusfume_packmaster_hook_name",
-            has_power_level = true,
-            hud_icon = "weapon_generic_icon_axe2h",
-            inventory_icon = "icon_wpn_dw_2h_axe_01_t1",
-            item_type = "dr_2h_axes",
-            name = M.ITEM_KEYS.slot_melee,
-            property_table_name = "melee",
-            rarity = "plentiful",
-            right_hand_unit = packmaster_item.right_hand_unit,
-            slot_type = "melee",
-            template = M.TEMPLATE_NAMES.slot_melee,
-            trait_table_name = "melee",
-        },
-        [M.ITEM_KEYS.slot_ranged] = {
-            can_wield = { registry.CAREER_NAME },
-            description = "pusfume_warpfire_thrower_description",
-            display_name = "pusfume_warpfire_thrower_name",
-            has_power_level = true,
-            hud_icon = "weapon_generic_icon_units/weapons/weapon_display/display_rifle",
-            inventory_icon = "icon_wpn_dw_iron_drake_02",
-            item_type = "dr_drakegun",
-            name = M.ITEM_KEYS.slot_ranged,
-            property_table_name = "ranged",
-            rarity = "plentiful",
-            left_hand_unit = warpfire_item.left_hand_unit,
-            slot_type = "ranged",
-            template = M.TEMPLATE_NAMES.slot_ranged,
-            trait_table_name = "ranged_heat",
-        },
+        [M.ITEM_KEYS.slot_melee] = melee,
+        [M.ITEM_KEYS.slot_ranged] = ranged,
     }
 end
 

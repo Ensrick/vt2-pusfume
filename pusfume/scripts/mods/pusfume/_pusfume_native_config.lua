@@ -8,6 +8,7 @@ return {
     first_person_material_package = false,
     first_person_materials = false,
     first_person_direct_link = false,
+    native_skaven_first_person = false,
     first_person_unit = false,
     hero_preview_enabled = false,
     fur_child_material = false,

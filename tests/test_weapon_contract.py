@@ -19,12 +19,20 @@ class WeaponContractTests(unittest.TestCase):
         self.assertNotIn('template = "vs_packmaster_claw"', WEAPONS)
         self.assertNotIn('template = "vs_warpfire_thrower_gun"', WEAPONS)
 
+    def test_custom_items_are_complete_clones_of_the_native_versus_records(self):
+        self.assertIn("local melee = deep_clone(packmaster_item)", WEAPONS)
+        self.assertIn("local ranged = deep_clone(warpfire_item)", WEAPONS)
+        self.assertIn("melee.source_item = M.VERSUS_ITEM_KEYS.slot_melee", WEAPONS)
+        self.assertIn("ranged.source_item = M.VERSUS_ITEM_KEYS.slot_ranged", WEAPONS)
+        self.assertIn("melee.mechanisms = nil", WEAPONS)
+        self.assertIn("ranged.mechanisms = nil", WEAPONS)
+
     def test_hero_actions_always_have_a_matching_wielded_hand_unit(self):
         self.assertIn("action_hand_contract_ready", WEAPONS)
         self.assertIn('local hand = action.weapon_action_hand or "right"', WEAPONS)
         ranged = WEAPONS[WEAPONS.index("[M.ITEM_KEYS.slot_ranged]") :]
-        self.assertIn("left_hand_unit = warpfire_item.left_hand_unit", ranged)
-        self.assertNotIn("right_hand_unit = warpfire_item", ranged)
+        self.assertIn("local ranged = deep_clone(warpfire_item)", WEAPONS)
+        self.assertNotIn("ranged.right_hand_unit =", ranged)
 
     def test_warpfire_uses_native_versus_actions_without_adventure_only_dependencies(self):
         self.assertIn("sanitize_warpfire_template", WEAPONS)

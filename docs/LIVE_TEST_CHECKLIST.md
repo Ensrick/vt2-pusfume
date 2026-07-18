@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.25-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.26-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -42,6 +42,12 @@ Packmaster item and articulated linking; Warpfire resolves the base Versus
 item and its native left-handed actions. Source commit `c59ab62` was compiled
 and uploaded at 2026-07-18 17:45 America/Chicago; Steam confirmed ManifestID
 `1817442651143246521`. The live result is pending.
+The v0.6.26 candidate replaces the remaining Ranger first-person contract with
+Fatshark's shared Skaven first-person base and native Packmaster arms. Both
+Pusfume inventory records are complete clones of their official Versus base
+items, adapted only for Pusfume ownership and Adventure slots. This is an
+intentional native-rig baseline: Janfon's arms remain in the source pipeline
+but are not displayed until they can be rebound to the exact Skaven rest rig.
 
 ## Before opening Heroes
 

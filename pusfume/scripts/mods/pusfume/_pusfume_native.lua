@@ -1,6 +1,13 @@
 local mod = get_mod("pusfume")
 
 local M = {}
+
+local SKAVEN_FIRST_PERSON_BASE =
+    "units/beings/player/dark_pact_first_person_base/skaven_common/chr_first_person_base"
+local SKAVEN_FIRST_PERSON_BOT_BASE =
+    "units/beings/player/dark_pact_first_person_base/skaven_common/chr_first_person_bot_base"
+local PACKMASTER_FIRST_PERSON_ARMS =
+    "units/beings/player/dark_pact_skins/skaven_pack_master/skin_0000/first_person/chr_first_person_mesh"
 local state = {
     cosmetic_registered = false,
     hook_installed = false,
@@ -908,9 +915,14 @@ local function register_cosmetic(registry, config)
         return false
     end
 
-    local first_person_unit = config.first_person_unit
+    local first_person_unit = config.native_skaven_first_person
+            and PACKMASTER_FIRST_PERSON_ARMS
+        or config.first_person_unit
     if first_person_unit then
-        state.first_person_resource_available = Application.can_get("unit", first_person_unit)
+        -- Native inventory units are loaded later by ProfileSynchronizer from
+        -- the registered skin. Only bundled custom units can be resolved now.
+        state.first_person_resource_available = config.native_skaven_first_person
+            or Application.can_get("unit", first_person_unit)
 
         if not state.first_person_resource_available then
             mod:error("[pusfume] First-person build enabled but unit is unavailable: %s", first_person_unit)
@@ -932,6 +944,10 @@ local function register_cosmetic(registry, config)
     skin.always_hide_attachment_slots = { "slot_hat" }
     skin.equip_hat_event = nil
     skin.material_changes = nil
+    if config.native_skaven_first_person then
+        skin.first_person = SKAVEN_FIRST_PERSON_BASE
+        skin.first_person_bot = SKAVEN_FIRST_PERSON_BOT_BASE
+    end
     local attachment_node_linking = config.root_animation_isolation
             and AttachmentNodeLinking.pusfume_root_animation_attachment
         or AttachmentNodeLinking.pusfume_third_person_attachment
@@ -941,7 +957,9 @@ local function register_cosmetic(registry, config)
         attachment_node_linking = attachment_node_linking,
     }
     if first_person_unit then
-        local first_person_linking = config.first_person_direct_link
+        local first_person_linking = config.native_skaven_first_person
+                and AttachmentNodeLinking.skaven_first_person_attachment
+            or config.first_person_direct_link
                 and AttachmentNodeLinking.pusfume_first_person_direct_attachment
             or AttachmentNodeLinking.pusfume_first_person_attachment
         skin.first_person_attachment = {
@@ -957,6 +975,9 @@ local function register_cosmetic(registry, config)
     mod:info("[pusfume] Native third-person cosmetic registered: %s", config.third_person_unit)
     if first_person_unit then
         mod:info("[pusfume] Native first-person cosmetic registered: %s", first_person_unit)
+        if config.native_skaven_first_person then
+            mod:info("[pusfume] Native Skaven first-person base active: %s", SKAVEN_FIRST_PERSON_BASE)
+        end
     end
 
     if config.root_animation_isolation then
@@ -967,6 +988,12 @@ local function register_cosmetic(registry, config)
 end
 
 local function apply_first_person_materials(extension, config)
+    if config.native_skaven_first_person then
+        extension._pusfume_first_person_materials_applied = true
+        state.first_person_materials_applied = true
+        return true
+    end
+
     if extension._pusfume_first_person_materials_applied then
         return true
     end
@@ -1517,6 +1544,7 @@ function M.first_person_status()
 
     return {
         enabled = type(config and config.first_person_unit) == "string",
+        native_skaven_baseline = config and config.native_skaven_first_person == true,
         resource_available = state.first_person_resource_available,
         hook_installed = state.first_person_hook_installed,
         package_requested = state.first_person_material_package_requested,

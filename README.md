@@ -21,21 +21,17 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current friends-only live-test candidate is **v0.6.25-dev**. It keeps the
+The current friends-only live-test candidate is **v0.6.26-dev**. It keeps the
 working v0.6.22 third-person materials, authored idle, and restored original
-walk and v0.6.23 first-person bind unchanged. It replaces the shared Ranger
-weapon loadout with Pusfume-only prototype items that render the playable
-Versus Packmaster hook and Warpfire Thrower, resolving both models from the
-game's own base Versus item registry. Warpfire retains Fatshark's native
-left-handed Versus actions with mechanism-only callbacks removed for Adventure.
-The Packmaster claw has no native ordinary attacks because its grab is a
-Pactsworn character state, so a temporary hero attack table drives it until
-Pusfume has dedicated melee actions.
-For first person, v0.6.23 baked Janfon's weighted arm mesh onto the
-Ranger donor's joint positions before installing the exact donor axes and bind
-matrices, addressing the block-pose warping seen with an unchanged mesh around
-moved pivots. Janfon's current first-person handoff has no walk cycle; VT2's
-native weapon/action poses remain the intended first-person animation source.
+walk. It replaces the Ranger first-person base with Fatshark's shared Skaven
+base and native Packmaster arms, establishing an unwarped Pactsworn weapon-rig
+baseline before Janfon's cosmetic arms are rebound to that exact skeleton.
+Pusfume's Packmaster hook and Warpfire Thrower are complete clones of the
+official Versus base-item records, with only ownership, identity, Adventure
+slot metadata, and isolated templates changed. Warpfire retains Fatshark's
+native left-handed actions with mechanism-only callbacks removed. The claw's
+temporary hero attacks remain isolated because the native Packmaster grab is a
+character state rather than an ordinary weapon action.
 Source commit `c59ab62` was compiled, hash-verified, deployed locally, and
 uploaded to the friends-only Workshop item at 2026-07-18 17:45
 America/Chicago. Steam recorded ManifestID `1817442651143246521`; the v0.6.25

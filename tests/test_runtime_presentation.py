@@ -30,6 +30,14 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn("extension._pusfume_weapon_hide_pending = false", self.native)
         self.assertIn("restore_first_person_weapons(extension)", self.native)
 
+    def test_weapon_baseline_uses_native_skaven_first_person_contract(self):
+        self.assertIn("SKAVEN_FIRST_PERSON_BASE", self.native)
+        self.assertIn("PACKMASTER_FIRST_PERSON_ARMS", self.native)
+        self.assertIn("skin.first_person = SKAVEN_FIRST_PERSON_BASE", self.native)
+        self.assertIn("AttachmentNodeLinking.skaven_first_person_attachment", self.native)
+        self.assertIn("if config.native_skaven_first_person then", self.native)
+        self.assertIn("native_skaven_baseline", self.native)
+
     def test_selector_name_is_guarded_at_final_write(self):
         self.assertIn('mod:hook(class, "_set_hero_info"', self.ui)
         self.assertIn('hero_name = mod:localize("pusfume_character_name")', self.ui)

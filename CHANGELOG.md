@@ -10,6 +10,19 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Replaced the Ranger Veteran first-person base used by the v0.6.25 weapon
+  prototype with Fatshark's shared Skaven first-person base and native
+  Packmaster arm attachment. This isolates weapon placement from Janfon's
+  still-Ranger-bound cosmetic arms and gives both prototype weapons their
+  authored Pactsworn attachment nodes for the v0.6.26 live test.
+- Rebuilt both Pusfume inventory entries as complete deep clones of the
+  official `vs_packmaster_claw` and `vs_warpfire_thrower_gun` base records.
+  Only Pusfume ownership, custom identity, Adventure slot metadata, and
+  isolated template names differ from Fatshark's records.
+- Added regression coverage for the native Skaven first-person contract and
+  complete base-item cloning. Janfon's first-person asset remains preserved in
+  the build pipeline for a later exact Skaven-rest rebind.
+
 - Corrected the v0.6.24 prototype weapon adapter after crash
   `c6fadfc5-d61e-4eaf-9d19-ced33b4d75ae`. Both models now resolve directly
   from Fatshark's base playable-Versus item records instead of substitute

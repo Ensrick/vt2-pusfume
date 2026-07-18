@@ -253,6 +253,8 @@ function M.collect(registry, career_index, backend, compat, ui, native, weapons)
             and "compiled first-person arms unit is unavailable"
             or not first_person_status.hook_installed
                 and "PlayerUnitFirstPerson hook is unavailable"
+            or first_person_status.native_skaven_baseline
+                and "native Skaven base, Packmaster arms, and weapon attachment nodes are active"
             or first_person_status.materials_applied
                 and "Janfon arms are attached and their direct-UV material is applied"
             or first_person_status.package_loaded
