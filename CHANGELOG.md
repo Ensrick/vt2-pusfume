@@ -25,6 +25,9 @@ request rather than in release notes.
 - Donor-rest builds use VT2's native 53-node first-person attachment directly
   and skip every per-frame midpoint, arm-root, and rest-retarget correction.
   Source builds retain the root-only fallback and diagnostics.
+- Uploaded the hash-verified v0.6.16-dev build from source commit `1b35b11` to
+  friends-only Workshop item `3764954245` as ManifestID
+  `3075372935869158668`.
 - Added the v0.6.15-dev staged-transform correction after v0.6.14 exposed
   vague transparent strands. The live probe showed midpoint and per-arm
   translations each repeating the same `~0.441m` offset, while per-arm

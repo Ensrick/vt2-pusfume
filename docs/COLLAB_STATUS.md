@@ -19,7 +19,8 @@ architecture and reproduction contract are in
   the installed compiled donor unit, rebinds 54 shared Blender bones to its
   exact rest matrices, and uses native direct links with no runtime retarget.
   Blender 5.2 measured maximum matrix error `0.00000310` and rest-mesh movement
-  `0.00000036m`; shipment pending.
+  `0.00000036m`. Source commit `1b35b11`; Workshop ManifestID
+  `3075372935869158668`; pending live test.
 - 2026-07-17 22:20 local: v0.6.14 LIVE RESULT / v0.6.15 CANDIDATE - vague
   transparent strands appeared. The probe reported midpoint error `0.4414m`,
   per-hand errors `0.4408/0.4419m`, and identical residuals; midpoint and arm

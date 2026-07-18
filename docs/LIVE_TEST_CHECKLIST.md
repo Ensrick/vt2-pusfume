@@ -24,7 +24,8 @@ source commit is `ecbddd0` and Workshop ManifestID is
 `5051999329694268825`. That live probe closed hand errors to
 `0.0181/0.0119m`, but the shoulder roots remained `0.4647/0.5126m` away and
 stretched the mesh into two strands. v0.6.16 rebinds the mesh offline to the
-compiled donor rest skeleton and removes runtime retargeting.
+compiled donor rest skeleton and removes runtime retargeting: source commit
+`1b35b11`, Workshop ManifestID `3075372935869158668`.
 
 ## Before opening Heroes
 

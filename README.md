@@ -21,9 +21,8 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current local live-test candidate is **v0.6.16-dev**. The last uploaded
-candidate is v0.6.15-dev, source commit `ecbddd0`, Steam ManifestID
-`5051999329694268825`.
+The current local and uploaded live-test candidate is **v0.6.16-dev**, source
+commit `1b35b11`, Steam ManifestID `3075372935869158668`.
 Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,
