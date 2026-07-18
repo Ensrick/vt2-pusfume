@@ -22,6 +22,9 @@ request rather than in release notes.
   The runtime exposes zero LOD objects on the custom target, so donor LOD bounds
   cannot be copied through `LODObject`; Stingray supports per-mesh disabled
   culling for exactly this camera-linked case.
+- Uploaded the hash-verified v0.6.13-dev build from source commit `ccaec5a` to
+  friends-only Workshop item `3764954245` as ManifestID
+  `299222409316147201`.
 - Added the v0.6.12-dev first-person rebind candidate after v0.6.11 rendered
   Janfon's arms as blinking sticks despite a live mesh, enabled visibility, and
   zero-distance attachment nodes.

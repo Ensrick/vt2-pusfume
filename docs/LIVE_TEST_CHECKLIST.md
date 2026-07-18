@@ -11,7 +11,8 @@ Known-good native body/animation baseline: commit `0ffdf5a`, Workshop ManifestID
 into blinking sticks. Current rest-relative retarget candidate: commit
 `b938d14`, Workshop ManifestID `1512228345017462962`. That build initialized
 all pairs but placed the clean arm rig outside the first-person view. v0.6.13
-adds rigid hand-midpoint camera anchoring and disables mesh-bound culling.
+adds rigid hand-midpoint camera anchoring and disables mesh-bound culling:
+source commit `ccaec5a`, Workshop ManifestID `299222409316147201`.
 
 ## Before opening Heroes
 
