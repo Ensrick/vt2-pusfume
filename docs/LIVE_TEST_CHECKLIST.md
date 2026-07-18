@@ -34,7 +34,8 @@ the old body with Janfon's repaired 138-bone untouched-rig model.
 The current v0.6.23 candidate preserves v0.6.22's third-person animation and
 material baseline while changing the first-person donor bind shape and adding
 explicit hero-identity/live-HUD portrait guards. Its source commit and Workshop
-upload are recorded after the candidate is shipped.
+upload are `6ecf623` and 2026-07-18 16:25 America/Chicago. Steam uploader
+reported success; live verification and a refreshed ManifestID remain pending.
 
 ## Before opening Heroes
 

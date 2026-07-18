@@ -30,6 +30,9 @@ request rather than in release notes.
   separate, while first-person arms inherit VT2's weapon/action poses.
 - Expanded the regression suite to 50 passing tests and made automatic
   preflight summaries log every warning/failure detail instead of only totals.
+- Shipped source commit `6ecf623` to the friends-only Workshop item at
+  2026-07-18 16:25 America/Chicago. The uploader reported success; live
+  verification and a refreshed Steam ManifestID remain pending.
 - Added the v0.6.22 animation candidate. Janfon's new 96-frame authored idle is
   packaged separately from the restored original 25-frame walk; the latter is
   rotation-retargeted from its 82-bone source onto the current 138-bone
