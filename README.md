@@ -11,8 +11,8 @@ special-kill capture, Moulder Ingenuity consumable-augmentation state, and
 three career perks. A full-size Pusfume card is placed one virtual UI row above Saltzpyre
 in the five-row selector and keeps the game's normal click, preview, and
 confirmation flow. The friends-only native build renders and deforms Janfon's
-textured third-person placeholder in the selector and in game, with a generated
-idle and Janfon's walk cycle. Every player in a lobby must install the same
+textured third-person placeholder in the selector and in game, with Janfon's
+authored idle and the restored original walk cycle. Every player in a lobby must install the same
 version.
 
 The successful native-character architecture, evidence, rejected approaches,
@@ -21,8 +21,11 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current friends-only live-test candidate is **v0.6.21-dev**, uploaded from
-source commit `04caf66` as Workshop ManifestID `3411867430659936354`.
+The current friends-only live-test candidate is **v0.6.22-dev**. It keeps
+Janfon's new authored idle and the original walk as separate clips on the
+138-bone untouched Skaven rig.
+The previous v0.6.21 candidate was source commit `04caf66` and Workshop
+ManifestID `3411867430659936354`.
 Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,
@@ -128,6 +131,9 @@ game tooling present, the known-good native build is:
 py -m unittest discover -s tests -v
 .\tools\Test-PusfumeSource.ps1
 .\tools\Build-NativePusfume.ps1 -HeroPreview -IntegratedFur `
+  -ModelFbx ".build\pusfume_handoff\pusfume_3p_authored_idle.fbx" `
+  -AnimationFbx ".build\generated-native\pusfume_3p_retargeted_walk.fbx" `
+  -IdleAnimationFbx ".build\generated-native\pusfume_3p_authored_idle_clip.fbx" `
   -FirstPersonBlend ".build\janfon_1p_20260717\pusfume_1p_arms 2.blend" `
   -FirstPersonDonorUnit ".build\donor_1p_extract\units\beings\player\dwarf_ranger\first_person_base\chr_first_person_mesh.unit"
 ```

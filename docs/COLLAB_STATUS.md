@@ -11,6 +11,14 @@ architecture and reproduction contract are in
 
 ## Latest shipment
 
+- 2026-07-18 local: v0.6.21 LIVE RESULT / v0.6.22 CANDIDATE - integrated fur
+  renders again, but third-person textures remain low-resolution or incorrectly
+  mapped, first-person fingers remain malformed, and no walk was visible. The
+  handoff directory's supposed walk was byte-identical to a generated 138-bone
+  model, not Janfon's original clip. v0.6.22 restores the genuine 82-bone walk,
+  rotation-retargets 79 mapped bones onto the untouched 138-bone rig, retains
+  Janfon's new authored idle as a separate clip, and adds structural plus visual
+  preflight. Pending compiler, deployment, and live verification.
 - 2026-07-18 local: v0.6.20 LIVE RESULT / v0.6.21 CANDIDATE - the game
   shut down normally, but fingers curled incorrectly and the third-person body
   looked UV-corrupted. The log proved all first-person attachment node distances

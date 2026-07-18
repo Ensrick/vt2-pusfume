@@ -134,10 +134,16 @@ def normalize_weights(mesh):
 def main(arguments):
     if len(arguments) != 2:
         raise SystemExit(
-            "Usage: prepare_pusfume_untouched_3p.py INPUT.blend OUTPUT.fbx"
+            "Usage: prepare_pusfume_untouched_3p.py INPUT.(blend|fbx) OUTPUT.fbx"
         )
     input_path, output_path = (os.path.abspath(value) for value in arguments)
-    bpy.ops.wm.open_mainfile(filepath=input_path, load_ui=False)
+    if input_path.lower().endswith(".blend"):
+        bpy.ops.wm.open_mainfile(filepath=input_path, load_ui=False)
+    elif input_path.lower().endswith(".fbx"):
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        bpy.ops.import_scene.fbx(filepath=input_path, automatic_bone_orientation=False)
+    else:
+        raise RuntimeError("Untouched Pusfume input must be a .blend or .fbx file")
     mesh = bpy.data.objects.get("p_mainbody")
     armature = bpy.data.objects.get("pusfume_slaverat_untouched")
     if mesh is None or mesh.type != "MESH" or armature is None or armature.type != "ARMATURE":

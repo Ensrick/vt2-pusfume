@@ -12,6 +12,12 @@ request rather than in release notes.
 
 ### Changed
 
+- Added the v0.6.22 animation candidate. Janfon's new 96-frame authored idle is
+  packaged separately from the restored original 25-frame walk; the latter is
+  rotation-retargeted from its 82-bone source onto the current 138-bone
+  untouched Skaven rig. Three-frame front/side renders verify coherent idle and
+  gait deformation before compilation, and the build now rejects missing bones,
+  missing actions, and zero-duration clips instead of trusting handoff filenames.
 - Added the v0.6.21 material and first-person deformation candidate after the
   v0.6.20 live test reached a normal shutdown but showed malformed finger curls
   and a corrupted-looking third-person surface. The log decoded the failed

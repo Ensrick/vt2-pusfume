@@ -288,6 +288,8 @@ Test-Condition ($nativeConfigText -match 'locomotion_events_enabled\s*=\s*false'
     $nativeBuildText -match 'default_state = "base/idle"' -and `
     $nativeBuildText -match '"units/pusfume/anims/pusfume_3p_idle"' -and `
     $nativeBuildText -match 'generate_idle_pusfume_fbx\.py' -and `
+    $nativeBuildText -match '\[string\]\$IdleAnimationFbx' -and `
+    $nativeBuildText -match 'validate_pusfume_animation_contract\.py' -and `
     (Test-Path (Join-Path $repoRoot "tools\generate_idle_pusfume_fbx.py"))) `
     "state-driven locomotion" "staged controller plays idle by default and Lua drives idle/walk from player speed"
 Test-Condition ($nativeText -match 'articulation source_delta=' -and `
@@ -328,11 +330,12 @@ Test-Condition ($nativeBuildText -match 'ChangeExtension\(\$inputPath, "\.bones"
     $nativeBuildText -match 'pusfume_3p\.bones') `
     "native animation" "same-name animation skeleton is required by the native build"
 Test-Condition ($nativeBuildText -match '\[string\]\$AnimationFbx' -and `
+    $nativeBuildText -match '\[string\]\$IdleAnimationFbx' -and `
     $nativeBuildText -match 'pusfume_3p_walk\.animation' -and `
     $nativeBuildText -match 'pusfume_3p_idle\.animation' -and `
     $nativeBuildText -match 'animation_state_machine\s*=\s*"units/pusfume/pusfume_3p"' -and `
     $nativeBuildText -match 'name = "base/walk"') `
-    "native animation" "Janfon's baked walk FBX is packaged as a controller state beside the generated idle"
+    "native animation" "separate authored idle and retargeted walk FBXs are packaged as controller states"
 Test-Condition ($nativeBuildText -match 'state_machine\s*=\s*\[' -and `
     $nativeBuildText -match 'animation\s*=\s*\[' -and `
     $nativeBuildText -match 'bones\s*=\s*\[') `

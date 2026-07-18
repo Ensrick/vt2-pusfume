@@ -2,6 +2,7 @@ param(
     [string]$InputBsi = ".build\compiler-fixture\pusfume_bsi_probe\units\pusfume_probe\pusfume_3p.bsi",
     [string]$ModelFbx = ".build\pusfume_handoff\pusfume_3p.fbx",
     [string]$AnimationFbx = ".build\pusfume_handoff\pusfume_3p_walk.fbx",
+    [string]$IdleAnimationFbx = "",
     [string]$BlenderExe = "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe",
     [string]$FirstPersonBlend = "",
     [string]$FirstPersonDonorUnit = "",
@@ -175,18 +176,34 @@ if ($firstPersonEnabled) {
     }
 }
 
-$idleFbxTool = Join-Path $repoRoot "tools\generate_idle_pusfume_fbx.py"
 $idleFbxPath = Join-Path $generatedRoot "pusfume_3p_idle.fbx"
-
-& $blenderExePath --background --factory-startup --disable-autoexec `
-    --python $idleFbxTool -- `
-    $modelFbxPath $idleFbxPath
-if ($LASTEXITCODE -ne 0) {
-    throw "Idle Pusfume FBX generation failed with exit code $LASTEXITCODE"
+if ([string]::IsNullOrWhiteSpace($IdleAnimationFbx)) {
+    $idleFbxTool = Join-Path $repoRoot "tools\generate_idle_pusfume_fbx.py"
+    & $blenderExePath --background --factory-startup --disable-autoexec `
+        --python $idleFbxTool -- `
+        $modelFbxPath $idleFbxPath
+    if ($LASTEXITCODE -ne 0) {
+        throw "Idle Pusfume FBX generation failed with exit code $LASTEXITCODE"
+    }
+} else {
+    $idleAnimationFbxPath = if ([IO.Path]::IsPathRooted($IdleAnimationFbx)) {
+        (Resolve-Path $IdleAnimationFbx).Path
+    } else {
+        (Resolve-Path (Join-Path $repoRoot $IdleAnimationFbx)).Path
+    }
+    Copy-Item -LiteralPath $idleAnimationFbxPath -Destination $idleFbxPath -Force
 }
 if (-not (Test-Path -LiteralPath $idleFbxPath -PathType Leaf) -or `
         (Get-Item -LiteralPath $idleFbxPath).Length -lt 1024) {
     throw "Idle Pusfume FBX generation produced no usable output"
+}
+
+$animationContractTool = Join-Path $repoRoot "tools\validate_pusfume_animation_contract.py"
+& $blenderExePath --background --factory-startup --disable-autoexec `
+    --python $animationContractTool -- `
+    $modelFbxPath $idleFbxPath $animationFbxPath
+if ($LASTEXITCODE -ne 0) {
+    throw "Pusfume animation contract validation failed with exit code $LASTEXITCODE"
 }
 
 $animatedModelFbxPath = $modelFbxPath
