@@ -21,22 +21,23 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current friends-only live-test candidate is **v0.6.24-dev**. It keeps the
+The current friends-only live-test candidate is **v0.6.25-dev**. It keeps the
 working v0.6.22 third-person materials, authored idle, and restored original
 walk and v0.6.23 first-person bind unchanged. It replaces the shared Ranger
 weapon loadout with Pusfume-only prototype items that render the playable
-Versus Packmaster hook and Warpfire Thrower. Their action logic remains
-Adventure-safe: Bardin's two-handed-axe and drakegun actions drive Janfon's
-first-person hands instead of the Pactsworn-only Versus state machines.
+Versus Packmaster hook and Warpfire Thrower, resolving both models from the
+game's own base Versus item registry. Warpfire retains Fatshark's native
+left-handed Versus actions with mechanism-only callbacks removed for Adventure.
+The Packmaster claw has no native ordinary attacks because its grab is a
+Pactsworn character state, so a temporary hero attack table drives it until
+Pusfume has dedicated melee actions.
 For first person, v0.6.23 baked Janfon's weighted arm mesh onto the
 Ranger donor's joint positions before installing the exact donor axes and bind
 matrices, addressing the block-pose warping seen with an unchanged mesh around
 moved pivots. Janfon's current first-person handoff has no walk cycle; VT2's
 native weapon/action poses remain the intended first-person animation source.
-Source commit `46b9f1f` was compiled, hash-verified, locally deployed, and
-uploaded to the friends-only Workshop item at 2026-07-18 17:11
-America/Chicago. Steam recorded ManifestID `40228561972604423`; live gameplay
-verification remains pending.
+The v0.6.25 action-hand adapter corrects the crash found in v0.6.24 and awaits
+live gameplay verification.
 Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,

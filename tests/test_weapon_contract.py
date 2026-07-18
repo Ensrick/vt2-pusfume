@@ -11,12 +11,26 @@ UI = (ROOT / "pusfume/scripts/mods/pusfume/_pusfume_ui.lua").read_text()
 
 class WeaponContractTests(unittest.TestCase):
     def test_prototype_items_use_shipped_rat_units_with_safe_hero_actions(self):
-        self.assertIn("wpn_skaven_packmaster_claw", WEAPONS)
-        self.assertIn("wpn_skaven_warpfiregun", WEAPONS)
+        self.assertIn('slot_melee = "vs_packmaster_claw"', WEAPONS)
+        self.assertIn('slot_ranged = "vs_warpfire_thrower_gun"', WEAPONS)
+        self.assertIn("ItemMasterList", WEAPONS)
         self.assertIn("two_handed_axes_template_1", WEAPONS)
-        self.assertIn("drakegun_template_1", WEAPONS)
+        self.assertIn("Weapons.vs_warpfire_thrower_gun", WEAPONS)
         self.assertNotIn('template = "vs_packmaster_claw"', WEAPONS)
         self.assertNotIn('template = "vs_warpfire_thrower_gun"', WEAPONS)
+
+    def test_hero_actions_always_have_a_matching_wielded_hand_unit(self):
+        self.assertIn("action_hand_contract_ready", WEAPONS)
+        self.assertIn('local hand = action.weapon_action_hand or "right"', WEAPONS)
+        ranged = WEAPONS[WEAPONS.index("[M.ITEM_KEYS.slot_ranged]") :]
+        self.assertIn("left_hand_unit = warpfire_item.left_hand_unit", ranged)
+        self.assertNotIn("right_hand_unit = warpfire_item", ranged)
+
+    def test_warpfire_uses_native_versus_actions_without_adventure_only_dependencies(self):
+        self.assertIn("sanitize_warpfire_template", WEAPONS)
+        self.assertIn("template.actions.dark_pact_action_one", WEAPONS)
+        self.assertIn("hero_warpfire_condition", WEAPONS)
+        self.assertIn("template.synced_states = nil", WEAPONS)
 
     def test_weapon_items_are_pusfume_only_and_ranger_weapons_are_not_inherited(self):
         self.assertEqual(WEAPONS.count("can_wield = { registry.CAREER_NAME }"), 2)

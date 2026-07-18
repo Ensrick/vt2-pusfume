@@ -183,15 +183,33 @@ function M.collect(registry, career_index, backend, compat, ui, native, weapons)
         weapon_items_ready and "Packmaster hook and Warpfire Thrower are Pusfume-only synchronized items"
             or "custom item, template, permission, or network lookup is missing")
 
+    local hand_contract_ready = weapon_status.hand_contract_ready
+
+    for _, slot_name in ipairs({ "slot_melee", "slot_ranged" }) do
+        local item = ItemMasterList and rawget(ItemMasterList, weapons.ITEM_KEYS[slot_name])
+        local template = Weapons and rawget(Weapons, weapons.TEMPLATE_NAMES[slot_name])
+
+        hand_contract_ready = hand_contract_ready
+            and weapons.action_hand_contract_ready(item, template)
+    end
+
+    add(checks, "Pusfume weapon action hands", hand_contract_ready and "PASS" or "FAIL",
+        hand_contract_ready and "every hero action has its required wielded hand unit"
+            or "an action can start without a matching wielded hand unit")
+
     local weapon_units_ready = true
 
-    for _, unit_path in pairs(weapons.UNIT_PATHS) do
-        weapon_units_ready = weapon_units_ready and Application.can_get("unit", unit_path)
+    for _, slot_name in ipairs({ "slot_melee", "slot_ranged" }) do
+        local unit_path = weapons.UNIT_PATHS[slot_name]
+
+        weapon_units_ready = weapon_units_ready and type(unit_path) == "string"
+            and Application.can_get("unit", unit_path)
     end
 
     add(checks, "Pusfume weapon units", weapon_units_ready and "PASS" or "FAIL",
-        weapon_units_ready and "shipped Versus Packmaster and Warpfire units resolve"
-            or "a shipped Versus weapon unit is unavailable")
+        weapon_units_ready and string.format("shipped skin units resolve: melee=%s ranged=%s",
+            weapons.UNIT_PATHS.slot_melee, weapons.UNIT_PATHS.slot_ranged)
+            or "a shipped Versus skin unit is unavailable")
 
     local backend_status = backend.status()
     local backend_hooks_ready = backend_status.installed

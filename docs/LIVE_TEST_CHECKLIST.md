@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.24-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.25-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -36,7 +36,7 @@ material baseline while changing the first-person donor bind shape and adding
 explicit hero-identity/live-HUD portrait guards. Its source commit and Workshop
 upload are `6ecf623` and 2026-07-18 16:25 America/Chicago. Steam uploader
 reported success; live verification and a refreshed ManifestID remain pending.
-The v0.6.24 candidate adds fixed Pusfume-only Packmaster hook and Warpfire
+The v0.6.25 candidate adds fixed Pusfume-only Packmaster hook and Warpfire
 Thrower items, restores weapon visibility, and extends the career-scoped
 Pusfume name guard to selector and inventory surfaces. Source commit `46b9f1f`
 was compiled and uploaded at 2026-07-18 17:11 America/Chicago; Steam confirmed
@@ -49,6 +49,7 @@ ManifestID `40228561972604423`. The live result is pending.
 3. Expect zero failures, including PASS results for `career color`, `career localization`, and `native third-person unit`. A warning that the five-row grid card has not rendered is normal at this stage.
 4. If backend data is still marked as not initialized, wait for the Keep to finish loading and rerun the command.
 5. Confirm `spawn weapons` passes and names resolved melee and ranged items before selecting Pusfume.
+6. Confirm `Pusfume weapon action hands` passes before attacking or blocking.
 
 ## Hero selector
 

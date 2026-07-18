@@ -10,6 +10,20 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Corrected the v0.6.24 prototype weapon adapter after crash
+  `c6fadfc5-d61e-4eaf-9d19-ced33b4d75ae`. Both models now resolve directly
+  from Fatshark's base playable-Versus item records instead of substitute
+  hero items. The Warpfire Thrower now keeps its native left-hand unit and
+  left-handed Versus action template as one coherent contract; only callbacks
+  tied to Versus ghost mode and its VCE manager are removed for Adventure.
+- Rebased the hook adapter on the native `vs_packmaster_claw` template and
+  attachment metadata. Fatshark implements its grab as a Pactsworn character
+  state and gives the weapon no ordinary actions, so only the temporary hero
+  attack table remains borrowed until Pusfume has dedicated melee actions.
+- Added a runtime action-hand invariant and source regression test. Preflight
+  now fails before selection if any Pusfume action could start without its
+  corresponding wielded unit.
+
 - Added the v0.6.24 weapon and identity candidate. Pusfume now owns fixed,
   synchronized prototype items that render the shipped playable-Versus
   Packmaster hook and Warpfire Thrower, while retaining Adventure-safe Bardin

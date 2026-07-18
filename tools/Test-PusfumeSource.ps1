@@ -579,8 +579,10 @@ Test-Condition ($mainText -match 'weapons\.install\(registry\)' -and `
     $weaponsText -match 'vs_packmaster_claw' -and `
     $weaponsText -match 'vs_warpfire_thrower_gun' -and `
     $weaponsText -match 'two_handed_axes_template_1' -and `
-    $weaponsText -match 'drakegun_template_1') `
-    "Pusfume weapon templates" "Versus units use Adventure-safe Ranger-compatible actions and attachment routing"
+    $weaponsText -match 'Weapons\.vs_warpfire_thrower_gun' -and `
+    $weaponsText -match 'sanitize_warpfire_template' -and `
+    $weaponsText -match 'action_hand_contract_ready') `
+    "Pusfume weapon templates" "base Versus items retain coherent native hand contracts with guarded Adventure adapters"
 Test-Condition ($weaponsText -match 'can_wield\s*=\s*\{ registry\.CAREER_NAME \}' -and `
     $registryText -match 'local is_weapon = item\.slot_type == "melee" or item\.slot_type == "ranged"' -and `
     $registryText -match 'if not is_weapon and type\(can_wield\)') `

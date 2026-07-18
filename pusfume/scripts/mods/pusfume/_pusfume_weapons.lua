@@ -14,9 +14,13 @@ M.TEMPLATE_NAMES = {
     slot_melee = "pusfume_packmaster_hook_template",
     slot_ranged = "pusfume_warpfire_thrower_template",
 }
+M.VERSUS_ITEM_KEYS = {
+    slot_melee = "vs_packmaster_claw",
+    slot_ranged = "vs_warpfire_thrower_gun",
+}
 M.UNIT_PATHS = {
-    slot_melee = "units/weapons/player/dark_pact/wpn_skaven_packmaster_claw/wpn_skaven_packmaster_claw",
-    slot_ranged = "units/weapons/player/dark_pact/wpn_skaven_warpfiregun/wpn_skaven_warpfiregun",
+    slot_melee = nil,
+    slot_ranged = nil,
 }
 
 local state = {
@@ -24,6 +28,8 @@ local state = {
     installed = false,
     lookups_registered = false,
     masterlist_registered = false,
+    hand_contract_ready = false,
+    resolved_unit_paths = {},
     templates_registered = false,
 }
 
@@ -60,34 +66,88 @@ local function append_lookup(lookup, name)
     return index
 end
 
-local function register_templates()
-    local melee_source = Weapons and Weapons.two_handed_axes_template_1
-    local ranged_source = Weapons and Weapons.drakegun_template_1
-    local versus_links = AttachmentNodeLinking and AttachmentNodeLinking.vs_warpfire_thrower_gun
-    local warpfire_left = versus_links and versus_links.left
+local function resolve_versus_item(slot_name)
+    local item = ItemMasterList and rawget(ItemMasterList, M.VERSUS_ITEM_KEYS[slot_name])
 
-    if not melee_source or not ranged_source
-            or not AttachmentNodeLinking or not AttachmentNodeLinking.vs_packmaster_claw
-            or not warpfire_left then
+    if not item then
+        return nil
+    end
+
+    local unit_path = item.right_hand_unit or item.left_hand_unit
+
+    if type(unit_path) ~= "string" or not Application.can_get("unit", unit_path) then
+        return nil
+    end
+
+    M.UNIT_PATHS[slot_name] = unit_path
+    state.resolved_unit_paths[slot_name] = unit_path
+
+    return item
+end
+
+local function hero_warpfire_condition(action_user)
+    local status_extension = ScriptUnit.has_extension(action_user, "status_system")
+
+    if status_extension and status_extension:is_climbing() then
+        return false
+    end
+
+    local overcharge_extension = ScriptUnit.has_extension(action_user, "overcharge_system")
+
+    return overcharge_extension and overcharge_extension:get_overcharge_value() <= 0
+end
+
+
+local function sanitize_warpfire_template(template)
+    local action_one = template.actions and template.actions.dark_pact_action_one
+    local action_reload = template.actions and template.actions.dark_pact_reload
+
+    if not action_one or not action_one.default or not action_one.fire
+            or not action_reload or not action_reload.default then
+        return false
+    end
+
+    -- Versus ghost-mode and VCE state callbacks are absent in Adventure.
+    -- Keep Fatshark's Warpfire action class, damage, input, heat, and FX data,
+    -- but remove only callbacks that cross that mechanism boundary.
+    action_one.default.condition_func = hero_warpfire_condition
+    action_one.default.enter_function = nil
+    action_one.default.finish_function = nil
+    action_one.fire.enter_function = nil
+    action_one.fire.finish_function = nil
+    action_reload.default.enter_function = nil
+    action_reload.default.finish_function = nil
+    template.synced_states = nil
+
+    return true
+end
+
+local function register_templates()
+    local melee_source = Weapons and Weapons.vs_packmaster_claw
+    local melee_actions = Weapons and Weapons.two_handed_axes_template_1
+    local ranged_source = Weapons and Weapons.vs_warpfire_thrower_gun
+
+    if not melee_source or not melee_actions or not ranged_source then
         return false
     end
 
     if not rawget(Weapons, M.TEMPLATE_NAMES.slot_melee) then
         local template = deep_clone(melee_source)
 
-        -- Keep Ranger-compatible action poses while letting the shipped claw's
-        -- articulated pieces follow the Skaven weapon-component nodes.
-        template.right_hand_attachment_node_linking = AttachmentNodeLinking.vs_packmaster_claw
+        -- Fatshark's Packmaster claw has no normal weapon actions; its grab is
+        -- a Pactsworn character state. Graft only temporary hero attacks while
+        -- preserving the native claw template and articulated linking.
+        template.actions = deep_clone(melee_actions.actions)
         Weapons[M.TEMPLATE_NAMES.slot_melee] = template
     end
 
     if not rawget(Weapons, M.TEMPLATE_NAMES.slot_ranged) then
         local template = deep_clone(ranged_source)
 
-        template.left_hand_attachment_node_linking = warpfire_left
-        template.right_hand_attachment_node_linking = nil
-        template.wwise_dep_left_hand = template.wwise_dep_right_hand
-        template.wwise_dep_right_hand = nil
+        if not sanitize_warpfire_template(template) then
+            return false
+        end
+
         Weapons[M.TEMPLATE_NAMES.slot_ranged] = template
     end
 
@@ -97,6 +157,13 @@ local function register_templates()
 end
 
 local function item_definitions(registry)
+    local packmaster_item = resolve_versus_item("slot_melee")
+    local warpfire_item = resolve_versus_item("slot_ranged")
+
+    if not packmaster_item or not warpfire_item then
+        return nil
+    end
+
     return {
         [M.ITEM_KEYS.slot_melee] = {
             can_wield = { registry.CAREER_NAME },
@@ -109,7 +176,7 @@ local function item_definitions(registry)
             name = M.ITEM_KEYS.slot_melee,
             property_table_name = "melee",
             rarity = "plentiful",
-            right_hand_unit = M.UNIT_PATHS.slot_melee,
+            right_hand_unit = packmaster_item.right_hand_unit,
             slot_type = "melee",
             template = M.TEMPLATE_NAMES.slot_melee,
             trait_table_name = "melee",
@@ -122,15 +189,42 @@ local function item_definitions(registry)
             hud_icon = "weapon_generic_icon_units/weapons/weapon_display/display_rifle",
             inventory_icon = "icon_wpn_dw_iron_drake_02",
             item_type = "dr_drakegun",
-            left_hand_unit = M.UNIT_PATHS.slot_ranged,
             name = M.ITEM_KEYS.slot_ranged,
             property_table_name = "ranged",
             rarity = "plentiful",
+            left_hand_unit = warpfire_item.left_hand_unit,
             slot_type = "ranged",
             template = M.TEMPLATE_NAMES.slot_ranged,
             trait_table_name = "ranged_heat",
         },
     }
+end
+
+local function action_hand_contract_ready(item_data, template)
+    if not item_data or not template or type(template.actions) ~= "table" then
+        return false
+    end
+
+    for _, sub_actions in pairs(template.actions) do
+        if type(sub_actions) == "table" then
+            for _, action in pairs(sub_actions) do
+                if type(action) == "table" then
+                    local hand = action.weapon_action_hand or "right"
+                    local has_right = item_data.right_hand_unit ~= nil
+                    local has_left = item_data.left_hand_unit ~= nil
+
+                    if hand == "right" and not has_right
+                            or hand == "left" and not has_left
+                            or hand == "both" and (not has_right or not has_left)
+                            or hand == "either" and not has_right and not has_left then
+                        return false
+                    end
+                end
+            end
+        end
+    end
+
+    return true
 end
 
 local function make_backend_item(item_key, backend_id, item_data)
@@ -168,6 +262,12 @@ local function register_items(registry)
 
     local definitions = item_definitions(registry)
 
+    if not definitions then
+        return false
+    end
+
+    local hand_contract_ready = true
+
     for _, slot_name in ipairs({ "slot_melee", "slot_ranged" }) do
         local item_key = M.ITEM_KEYS[slot_name]
         local item_data = rawget(ItemMasterList, item_key)
@@ -179,10 +279,13 @@ local function register_items(registry)
 
         append_lookup(NetworkLookup.item_names, item_key)
         append_lookup(NetworkLookup.damage_sources, item_key)
+        hand_contract_ready = hand_contract_ready and action_hand_contract_ready(
+            item_data, Weapons[M.TEMPLATE_NAMES[slot_name]])
         state.backend_items[M.BACKEND_IDS[slot_name]] = make_backend_item(
             item_key, M.BACKEND_IDS[slot_name], item_data)
     end
 
+    state.hand_contract_ready = hand_contract_ready
     state.lookups_registered = true
     state.masterlist_registered = true
 
@@ -196,13 +299,19 @@ function M.install(registry)
     state.installed = templates_ready and items_ready
 
     if state.installed then
-        mod:info("[pusfume] registered Pusfume-only weapons melee=%s ranged=%s",
-            M.ITEM_KEYS.slot_melee, M.ITEM_KEYS.slot_ranged)
+        mod:info("[pusfume] registered Pusfume-only Versus weapons melee=%s unit=%s ranged=%s unit=%s hand_contract=%s",
+            M.ITEM_KEYS.slot_melee, M.UNIT_PATHS.slot_melee,
+            M.ITEM_KEYS.slot_ranged, M.UNIT_PATHS.slot_ranged,
+            tostring(state.hand_contract_ready))
     else
         mod:warning("[pusfume] Pusfume weapon dependencies are not ready; registration deferred")
     end
 
     return state.installed
+end
+
+function M.action_hand_contract_ready(item_data, template)
+    return action_hand_contract_ready(item_data, template)
 end
 
 function M.inject_backend_items(items)
