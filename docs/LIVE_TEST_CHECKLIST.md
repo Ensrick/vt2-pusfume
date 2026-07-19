@@ -61,6 +61,9 @@ That candidate successfully reached native player spawn, then its delayed
 diagnostic asserted because Packmaster arms do not expose the old
 Janfon/Ranger `j_spine2` probe node. v0.6.28 guards all probe pairs and logs
 unavailable nodes without calling Stingray's assertion-prone lookup.
+Source commit `2fa45c5` was compiled, locally hash-verified, and uploaded at
+2026-07-18 19:21 America/Chicago. Steam confirmed ManifestID
+`2137408449754657186`; the live result is pending.
 
 ## Before opening Heroes
 

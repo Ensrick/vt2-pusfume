@@ -17,6 +17,11 @@ request rather than in release notes.
 - Guarded both units in every first-person probe pair with `Unit.has_node`.
   Unavailable diagnostic pairs are now reported as such without affecting
   gameplay, and regression coverage locks the assertion-safe lookup order.
+- Built and hash-verified the v0.6.28 native package from source commit
+  `2fa45c5`, deployed all eight game files locally, and uploaded the same
+  payload to the friends-only Workshop item. Steam confirmed ManifestID
+  `2137408449754657186` at 2026-07-18 19:21 America/Chicago. Live gameplay
+  validation remains pending.
 
 - Fixed the v0.6.26 spawn crash at
   `player_unit_first_person.lua:60`. The live locals proved

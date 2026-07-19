@@ -41,6 +41,8 @@ The v0.6.27 candidate is source commit `182f977`, Workshop ManifestID
 That test reached a successful native spawn, then v0.6.27's delayed diagnostic
 asserted on a Janfon/Ranger-only probe node. v0.6.28 guards every probe node;
 missing diagnostic pairs no longer affect gameplay.
+The v0.6.28 candidate is source commit `2fa45c5`, Workshop ManifestID
+`2137408449754657186`; live gameplay validation remains pending.
 Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,
