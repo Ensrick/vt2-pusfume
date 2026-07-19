@@ -533,6 +533,17 @@ function Write-NativeTexture {
     } else {
         "false"
     }
+    # Diffuse and normal maps compile as BC7 to match Fatshark's own SDK
+    # normal-map treatment (endurance_badges *_nm.texture ships format="BC7").
+    # BC7 is the same 8 bpp as DXT5 (no bundle-size cost) but carries ~8-bit
+    # RGB precision instead of DXT5's 5:6:5, recovering normal/diffuse detail,
+    # and its alpha still carries the donor's gloss-in-alpha channel. Specular
+    # and mask maps stay DXT5.
+    $format = if ($Name.EndsWith("df") -or $Name.EndsWith("nm")) {
+        "BC7"
+    } else {
+        "DXT5"
+    }
     # Preserve fractional coverage alpha. The native skinned-alpha material
     # performs its own 0.5 test; preprocessing created the visible tape card.
     $cutAlphaEnabled = "false"
@@ -547,7 +558,7 @@ common = {
         category = ""
         cut_alpha_threshold = 0.5
         enable_cut_alpha_threshold = $cutAlphaEnabled
-        format = "DXT5"
+        format = "$format"
         mipmap_filter = "kaiser"
         mipmap_filter_wrap_mode = "mirror"
         mipmap_keep_original = false
@@ -567,6 +578,14 @@ function Write-NativeTextureRecipe {
     )
 
     $srgbValue = if ($Srgb) { "true" } else { "false" }
+    # See Write-NativeTexture: diffuse/normal atlases compile as BC7 (same 8 bpp
+    # as DXT5, higher RGB precision, gloss-in-alpha preserved); specular stays
+    # DXT5. Matches the atlas the spliced Globadier child samples for the body.
+    $format = if ($Name.EndsWith("df") -or $Name.EndsWith("nm")) {
+        "BC7"
+    } else {
+        "DXT5"
+    }
     @"
 common = {
     input = {
@@ -577,7 +596,7 @@ common = {
         category = ""
         cut_alpha_threshold = 0.5
         enable_cut_alpha_threshold = false
-        format = "DXT5"
+        format = "$format"
         mipmap_filter = "kaiser"
         mipmap_filter_wrap_mode = "mirror"
         mipmap_keep_original = false
@@ -661,17 +680,26 @@ function Write-PusfumeAtlas {
         [Drawing.Drawing2D.CompositingMode]::SourceCopy
     }
     $opaqueAttributes = $null
+    $opaqueGainAttributes = $null
     if ($forceOpaque) {
         $opaqueAttributes = New-Object Drawing.Imaging.ImageAttributes
         $opaqueMatrix = New-Object Drawing.Imaging.ColorMatrix
-        if ($Suffix -eq "df") {
-            $opaqueMatrix.Matrix00 = $BodyDiffuseGain
-            $opaqueMatrix.Matrix11 = $BodyDiffuseGain
-            $opaqueMatrix.Matrix22 = $BodyDiffuseGain
-        }
         $opaqueMatrix.Matrix33 = 0
         $opaqueMatrix.Matrix43 = 1
         $opaqueAttributes.SetColorMatrix($opaqueMatrix)
+        if ($Suffix -eq "df") {
+            # BodyDiffuseGain applies to the body tile ONLY; the outfit tiles
+            # (globadier/armor/metal/ammo) keep their authored brightness
+            # instead of a 1.2x highlight-clipping boost.
+            $opaqueGainAttributes = New-Object Drawing.Imaging.ImageAttributes
+            $gainMatrix = New-Object Drawing.Imaging.ColorMatrix
+            $gainMatrix.Matrix00 = $BodyDiffuseGain
+            $gainMatrix.Matrix11 = $BodyDiffuseGain
+            $gainMatrix.Matrix22 = $BodyDiffuseGain
+            $gainMatrix.Matrix33 = 0
+            $gainMatrix.Matrix43 = 1
+            $opaqueGainAttributes.SetColorMatrix($gainMatrix)
+        }
     }
 
     function Draw-AtlasTile {
@@ -680,7 +708,8 @@ function Write-PusfumeAtlas {
             [int]$X,
             [int]$Y,
             [int]$Width,
-            [int]$Height
+            [int]$Height,
+            [bool]$ApplyGain = $false
         )
 
         $sourcePath = Join-Path $textureSourcePath "$Texture.png"
@@ -692,10 +721,15 @@ function Write-PusfumeAtlas {
         try {
             $top = $atlasSize - $Y - $Height
             if ($forceOpaque) {
+                $tileAttributes = if ($ApplyGain -and $null -ne $opaqueGainAttributes) {
+                    $opaqueGainAttributes
+                } else {
+                    $opaqueAttributes
+                }
                 $destination = New-Object Drawing.Rectangle($X, $top, $Width, $Height)
                 $graphics.DrawImage(
                     $source, $destination, 0, 0, $source.Width, $source.Height,
-                    [Drawing.GraphicsUnit]::Pixel, $opaqueAttributes)
+                    [Drawing.GraphicsUnit]::Pixel, $tileAttributes)
             } else {
                 $graphics.DrawImage($source, $X, $top, $Width, $Height)
             }
@@ -724,7 +758,7 @@ function Write-PusfumeAtlas {
                 foreach ($column in 0..([int]$tile.grid[0] - 1)) {
                     Draw-AtlasTile $texture `
                         ($originX + $column * $width) ($originY + $row * $height) `
-                        $width $height
+                        $width $height ($tileProperty.Name -eq "body")
                 }
             }
         }
@@ -734,6 +768,9 @@ function Write-PusfumeAtlas {
     } finally {
         if ($null -ne $opaqueAttributes) {
             $opaqueAttributes.Dispose()
+        }
+        if ($null -ne $opaqueGainAttributes) {
+            $opaqueGainAttributes.Dispose()
         }
         $graphics.Dispose()
         $atlas.Dispose()

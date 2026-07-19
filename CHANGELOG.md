@@ -10,6 +10,17 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Audited the texture pipeline against Fatshark's SDK examples and working
+  Workshop mods after the reported in-game quality loss. Diffuse and normal
+  textures (per-slot and both body atlases) now compile as `BC7` instead of
+  `DXT5`: same 8 bpp so no bundle growth, but ~8-bit RGB precision instead of
+  5:6:5, matching the SDK's own `*_nm.texture` treatment, with the donor's
+  gloss-in-alpha channel preserved. Specular and mask maps stay DXT5.
+- Scoped `BodyDiffuseGain` (1.2x) to the body atlas tile only. Globadier,
+  armor, metal, and ammo tiles keep Janfon's authored brightness instead of a
+  highlight-clipping boost. Verified non-losses during the same audit: gloss
+  survives in the normal-map alpha through atlas composition, and all srgb
+  flags are correct.
 - Compiled, deployed (8 files), and uploaded the friends-only v0.6.37-dev
   candidate with the hook damage-type CTD fix. Steam confirmed ManifestID
   `3176743220645990543` at 2026-07-19 12:37 America/Chicago. Live gameplay
