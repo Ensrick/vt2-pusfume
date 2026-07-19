@@ -31,6 +31,12 @@ request rather than in release notes.
 - Expanded regression coverage to 72 tests, added exact roster, hook damage,
   Ratling, globe, voice, role-pose, and overcharge-HUD contracts, and verified
   all 14 Lua files with the Lua 5.1 parser.
+- Compiled source commit `77341d4`, passed GitHub source-preflight CI and the
+  54-node first-person rest check (`0.00000310` maximum error), deployed all
+  eight files with exact staging/live SHA-256 parity (`119,874,864` bytes), and
+  uploaded the friends-only v0.6.33 candidate. Steam confirmed ManifestID
+  `2481608271187325602` at 2026-07-18 23:49 America/Chicago. Live gameplay
+  verification is pending.
 
 - Fixed release-pipeline issue
   [#29](https://github.com/Ensrick/vt2-pusfume/issues/29) by replacing

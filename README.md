@@ -37,7 +37,9 @@ Pusfume-only inventory filtering, normal-input Ratling and Globadier
 prototypes, playable-Globadier dialogue routing, and Pusfume Warpfire HUD data.
 Exact Packmaster dragging remains a larger career-state feature. The localized
 chest UV/material seam is tracked separately in issue #28 and is not claimed
-fixed by this weapon release. Live gameplay verification is pending.
+fixed by this weapon release. The v0.6.33 candidate is source commit `77341d4`
+and friends-only Workshop ManifestID `2481608271187325602`; live gameplay
+verification is pending.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person
 inventory packages resident before vanilla spawned Pusfume. v0.6.27 loads and
 verifies those unit packages synchronously with a dedicated reference before

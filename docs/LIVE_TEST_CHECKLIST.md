@@ -103,6 +103,10 @@ the Warpfire heat HUD was absent. v0.6.33 hard-filters the four Pusfume item
 identities, adds direct Adventure hook damage, adds Ratling and Globadier
 ranged prototypes, routes dialogue to playable Globadier, and registers the
 Pactsworn-green Warpfire HUD data. All of these changes remain live-unverified.
+Source commit `77341d4` passed CI, native compilation, and the 54-node compiled
+rest gate. All eight installed files match staging at `119,874,864` bytes.
+Steam confirmed friends-only ManifestID `2481608271187325602` at 2026-07-18
+23:49 America/Chicago.
 
 ## Before opening Heroes
 
