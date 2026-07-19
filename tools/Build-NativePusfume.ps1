@@ -914,6 +914,88 @@ function Set-PusfumeEmissionProbe {
     }
 }
 
+function Set-PusfumeEyeEmission {
+    # Bake the character's only authored emissive (the eyes) into the normal
+    # atlas's BLUE channel, which is where the game character shader reads its
+    # emission mask. Ground truth: the vanilla Globadier normal (E334, BC7) has
+    # blue 99.8% black - the engine reconstructs the normal Z from RG and
+    # repurposes blue as the emissive mask, so real emissive pixels are the rare
+    # nonzero-blue ones. Janfon's authored _nm blue is a genuine Z (mean ~117),
+    # which would self-illuminate the whole body, so blue is zeroed everywhere
+    # first, then skaven_eyemask (the eye emission-strength mask) is stamped into
+    # the eye tile's blue, tiled to match the layout's df/s eye cells.
+    param(
+        [Parameter(Mandatory)][string]$NormalAtlasPath,
+        [Parameter(Mandatory)][string]$EyeMaskPath,
+        [Parameter(Mandatory)][int]$AtlasSize,
+        [Parameter(Mandatory)][int]$EyeOriginX,
+        [Parameter(Mandatory)][int]$EyeOriginY,
+        [Parameter(Mandatory)][int]$EyeCell,
+        [Parameter(Mandatory)][int]$EyeGrid
+    )
+
+    Add-Type -AssemblyName System.Drawing
+    $source = [Drawing.Image]::FromFile($NormalAtlasPath)
+    $mask = $null
+    try {
+        $width = $source.Width
+        $height = $source.Height
+        $output = New-Object Drawing.Bitmap($width, $height, `
+            [Drawing.Imaging.PixelFormat]::Format32bppArgb)
+        $graphics = [Drawing.Graphics]::FromImage($output)
+        $graphics.CompositingMode = [Drawing.Drawing2D.CompositingMode]::SourceCopy
+        $graphics.InterpolationMode = [Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+        $graphics.PixelOffsetMode = [Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+        # 1) Zero blue across the whole normal atlas (keep RG normal + A gloss).
+        $zeroBlue = New-Object Drawing.Imaging.ImageAttributes
+        $zeroMatrix = New-Object Drawing.Imaging.ColorMatrix
+        $zeroMatrix.Matrix22 = 0
+        $zeroBlue.SetColorMatrix($zeroMatrix)
+        # 2) Eye stamp: flat normal (RG=128) + full alpha, with the mask
+        #    luminance (source red) routed into blue only.
+        $eyeAttributes = New-Object Drawing.Imaging.ImageAttributes
+        $eyeMatrix = New-Object Drawing.Imaging.ColorMatrix
+        $eyeMatrix.Matrix00 = 0
+        $eyeMatrix.Matrix11 = 0
+        $eyeMatrix.Matrix22 = 0
+        $eyeMatrix.Matrix33 = 0
+        $eyeMatrix.Matrix02 = 1   # source red -> destination blue (emission mask)
+        $eyeMatrix.Matrix40 = 0.5 # destination red   = 128 (flat normal x)
+        $eyeMatrix.Matrix41 = 0.5 # destination green = 128 (flat normal y)
+        $eyeMatrix.Matrix43 = 1   # destination alpha = 255 (gloss)
+        $eyeAttributes.SetColorMatrix($eyeMatrix)
+        try {
+            $full = New-Object Drawing.Rectangle(0, 0, $width, $height)
+            $graphics.DrawImage($source, $full, 0, 0, $width, $height, `
+                [Drawing.GraphicsUnit]::Pixel, $zeroBlue)
+            # GDI+ keeps the FromFile handle locked; release it before Save
+            # targets the same path or Save throws a generic GDI+ error.
+            $source.Dispose()
+            $source = $null
+            $mask = [Drawing.Image]::FromFile($EyeMaskPath)
+            foreach ($row in 0..($EyeGrid - 1)) {
+                foreach ($column in 0..($EyeGrid - 1)) {
+                    $cellX = $EyeOriginX + $column * $EyeCell
+                    $cellY = $EyeOriginY + $row * $EyeCell
+                    $top = $AtlasSize - $cellY - $EyeCell
+                    $cell = New-Object Drawing.Rectangle($cellX, $top, $EyeCell, $EyeCell)
+                    $graphics.DrawImage($mask, $cell, 0, 0, $mask.Width, $mask.Height, `
+                        [Drawing.GraphicsUnit]::Pixel, $eyeAttributes)
+                }
+            }
+            $output.Save($NormalAtlasPath, [Drawing.Imaging.ImageFormat]::Png)
+        } finally {
+            $zeroBlue.Dispose()
+            $eyeAttributes.Dispose()
+            $graphics.Dispose()
+            $output.Dispose()
+        }
+    } finally {
+        if ($null -ne $mask) { $mask.Dispose() }
+        if ($null -ne $source) { $source.Dispose() }
+    }
+}
+
 Write-PusfumeAtlas "pusfume_atlas_df" "df" ([Drawing.Color]::Black)
 Write-PusfumeAtlas "pusfume_atlas_nm" "nm" ([Drawing.Color]::FromArgb(255, 128, 128, 255))
 Write-PusfumeAtlas "pusfume_atlas_s" "s" ([Drawing.Color]::Black)
@@ -921,12 +1003,13 @@ Write-PusfumeAtlas "pusfume_atlas_s" "s" ([Drawing.Color]::Black)
 # slot (channel 909D00F3, build alias texture_map_27b67fd2). Verified against the
 # installed Globadier's own MA texture 45FFAEEF53695A86 (BC3/DXT5, dxgi=77):
 # R=metallic, G=AO, B=255 unused, A a clean localized mask; Fatshark's
-# "M/AO/x/EM" packing. Janfon's _s maps carry the same channel order
-# (skaven_body_s: R=0 skin non-metal, G high, A a bimodal mask), so the s-suffix
-# sources compose straight in. The clear is the neutral value metallic=0 /
-# AO=255 / B=255 / alpha=0 so unmapped gutters never read metallic or
-# self-illuminated. (Whether the game reads A as emissive is unresolved; the
-# emissive tint stays dark, so the alpha content is inert on normal builds.)
+# "M/AO/x/EM" packing. Janfon's _s maps carry the same R/G order (skaven_body_s:
+# R=0 skin non-metal, G high), so the s-suffix sources compose straight in for
+# metallic + AO. The _s alpha is treated as unknown/unused (Janfon: VT2 has no
+# tint-mask concept - that was a community-ubershader toggle). Emission does NOT
+# ride this slot: the game character shader reads its emissive mask from the
+# NORMAL atlas blue channel (see Set-PusfumeEyeEmission). The clear is the
+# neutral value metallic=0 / AO=255 / B=255 / alpha=0.
 Write-PusfumeAtlas "pusfume_atlas_ma" "s" ([Drawing.Color]::FromArgb(0, 0, 255, 255))
 Write-NativeTextureRecipe "pusfume_atlas_df" $true
 Write-NativeTextureRecipe "pusfume_atlas_nm" $false
@@ -950,6 +1033,21 @@ if ($EmissionProbe) {
     Write-Host ("EMISSION PROBE ACTIVE: normal.blue mask = body-tile TOP half, " +
         "MA.alpha mask = body-tile BOTTOM half, emissive tint = red [25,0,0]. " +
         "This is a DIAGNOSTIC build, not a shippable candidate.")
+} elseif ($SplicedGameChild) {
+    # Shipped emission (Janfon: the eyes are the ONLY emissive on the character;
+    # the red arm is plain diffuse). Bake the eye emission mask into the normal
+    # atlas blue and zero body blue so nothing else self-illuminates. The eye
+    # tile geometry is read from the layout so it always tracks the df/s cells.
+    $eyeLayout = Get-Content -LiteralPath (Join-Path $repoRoot `
+        "tools\pusfume_atlas_layout.json") -Raw | ConvertFrom-Json
+    $eyeTile = $eyeLayout.tiles.eye
+    Set-PusfumeEyeEmission `
+        -NormalAtlasPath (Join-Path $textureRoot "pusfume_atlas_nm.png") `
+        -EyeMaskPath (Join-Path $textureSourcePath "skaven_eyemask.png") `
+        -AtlasSize ([int]$eyeLayout.atlas_size) `
+        -EyeOriginX ([int]$eyeTile.origin[0]) -EyeOriginY ([int]$eyeTile.origin[1]) `
+        -EyeCell ([int]$eyeTile.size[0]) -EyeGrid ([int]$eyeTile.grid[0])
+    Write-Host "Eye emission baked into normal.blue (eye tile, 3x3); body blue zeroed."
 }
 
 # Shadow builds must keep the atlas out of the startup package. These fallback
@@ -1460,12 +1558,17 @@ if ($SplicedGameChild) {
     # emission mask (his normal.B is standard normal-Z, his _s.A is a TINT mask
     # per his V2 Ubershader graph). Lighting the red arm needs Janfon's emission
     # mask + an in-game A/B test of which channel the shader reads - see report.
-    # Emissive tint: dark on normal builds; a bright red HDR value under
-    # -EmissionProbe so the probed body region visibly self-illuminates.
+    # Emissive tint (C985395A). The mask is the eyes (baked into normal.blue by
+    # Set-PusfumeEyeEmission), so this tint colours the eye glow. Hue is taken
+    # from Janfon's authored eye colour pusfume_eyenormal (dominant 138,9,2 =
+    # a warpstone red), its 138:9:2 ratio scaled so the red channel is ~15 HDR -
+    # the middle of the donor's own emissive_color magnitudes (green was
+    # [14.2,25.3,2]) - giving a visible bloom without blowing out. TUNABLE: raise
+    # the scale for a hotter glow. Under -EmissionProbe use an obvious flat red.
     $bodyEmissiveColor = if ($EmissionProbe) {
         "emissive_color=25,0,0"
     } else {
-        "emissive_color=0,0,0"
+        "emissive_color=15,1,0.2"
     }
     $splicePayload = Join-Path $generatedRoot "spliced_child_payload.bin"
     $result = Invoke-HiddenPython @(

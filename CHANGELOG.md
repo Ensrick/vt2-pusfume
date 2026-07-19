@@ -10,6 +10,18 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Lit the authored eye glow (issue [#36](https://github.com/Ensrick/vt2-pusfume/issues/36)):
+  Janfon confirmed character emission rides the normal map's BLUE channel and
+  that the eyes are the model's only emissive. The normal atlas now ships a
+  zeroed blue channel (matching vanilla character normals; the engine
+  reconstructs Z from RG) with `skaven_eyemask` stamped into the eye tile,
+  and the spliced body child sets `emissive_color` to the authored warpstone
+  red (15, 1, 0.2 HDR, tunable). Corrected the earlier mis-read: nothing on
+  the arm glows, and VT2 has no tint-mask concept.
+- Reconciled Janfon's fully-packed body .blend against the handoff: 23 maps
+  byte-identical; `pusfume_fur_df` updated and the previously-missing
+  `pusfume_fur_n`/`pusfume_fur_s` recovered. Wiring the fur child to Janfon's
+  own maps awaits a UV-pairing confirmation for the integrated fur mesh.
 - Fixed the flat body shading (issue [#36](https://github.com/Ensrick/vt2-pusfume/issues/36)):
   the spliced body child's third texture slot was left pointing at the
   Globadier's OWN metallic/AO map (baked to Globadier UVs, misaligned to
