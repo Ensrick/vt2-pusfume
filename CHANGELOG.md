@@ -10,6 +10,18 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Fixed the hero-select name rendering as the missing-localization marker
+  `< Pusfume >`: the identity widgets received the VMF-resolved string, which
+  the vanilla localize=true text pass re-ran through global `Localize` where
+  mod localization is invisible. The display strings are now registered as
+  self-resolving keys in `LocalizationManager`'s backend table (the
+  `_base_lookup` chokepoint), re-registered on manager init, per the repo
+  localization standard - no Localize hooks.
+- Added the gated hero-weapon roster layer (issue
+  [#35](https://github.com/Ensrick/vt2-pusfume/issues/35) groundwork):
+  `open_all_hero_weapons` dev flag with can_wield expansion, an unconditional
+  three-path 3P animation wire-safety floor, and per-slot enumeration. Inert
+  while the flag is off; the human-rig switch enables it.
 - Corrected the emission channel after the v0.6.40 live test lit the whole
   body except the eyes: the shader reads its emission mask from the MA
   texture's ALPHA, not the normal map's blue (that convention was the Blender

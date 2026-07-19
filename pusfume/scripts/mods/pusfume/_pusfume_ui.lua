@@ -727,7 +727,44 @@ local function install_hud_hook(registry)
     state.hud_hook_installed = true
 end
 
+local function register_backend_localizations()
+    -- The vanilla hero-identity text passes run global Localize over whatever
+    -- string lands in the widget, and VMF mod loc is invisible to the global
+    -- localizer, so the resolved "Pusfume" rendered as the missing-loc marker
+    -- "< Pusfume >". Registering the display strings as their own keys in
+    -- LocalizationManager's backend table (the _base_lookup chokepoint every
+    -- resolution path bottoms out in) makes them self-resolving on
+    -- localize=true passes while localize=false passes still print them
+    -- verbatim. Data registration, not a Localize hook: wrapper hooks get
+    -- blown away by the manager's rawset re-init and miss simple_lookup.
+    local localizer = Managers and Managers.localizer
+
+    if not localizer or not localizer.append_backend_localizations then
+        return false
+    end
+
+    localizer:append_backend_localizations({
+        [mod:localize("pusfume_character_name")] = mod:localize("pusfume_character_name"),
+        [mod:localize("pusfume_career_name")] = mod:localize("pusfume_career_name"),
+    })
+
+    return true
+end
+
 function M.install(registry, native)
+    if not register_backend_localizations() then
+        mod:warning("[pusfume] Backend localizer unavailable; hero name may show <> markers")
+    end
+
+    if not state.backend_loc_reinit_hooked and LocalizationManager then
+        state.backend_loc_reinit_hooked = true
+        -- _backend_localizations is reset inside LocalizationManager.init, so
+        -- a locale change or manager re-init drops the entries; re-register.
+        mod:hook_safe(LocalizationManager, "init", function()
+            register_backend_localizations()
+        end)
+    end
+
     install_modern_hooks(registry)
     install_legacy_hooks(registry)
     install_preview_hooks(registry, native)
