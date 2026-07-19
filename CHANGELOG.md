@@ -10,6 +10,15 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Fixed release-pipeline issue
+  [#29](https://github.com/Ensrick/vt2-pusfume/issues/29) by replacing
+  Pusfume's disruptive direct Blender/Node/VMB upload sequence with a
+  single optional `Build-NativePusfume.ps1 -Upload` pipeline. Every external
+  process now uses redirected output, `CreateNoWindow=true`, and hidden window
+  style; VMBLauncher owns build, verified local/enabled-remote deploy, and
+  friends-only upload. The pipeline also rejects uploader success unless
+  Steam's Workshop log confirms a fresh Pusfume ManifestID.
+
 - Fixed crash `cd33e247-dc5e-4aa6-96ed-840258a1bde5` in
   `WeaponUnitExtension.get_action`. The adapted Warpfire state machine retained
   a native `dark_pact_action_one` transition after Adventure input began

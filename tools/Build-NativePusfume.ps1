@@ -9,9 +9,10 @@ param(
     [ValidateSet("bsi", "fbx")]
     [string]$FirstPersonFormat = "bsi",
     [string]$TextureSource = ".build\pusfume_handoff\textures conv",
-    [string]$WorkshopPath = "C:\Program Files (x86)\Steam\steamapps\workshop\content\552500\3764954245",
     [string]$GameBundleDir = "C:\Program Files (x86)\Steam\steamapps\common\Warhammer Vermintide 2\bundle",
     [string]$UnpackerExe = "C:\Tools\vt2_bundle_unpacker\target\release\unpacker.exe",
+    [string]$VmbLauncherExe = "C:\Users\danjo\source\repos\vermintide-2-tweaker\tools\vmb-launcher\bin\Release\net9.0-windows\win-x64\publish\VMBLauncher.exe",
+    [string]$VmbLauncherSettings = ".build\vmb-pusfume-settings.json",
     [switch]$LegacyFur,
     [switch]$IntegratedFur,
     [string]$LegacyFurRoot = ".build\reference_legacy_pusfume",
@@ -22,10 +23,106 @@ param(
     [switch]$NoDonorTextureShadow,
     [switch]$SplicedGameChild,
     [switch]$UseBsiSkinFallback,
+    [switch]$Upload,
+    [switch]$NoRemote,
     [switch]$NoDeploy
 )
 
 $ErrorActionPreference = "Stop"
+
+function Invoke-HiddenTool {
+    param(
+        [Parameter(Mandatory)]
+        [string]$FilePath,
+        [Parameter(Mandatory)]
+        [string[]]$ArgumentList,
+        [string]$WorkingDirectory = "",
+        [string]$StandardInput = ""
+    )
+
+    $startInfo = [Diagnostics.ProcessStartInfo]::new()
+    $startInfo.FileName = $FilePath
+    $startInfo.UseShellExecute = $false
+    $startInfo.CreateNoWindow = $true
+    $startInfo.WindowStyle = [Diagnostics.ProcessWindowStyle]::Hidden
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    $startInfo.RedirectStandardInput = -not [string]::IsNullOrEmpty($StandardInput)
+    $startInfo.WorkingDirectory = if ([string]::IsNullOrWhiteSpace($WorkingDirectory)) {
+        (Get-Location).Path
+    } else {
+        $WorkingDirectory
+    }
+
+    foreach ($argument in $ArgumentList) {
+        $startInfo.ArgumentList.Add($argument)
+    }
+
+    $process = [Diagnostics.Process]::new()
+    $process.StartInfo = $startInfo
+
+    try {
+        if (-not $process.Start()) {
+            throw "Failed to start hidden tool: $FilePath"
+        }
+
+        $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+        $stderrTask = $process.StandardError.ReadToEndAsync()
+
+        if ($startInfo.RedirectStandardInput) {
+            $process.StandardInput.Write($StandardInput)
+            $process.StandardInput.Close()
+        }
+
+        $process.WaitForExit()
+        $stdout = $stdoutTask.GetAwaiter().GetResult()
+        $stderr = $stderrTask.GetAwaiter().GetResult()
+
+        if (-not [string]::IsNullOrWhiteSpace($stdout)) {
+            Write-Host $stdout.TrimEnd()
+        }
+        if (-not [string]::IsNullOrWhiteSpace($stderr)) {
+            Write-Host $stderr.TrimEnd()
+        }
+
+        return [pscustomobject]@{
+            ExitCode = $process.ExitCode
+            ProcessId = $process.Id
+            MainWindowHandle = $process.MainWindowHandle
+            Stdout = $stdout
+            Stderr = $stderr
+        }
+    }
+    finally {
+        $process.Dispose()
+    }
+}
+
+function Assert-HiddenToolSuccess {
+    param(
+        [Parameter(Mandatory)]
+        [psobject]$Result,
+        [Parameter(Mandatory)]
+        [string]$Operation
+    )
+
+    if ($Result.ExitCode -ne 0) {
+        throw "$Operation failed with exit code $($Result.ExitCode)"
+    }
+}
+
+function Invoke-HiddenPython {
+    param(
+        [Parameter(Mandatory)]
+        [string[]]$ArgumentList
+    )
+
+    return Invoke-HiddenTool -FilePath "py.exe" -ArgumentList $ArgumentList
+}
+
+if ($Upload -and $NoDeploy) {
+    throw "Upload requires deployment; remove -NoDeploy"
+}
 if ($BodyDiffuseGain -lt 0.5 -or $BodyDiffuseGain -gt 2.0) {
     throw "BodyDiffuseGain must be between 0.5 and 2.0"
 }
@@ -161,12 +258,12 @@ if ($firstPersonEnabled) {
     }
     $sourceBlendHash = (Get-FileHash -LiteralPath $firstPersonBlendPath -Algorithm SHA256).Hash
 
-    & $blenderExePath --background --factory-startup --disable-autoexec `
-        --python $firstPersonTool -- `
-        $firstPersonBlendPath $firstPersonDonorUnitPath $firstPersonAssetPath
-    if ($LASTEXITCODE -ne 0) {
-        throw "First-person Pusfume $($FirstPersonFormat.ToUpperInvariant()) preparation failed with exit code $LASTEXITCODE"
-    }
+    $result = Invoke-HiddenTool -FilePath $blenderExePath -ArgumentList @(
+        "--background", "--factory-startup", "--disable-autoexec",
+        "--python", $firstPersonTool, "--",
+        $firstPersonBlendPath, $firstPersonDonorUnitPath, $firstPersonAssetPath)
+    Assert-HiddenToolSuccess $result `
+        "First-person Pusfume $($FirstPersonFormat.ToUpperInvariant()) preparation"
     if ((Get-FileHash -LiteralPath $firstPersonBlendPath -Algorithm SHA256).Hash -ne $sourceBlendHash) {
         throw "First-person preparation modified its source blend: $firstPersonBlendPath"
     }
@@ -179,12 +276,10 @@ if ($firstPersonEnabled) {
 $idleFbxPath = Join-Path $generatedRoot "pusfume_3p_idle.fbx"
 if ([string]::IsNullOrWhiteSpace($IdleAnimationFbx)) {
     $idleFbxTool = Join-Path $repoRoot "tools\generate_idle_pusfume_fbx.py"
-    & $blenderExePath --background --factory-startup --disable-autoexec `
-        --python $idleFbxTool -- `
-        $modelFbxPath $idleFbxPath
-    if ($LASTEXITCODE -ne 0) {
-        throw "Idle Pusfume FBX generation failed with exit code $LASTEXITCODE"
-    }
+    $result = Invoke-HiddenTool -FilePath $blenderExePath -ArgumentList @(
+        "--background", "--factory-startup", "--disable-autoexec",
+        "--python", $idleFbxTool, "--", $modelFbxPath, $idleFbxPath)
+    Assert-HiddenToolSuccess $result "Idle Pusfume FBX generation"
 } else {
     $idleAnimationFbxPath = if ([IO.Path]::IsPathRooted($IdleAnimationFbx)) {
         (Resolve-Path $IdleAnimationFbx).Path
@@ -199,31 +294,27 @@ if (-not (Test-Path -LiteralPath $idleFbxPath -PathType Leaf) -or `
 }
 
 $animationContractTool = Join-Path $repoRoot "tools\validate_pusfume_animation_contract.py"
-& $blenderExePath --background --factory-startup --disable-autoexec `
-    --python $animationContractTool -- `
-    $modelFbxPath $idleFbxPath $animationFbxPath
-if ($LASTEXITCODE -ne 0) {
-    throw "Pusfume animation contract validation failed with exit code $LASTEXITCODE"
-}
+$result = Invoke-HiddenTool -FilePath $blenderExePath -ArgumentList @(
+    "--background", "--factory-startup", "--disable-autoexec",
+    "--python", $animationContractTool, "--",
+    $modelFbxPath, $idleFbxPath, $animationFbxPath)
+Assert-HiddenToolSuccess $result "Pusfume animation contract validation"
 
 $animatedModelFbxPath = $modelFbxPath
 if ($useFbxDcc) {
     $animatedFbxTool = Join-Path $repoRoot "tools\prepare_animated_pusfume_fbx.py"
     $animatedModelFbxPath = Join-Path $generatedRoot "pusfume_3p_animated.fbx"
 
+    $animatedArguments = @(
+        "--background", "--factory-startup", "--disable-autoexec",
+        "--python", $animatedFbxTool, "--",
+        $modelFbxPath, $animationFbxPath, $animatedModelFbxPath)
     if ($LegacyFur) {
-        & $blenderExePath --background --factory-startup --disable-autoexec `
-            --python $animatedFbxTool -- `
-            $modelFbxPath $animationFbxPath $animatedModelFbxPath `
-            $legacyFurPath $legacyBodyPath
-    } else {
-        & $blenderExePath --background --factory-startup --disable-autoexec `
-            --python $animatedFbxTool -- `
-            $modelFbxPath $animationFbxPath $animatedModelFbxPath
+        $animatedArguments += @($legacyFurPath, $legacyBodyPath)
     }
-    if ($LASTEXITCODE -ne 0) {
-        throw "Animated Pusfume FBX preparation failed with exit code $LASTEXITCODE"
-    }
+    $result = Invoke-HiddenTool -FilePath $blenderExePath `
+        -ArgumentList $animatedArguments
+    Assert-HiddenToolSuccess $result "Animated Pusfume FBX preparation"
     if (-not (Test-Path -LiteralPath $animatedModelFbxPath -PathType Leaf) -or `
             (Get-Item -LiteralPath $animatedModelFbxPath).Length -lt 1024) {
         throw "Animated Pusfume FBX preparation produced no usable output"
@@ -231,7 +322,17 @@ if ($useFbxDcc) {
 }
 $stageRoot = Join-Path $repoRoot ".build\native-workshop"
 $stageMod = Join-Path $stageRoot "pusfume"
-$vmbPath = (Resolve-Path (Join-Path $repoRoot "..\vmb\vmb.js")).Path
+$vmbLauncherCandidate = if ([IO.Path]::IsPathRooted($VmbLauncherExe)) {
+    $VmbLauncherExe
+} else {
+    Join-Path $repoRoot $VmbLauncherExe
+}
+$vmbLauncherPath = (Resolve-Path $vmbLauncherCandidate).Path
+$vmbLauncherSettingsPath = if ([IO.Path]::IsPathRooted($VmbLauncherSettings)) {
+    [IO.Path]::GetFullPath($VmbLauncherSettings)
+} else {
+    [IO.Path]::GetFullPath((Join-Path $repoRoot $VmbLauncherSettings))
+}
 
 $resolvedStageRoot = [IO.Path]::GetFullPath($stageRoot)
 $allowedBuildRoot = [IO.Path]::GetFullPath((Join-Path $repoRoot ".build")) + [IO.Path]::DirectorySeparatorChar
@@ -254,6 +355,32 @@ Copy-Item -LiteralPath $sourceMod -Destination $stageRoot -Recurse -Force
 # a mod project, so Workshop uploads ride the monorepo's canonical pipeline
 # (vmblauncher upload pusfume --config <settings with ProjectRoot=stage root>).
 Copy-Item -LiteralPath (Join-Path $repoRoot ".vmbrc") -Destination (Join-Path $stageRoot ".vmbrc") -Force
+
+# Mirror VMBLauncher's machine settings into ignored staging and bind only the
+# ProjectRoot. This preserves its canonical SDK, Workshop, and enabled-remote
+# configuration without mutating the user's live GUI settings.
+$globalLauncherSettings = Join-Path $env:APPDATA "VMBLauncher\settings.json"
+if (-not (Test-Path -LiteralPath $globalLauncherSettings -PathType Leaf)) {
+    throw "VMBLauncher settings are missing: $globalLauncherSettings"
+}
+if ([IO.Path]::GetFullPath($globalLauncherSettings) -eq
+        [IO.Path]::GetFullPath($vmbLauncherSettingsPath)) {
+    throw "Staged VMBLauncher settings must not overwrite the live GUI settings"
+}
+$launcherSettings = Get-Content -LiteralPath $globalLauncherSettings -Raw |
+    ConvertFrom-Json
+if ($launcherSettings.PSObject.Properties.Name -contains "ProjectRoot") {
+    $launcherSettings.ProjectRoot = $resolvedStageRoot
+} else {
+    $launcherSettings | Add-Member -NotePropertyName ProjectRoot `
+        -NotePropertyValue $resolvedStageRoot
+}
+New-Item -ItemType Directory -Path ([IO.Path]::GetDirectoryName(
+    $vmbLauncherSettingsPath)) -Force | Out-Null
+$launcherSettingsJson = $launcherSettings | ConvertTo-Json -Depth 20
+$utf8NoBom = [Text.UTF8Encoding]::new($false)
+[IO.File]::WriteAllText(
+    $vmbLauncherSettingsPath, $launcherSettingsJson, $utf8NoBom)
 
 $staleBundlePath = Join-Path $stageMod "bundleV2"
 if (Test-Path -LiteralPath $staleBundlePath) {
@@ -1046,10 +1173,10 @@ $($rootTextureEntries -join "`n")
 "@ | Add-Content -LiteralPath (Join-Path $stageMod `
     "resource_packages\pusfume\pusfume.package") -Encoding utf8
 
-& node $vmbPath build pusfume -f $stageRoot --rc $repoRoot --clean --no-workshop
-if ($LASTEXITCODE -ne 0) {
-    throw "VT2 SDK native build failed with exit code $LASTEXITCODE"
-}
+$result = Invoke-HiddenTool -FilePath $vmbLauncherPath -ArgumentList @(
+    "build", "pusfume", "--clean", "--no-banner",
+    "--config", $vmbLauncherSettingsPath)
+Assert-HiddenToolSuccess $result "VMBLauncher native build"
 
 $bundleRoot = Join-Path $stageMod "bundleV2"
 $modFile = Join-Path $bundleRoot "pusfume.mod"
@@ -1094,10 +1221,10 @@ if ($firstPersonEnabled) {
         ".temp\pusfumeV2\compile\" +
         $firstPersonCompiledMatch.Groups[1].Value.Replace('/', '\'))
     $compiledRestTool = Join-Path $repoRoot "tools\validate_compiled_1p_rest.py"
-    & py $compiledRestTool $compiledFirstPersonUnit $firstPersonDonorUnitPath
-    if ($LASTEXITCODE -ne 0) {
-        throw "Compiled first-person rest-skeleton validation failed"
-    }
+    $result = Invoke-HiddenPython @(
+        $compiledRestTool, $compiledFirstPersonUnit, $firstPersonDonorUnitPath)
+    Assert-HiddenToolSuccess $result `
+        "Compiled first-person rest-skeleton validation"
 }
 
 if ($ParentChildMaterial) {
@@ -1111,19 +1238,23 @@ if ($ParentChildMaterial) {
     $totalStripped = 0
 
     foreach ($bundleFile in (Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)) {
-        $dryOutput = & py $stripTool $bundleFile.FullName --type material `
-            --old $donorParentPath --new "units/pusfume/retired_stub_parent" --dry-run 2>&1
+        $result = Invoke-HiddenPython @(
+            $stripTool, $bundleFile.FullName, "--type", "material",
+            "--old", $donorParentPath, "--new",
+            "units/pusfume/retired_stub_parent", "--dry-run")
+        $dryOutput = @($result.Stdout, $result.Stderr)
         $found = 0
         if ($dryOutput -join "`n" -match '(\d+) occurrence') {
             $found = [int]$Matches[1]
         }
 
         if ($found -gt 0) {
-            & py $stripTool $bundleFile.FullName --type material `
-                --old $donorParentPath --new "units/pusfume/retired_stub_parent" --expect $found
-            if ($LASTEXITCODE -ne 0) {
-                throw "Stub strip failed on $($bundleFile.Name)"
-            }
+            $result = Invoke-HiddenPython @(
+                $stripTool, $bundleFile.FullName, "--type", "material",
+                "--old", $donorParentPath, "--new",
+                "units/pusfume/retired_stub_parent", "--expect", "$found")
+            Assert-HiddenToolSuccess $result `
+                "Stub strip on $($bundleFile.Name)"
             $totalStripped += $found
         }
     }
@@ -1137,11 +1268,12 @@ if ($ParentChildMaterial) {
     }
 
     foreach ($bundleFile in (Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)) {
-        & py $stripTool $bundleFile.FullName --type material `
-            --old $donorParentPath --new "units/pusfume/retired_stub_parent" --expect 0 --dry-run
-        if ($LASTEXITCODE -ne 0) {
-            throw "Stub identity still present in $($bundleFile.Name) after strip"
-        }
+        $result = Invoke-HiddenPython @(
+            $stripTool, $bundleFile.FullName, "--type", "material",
+            "--old", $donorParentPath, "--new",
+            "units/pusfume/retired_stub_parent", "--expect", "0", "--dry-run")
+        Assert-HiddenToolSuccess $result `
+            "Stub identity verification on $($bundleFile.Name)"
     }
 
     Write-Host "Stub parent identity stripped: $totalStripped pair(s) renamed to units/pusfume/retired_stub_parent"
@@ -1165,7 +1297,9 @@ if ($SplicedGameChild) {
 
     $spliceExtractDir = Join-Path $generatedRoot "donor-bundle-extract"
     New-Item -ItemType Directory -Path $spliceExtractDir -Force | Out-Null
-    & $UnpackerExe extract $donorGameBundle $spliceExtractDir --flatten 2>$null | Out-Null
+    $result = Invoke-HiddenTool -FilePath $UnpackerExe -ArgumentList @(
+        "extract", $donorGameBundle, $spliceExtractDir, "--flatten")
+    Assert-HiddenToolSuccess $result "Globadier donor bundle extraction"
     $gameChildPath = Join-Path $spliceExtractDir "90BDF3BAC6F81BA8.material"
     if (-not (Test-Path -LiteralPath $gameChildPath -PathType Leaf)) {
         throw "Donor bundle extraction did not produce 90BDF3BAC6F81BA8.material"
@@ -1180,34 +1314,33 @@ if ($SplicedGameChild) {
     # normal to the atlas, and leave the donor's own black emissive untouched
     # (it is resident via the donor package, which always loads first).
     $splicePayload = Join-Path $generatedRoot "spliced_child_payload.bin"
-    & py (Join-Path $repoRoot "tools\make_spliced_child.py") `
-        --extracted $gameChildPath `
-        --resource hash:90BDF3BAC6F81BA8 --expect-size 768 `
-        --expect-parent 3D25339231384C80 `
-        --map DD74D8319F514D96=C263ECB79A8DCEC0 `
-        --map E334A8CB6BCB5E6D=A4215592F6297E57 `
-        --set-variable emissive_color=0,0,0 `
-        --expect-texture texture_map_02af90f8=C263ECB79A8DCEC0 `
-        --expect-texture texture_map_27b67fd2=45FFAEEF53695A86 `
-        --expect-texture texture_map_8bf37d8e=A4215592F6297E57 `
-        --out $splicePayload
-    if ($LASTEXITCODE -ne 0) {
-        throw "Spliced child payload generation failed"
-    }
+    $result = Invoke-HiddenPython @(
+        (Join-Path $repoRoot "tools\make_spliced_child.py"),
+        "--extracted", $gameChildPath,
+        "--resource", "hash:90BDF3BAC6F81BA8", "--expect-size", "768",
+        "--expect-parent", "3D25339231384C80",
+        "--map", "DD74D8319F514D96=C263ECB79A8DCEC0",
+        "--map", "E334A8CB6BCB5E6D=A4215592F6297E57",
+        "--set-variable", "emissive_color=0,0,0",
+        "--expect-texture", "texture_map_02af90f8=C263ECB79A8DCEC0",
+        "--expect-texture", "texture_map_27b67fd2=45FFAEEF53695A86",
+        "--expect-texture", "texture_map_8bf37d8e=A4215592F6297E57",
+        "--out", $splicePayload)
+    Assert-HiddenToolSuccess $result "Spliced child payload generation"
 
     $spliceTool = Join-Path $repoRoot "tools\splice_bundle_resource.py"
     $childId = "hash:F72D636600F7F598"
     $splicedInto = @()
 
     foreach ($bundleFile in (Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)) {
-        & py $spliceTool $bundleFile.FullName --type material `
-            --name $childId --payload $splicePayload --dry-run 2>$null
-        if ($LASTEXITCODE -eq 0) {
-            & py $spliceTool $bundleFile.FullName --type material `
-                --name $childId --payload $splicePayload
-            if ($LASTEXITCODE -ne 0) {
-                throw "Splice failed on $($bundleFile.Name)"
-            }
+        $result = Invoke-HiddenPython @(
+            $spliceTool, $bundleFile.FullName, "--type", "material",
+            "--name", $childId, "--payload", $splicePayload, "--dry-run")
+        if ($result.ExitCode -eq 0) {
+            $result = Invoke-HiddenPython @(
+                $spliceTool, $bundleFile.FullName, "--type", "material",
+                "--name", $childId, "--payload", $splicePayload)
+            Assert-HiddenToolSuccess $result "Splice on $($bundleFile.Name)"
             $splicedInto += $bundleFile.Name
         }
     }
@@ -1222,33 +1355,34 @@ if ($SplicedGameChild) {
         # The 1P mesh keeps Janfon's original UVs, so splice the same proven
         # character-skin binding with direct body maps rather than the 3P atlas.
         $firstPersonPayload = Join-Path $generatedRoot "spliced_1p_child_payload.bin"
-        & py (Join-Path $repoRoot "tools\make_spliced_child.py") `
-            --extracted $gameChildPath `
-            --resource hash:90BDF3BAC6F81BA8 --expect-size 768 `
-            --expect-parent 3D25339231384C80 `
-            --map DD74D8319F514D96=E0C4E09D80AE735B `
-            --map E334A8CB6BCB5E6D=3B3F6545AF6782F5 `
-            --set-variable emissive_color=0,0,0 `
-            --expect-texture texture_map_02af90f8=E0C4E09D80AE735B `
-            --expect-texture texture_map_27b67fd2=45FFAEEF53695A86 `
-            --expect-texture texture_map_8bf37d8e=3B3F6545AF6782F5 `
-            --out $firstPersonPayload
-        if ($LASTEXITCODE -ne 0) {
-            throw "Spliced first-person child payload generation failed"
-        }
+        $result = Invoke-HiddenPython @(
+            (Join-Path $repoRoot "tools\make_spliced_child.py"),
+            "--extracted", $gameChildPath,
+            "--resource", "hash:90BDF3BAC6F81BA8", "--expect-size", "768",
+            "--expect-parent", "3D25339231384C80",
+            "--map", "DD74D8319F514D96=E0C4E09D80AE735B",
+            "--map", "E334A8CB6BCB5E6D=3B3F6545AF6782F5",
+            "--set-variable", "emissive_color=0,0,0",
+            "--expect-texture", "texture_map_02af90f8=E0C4E09D80AE735B",
+            "--expect-texture", "texture_map_27b67fd2=45FFAEEF53695A86",
+            "--expect-texture", "texture_map_8bf37d8e=3B3F6545AF6782F5",
+            "--out", $firstPersonPayload)
+        Assert-HiddenToolSuccess $result `
+            "Spliced first-person child payload generation"
 
         $firstPersonSplicedInto = @()
         foreach ($bundleFile in (Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)) {
-            & py $spliceTool $bundleFile.FullName --type material `
-                --name "child_materials/pusfume/pusfume_1p_body_child" `
-                --payload $firstPersonPayload --dry-run 2>$null
-            if ($LASTEXITCODE -eq 0) {
-                & py $spliceTool $bundleFile.FullName --type material `
-                    --name "child_materials/pusfume/pusfume_1p_body_child" `
-                    --payload $firstPersonPayload
-                if ($LASTEXITCODE -ne 0) {
-                    throw "First-person material splice failed on $($bundleFile.Name)"
-                }
+            $result = Invoke-HiddenPython @(
+                $spliceTool, $bundleFile.FullName, "--type", "material",
+                "--name", "child_materials/pusfume/pusfume_1p_body_child",
+                "--payload", $firstPersonPayload, "--dry-run")
+            if ($result.ExitCode -eq 0) {
+                $result = Invoke-HiddenPython @(
+                    $spliceTool, $bundleFile.FullName, "--type", "material",
+                    "--name", "child_materials/pusfume/pusfume_1p_body_child",
+                    "--payload", $firstPersonPayload)
+                Assert-HiddenToolSuccess $result `
+                    "First-person material splice on $($bundleFile.Name)"
                 $firstPersonSplicedInto += $bundleFile.Name
             }
         }
@@ -1270,41 +1404,44 @@ if ($SplicedGameChild) {
 
     $laurelExtractDir = Join-Path $generatedRoot "laurel-bundle-extract"
     New-Item -ItemType Directory -Path $laurelExtractDir -Force | Out-Null
-    & $UnpackerExe extract $laurelGameBundle $laurelExtractDir --flatten `
-        --include "*C70B1AAD3B363E24*" 2>$null | Out-Null
+    $result = Invoke-HiddenTool -FilePath $UnpackerExe -ArgumentList @(
+        "extract", $laurelGameBundle, $laurelExtractDir, "--flatten",
+        "--include", "*C70B1AAD3B363E24*")
+    Assert-HiddenToolSuccess $result "Laurel donor bundle extraction"
     $laurelMaterialPath = Join-Path $laurelExtractDir "C70B1AAD3B363E24.material"
     if (-not (Test-Path -LiteralPath $laurelMaterialPath -PathType Leaf)) {
         throw "Laurel bundle extraction did not produce C70B1AAD3B363E24.material"
     }
 
     $whiskerPayload = Join-Path $generatedRoot "spliced_whisker_payload.bin"
-    & py (Join-Path $repoRoot "tools\make_spliced_child.py") `
-        --extracted $laurelMaterialPath `
-        --resource hash:C70B1AAD3B363E24 --expect-size 128 `
-        --expect-parent F85B289742D5D69A `
-        --map C9CF19C214612D75=7F060B4938ADCF12 `
-        --map CDA03B9B0226037A=950FC5950CCEBCD0 `
-        --map D3FD8377A3DE498A=BEB4D8D9891A6D4A `
-        --expect-texture texture_map_c0ba2942=7F060B4938ADCF12 `
-        --expect-texture texture_map_59cd86b9=950FC5950CCEBCD0 `
-        --expect-texture texture_map_b788717c=BEB4D8D9891A6D4A `
-        --out $whiskerPayload
-    if ($LASTEXITCODE -ne 0) {
-        throw "Spliced Laurel whisker payload generation failed"
-    }
+    $result = Invoke-HiddenPython @(
+        (Join-Path $repoRoot "tools\make_spliced_child.py"),
+        "--extracted", $laurelMaterialPath,
+        "--resource", "hash:C70B1AAD3B363E24", "--expect-size", "128",
+        "--expect-parent", "F85B289742D5D69A",
+        "--map", "C9CF19C214612D75=7F060B4938ADCF12",
+        "--map", "CDA03B9B0226037A=950FC5950CCEBCD0",
+        "--map", "D3FD8377A3DE498A=BEB4D8D9891A6D4A",
+        "--expect-texture", "texture_map_c0ba2942=7F060B4938ADCF12",
+        "--expect-texture", "texture_map_59cd86b9=950FC5950CCEBCD0",
+        "--expect-texture", "texture_map_b788717c=BEB4D8D9891A6D4A",
+        "--out", $whiskerPayload)
+    Assert-HiddenToolSuccess $result `
+        "Spliced Laurel whisker payload generation"
 
     $whiskerSplicedInto = @()
     foreach ($bundleFile in (Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)) {
-        & py $spliceTool $bundleFile.FullName --type material `
-            --name "child_materials/pusfume/pusfume_whiskers_child" `
-            --payload $whiskerPayload --dry-run 2>$null
-        if ($LASTEXITCODE -eq 0) {
-            & py $spliceTool $bundleFile.FullName --type material `
-                --name "child_materials/pusfume/pusfume_whiskers_child" `
-                --payload $whiskerPayload
-            if ($LASTEXITCODE -ne 0) {
-                throw "Whisker material splice failed on $($bundleFile.Name)"
-            }
+        $result = Invoke-HiddenPython @(
+            $spliceTool, $bundleFile.FullName, "--type", "material",
+            "--name", "child_materials/pusfume/pusfume_whiskers_child",
+            "--payload", $whiskerPayload, "--dry-run")
+        if ($result.ExitCode -eq 0) {
+            $result = Invoke-HiddenPython @(
+                $spliceTool, $bundleFile.FullName, "--type", "material",
+                "--name", "child_materials/pusfume/pusfume_whiskers_child",
+                "--payload", $whiskerPayload)
+            Assert-HiddenToolSuccess $result `
+                "Whisker material splice on $($bundleFile.Name)"
             $whiskerSplicedInto += $bundleFile.Name
         }
     }
@@ -1318,33 +1455,33 @@ if ($SplicedGameChild) {
         # Reuse the same proven skinned alpha-card binding for fur, but patch
         # all three channels to the licensed dalokraff texture set.
         $furPayload = Join-Path $generatedRoot "spliced_fur_payload.bin"
-        & py (Join-Path $repoRoot "tools\make_spliced_child.py") `
-            --extracted $laurelMaterialPath `
-            --resource hash:C70B1AAD3B363E24 --expect-size 128 `
-            --expect-parent F85B289742D5D69A `
-            --map C9CF19C214612D75=20A7120B25F414F7 `
-            --map CDA03B9B0226037A=57505EBDF932A68B `
-            --map D3FD8377A3DE498A=D7B1C45DEFA31C39 `
-            --expect-texture texture_map_c0ba2942=20A7120B25F414F7 `
-            --expect-texture texture_map_59cd86b9=57505EBDF932A68B `
-            --expect-texture texture_map_b788717c=D7B1C45DEFA31C39 `
-            --out $furPayload
-        if ($LASTEXITCODE -ne 0) {
-            throw "Spliced Laurel fur payload generation failed"
-        }
+        $result = Invoke-HiddenPython @(
+            (Join-Path $repoRoot "tools\make_spliced_child.py"),
+            "--extracted", $laurelMaterialPath,
+            "--resource", "hash:C70B1AAD3B363E24", "--expect-size", "128",
+            "--expect-parent", "F85B289742D5D69A",
+            "--map", "C9CF19C214612D75=20A7120B25F414F7",
+            "--map", "CDA03B9B0226037A=57505EBDF932A68B",
+            "--map", "D3FD8377A3DE498A=D7B1C45DEFA31C39",
+            "--expect-texture", "texture_map_c0ba2942=20A7120B25F414F7",
+            "--expect-texture", "texture_map_59cd86b9=57505EBDF932A68B",
+            "--expect-texture", "texture_map_b788717c=D7B1C45DEFA31C39",
+            "--out", $furPayload)
+        Assert-HiddenToolSuccess $result "Spliced Laurel fur payload generation"
 
         $furSplicedInto = @()
         foreach ($bundleFile in (Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)) {
-            & py $spliceTool $bundleFile.FullName --type material `
-                --name "child_materials/pusfume/pusfume_fur_child" `
-                --payload $furPayload --dry-run 2>$null
-            if ($LASTEXITCODE -eq 0) {
-                & py $spliceTool $bundleFile.FullName --type material `
-                    --name "child_materials/pusfume/pusfume_fur_child" `
-                    --payload $furPayload
-                if ($LASTEXITCODE -ne 0) {
-                    throw "Fur material splice failed on $($bundleFile.Name)"
-                }
+            $result = Invoke-HiddenPython @(
+                $spliceTool, $bundleFile.FullName, "--type", "material",
+                "--name", "child_materials/pusfume/pusfume_fur_child",
+                "--payload", $furPayload, "--dry-run")
+            if ($result.ExitCode -eq 0) {
+                $result = Invoke-HiddenPython @(
+                    $spliceTool, $bundleFile.FullName, "--type", "material",
+                    "--name", "child_materials/pusfume/pusfume_fur_child",
+                    "--payload", $furPayload)
+                Assert-HiddenToolSuccess $result `
+                    "Fur material splice on $($bundleFile.Name)"
                 $furSplicedInto += $bundleFile.Name
             }
         }
@@ -1355,9 +1492,6 @@ if ($SplicedGameChild) {
 
         Write-Host "Spliced Laurel feather payload (128 bytes, dalokraff fur maps) into $($furSplicedInto[0])"
     }
-    # The locator dry-runs exit 1 on bundles without the child; do not let the
-    # last probe's code leak out as the script's exit status.
-    $global:LASTEXITCODE = 0
 }
 
 if (-not $NoDonorTextureShadow) {
@@ -1383,19 +1517,22 @@ if (-not $NoDonorTextureShadow) {
         $totalRenamed = 0
 
         foreach ($bundleFile in (Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)) {
-            $dryOutput = & py $stripTool $bundleFile.FullName --type texture --bare `
-                --old $atlasPath --new-hash $donorId --dry-run 2>&1
+            $result = Invoke-HiddenPython @(
+                $stripTool, $bundleFile.FullName, "--type", "texture", "--bare",
+                "--old", $atlasPath, "--new-hash", $donorId, "--dry-run")
+            $dryOutput = @($result.Stdout, $result.Stderr)
             $found = 0
             if ($dryOutput -join "`n" -match '(\d+) occurrence') {
                 $found = [int]$Matches[1]
             }
 
             if ($found -gt 0) {
-                & py $stripTool $bundleFile.FullName --type texture --bare `
-                    --old $atlasPath --new-hash $donorId --expect $found
-                if ($LASTEXITCODE -ne 0) {
-                    throw "Donor texture shadow rename failed on $($bundleFile.Name) for $atlasPath"
-                }
+                $result = Invoke-HiddenPython @(
+                    $stripTool, $bundleFile.FullName, "--type", "texture", "--bare",
+                    "--old", $atlasPath, "--new-hash", $donorId,
+                    "--expect", "$found")
+                Assert-HiddenToolSuccess $result `
+                    "Donor texture shadow rename on $($bundleFile.Name) for $atlasPath"
                 $totalRenamed += $found
             }
         }
@@ -1408,11 +1545,12 @@ if (-not $NoDonorTextureShadow) {
         }
 
         foreach ($bundleFile in (Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)) {
-            & py $stripTool $bundleFile.FullName --type texture --bare `
-                --old $atlasPath --new-hash $donorId --expect 0 --dry-run
-            if ($LASTEXITCODE -ne 0) {
-                throw "Atlas identity still present in $($bundleFile.Name) after shadow rename"
-            }
+            $result = Invoke-HiddenPython @(
+                $stripTool, $bundleFile.FullName, "--type", "texture", "--bare",
+                "--old", $atlasPath, "--new-hash", $donorId,
+                "--expect", "0", "--dry-run")
+            Assert-HiddenToolSuccess $result `
+                "Atlas identity verification on $($bundleFile.Name)"
         }
 
         Write-Host "Donor texture shadow: $atlasPath -> $donorId ($totalRenamed occurrence(s))"
@@ -1420,48 +1558,40 @@ if (-not $NoDonorTextureShadow) {
 }
 
 if (-not $NoDeploy) {
-    $resolvedWorkshop = [IO.Path]::GetFullPath($WorkshopPath)
-    if (-not $resolvedWorkshop.EndsWith("552500\3764954245", [StringComparison]::OrdinalIgnoreCase)) {
-        throw "Refusing to deploy outside the Pusfume Workshop item: $resolvedWorkshop"
+    $deployArguments = @(
+        "deploy", "pusfume", "--no-banner",
+        "--config", $vmbLauncherSettingsPath)
+    if ($NoRemote) {
+        $deployArguments += "--no-remote"
     }
 
-    New-Item -ItemType Directory -Path $resolvedWorkshop -Force | Out-Null
-    $bundleFiles = @(Get-ChildItem -LiteralPath $bundleRoot -File)
-    $expectedNames = @{}
+    $result = Invoke-HiddenTool -FilePath $vmbLauncherPath `
+        -ArgumentList $deployArguments
+    Assert-HiddenToolSuccess $result "VMBLauncher verified deployment"
+}
 
-    foreach ($bundleFile in $bundleFiles) {
-        $expectedNames[$bundleFile.Name] = $true
+if ($Upload) {
+    $workshopLog = "C:\Program Files (x86)\Steam\logs\workshop_log.txt"
+    $uploadStarted = Get-Date
+    $result = Invoke-HiddenTool -FilePath $vmbLauncherPath -ArgumentList @(
+        "upload", "pusfume", "--no-banner",
+        "--config", $vmbLauncherSettingsPath)
+    Assert-HiddenToolSuccess $result "VMBLauncher friends-only Workshop upload"
+
+    $manifestLine = Get-Content -LiteralPath $workshopLog -Tail 200 |
+        Where-Object {
+            $_ -match "Uploaded new content \( ManifestID (\d+) \) for item 3764954245"
+        } | Select-Object -Last 1
+    if (-not $manifestLine -or $manifestLine -notmatch
+            "^\[(?<timestamp>[^]]+)\].*ManifestID (?<manifest>\d+)") {
+        throw "Workshop upload returned success without a manifest confirmation for item 3764954245"
+    }
+    $manifestTime = [datetime]::Parse($matches.timestamp)
+    if ($manifestTime -lt $uploadStarted.AddMinutes(-1)) {
+        throw "Workshop manifest confirmation is stale: $manifestLine"
     }
 
-    $staleBundles = @(Get-ChildItem -LiteralPath $resolvedWorkshop -Filter *.mod_bundle -File |
-        Where-Object { -not $expectedNames.ContainsKey($_.Name) })
-
-    foreach ($staleBundle in $staleBundles) {
-        if ([IO.Path]::GetDirectoryName($staleBundle.FullName) -ne $resolvedWorkshop) {
-            throw "Refusing to remove a stale bundle outside the Workshop item: $($staleBundle.FullName)"
-        }
-
-        Remove-Item -LiteralPath $staleBundle.FullName -Force
-    }
-
-    $verifiedFiles = 0
-
-    $bundleFiles | ForEach-Object {
-        $deployedPath = Join-Path $resolvedWorkshop $_.Name
-
-        Copy-Item -LiteralPath $_.FullName -Destination $deployedPath -Force
-
-        $sourceHash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
-        $deployedHash = (Get-FileHash -LiteralPath $deployedPath -Algorithm SHA256).Hash
-        if ($sourceHash -ne $deployedHash) {
-            throw "Deployment hash mismatch: $deployedPath"
-        }
-
-        $verifiedFiles++
-    }
-
-    Write-Host "Deployed and hash-verified $verifiedFiles native Pusfume files to $resolvedWorkshop"
-    Write-Host "Removed $($staleBundles.Count) obsolete native Pusfume bundles"
+    Write-Host "Steam confirmed Pusfume Workshop ManifestID $($matches.manifest) at $($matches.timestamp)"
 }
 
 $nativeSource = if ($useFbxDcc) { $animatedModelFbxPath } else { $inputPath }

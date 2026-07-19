@@ -309,16 +309,32 @@ Test-Condition ($nativeConfigText -match 'manual_skin_probe\s*=\s*false' -and `
 Test-Condition ($nativeBuildText -match '\[switch\]\$NoDeploy' -and `
     $nativeBuildText -match 'if \(-not \$NoDeploy\)') `
     "local deployment" "native builds deploy to the active Workshop item by default"
-Test-Condition ($nativeBuildText -match '\$staleBundles' -and `
-    $nativeBuildText -match 'Remove-Item -LiteralPath \$staleBundle\.FullName') `
-    "local deployment" "obsolete Workshop bundles are removed inside the verified item directory"
+Test-Condition ($nativeBuildText -match '"deploy", "pusfume", "--no-banner"' -and `
+    $nativeBuildText -match 'Assert-HiddenToolSuccess \$result "VMBLauncher verified deployment"' -and `
+    $nativeBuildText -notmatch 'Copy-Item -LiteralPath \$_\.FullName -Destination \$deployedPath') `
+    "canonical deployment" "VMBLauncher hash-verifies local and enabled-remote Workshop copies"
+Test-Condition ($nativeBuildText -match 'function Invoke-HiddenTool' -and `
+    $nativeBuildText -match '\$startInfo\.UseShellExecute\s*=\s*\$false' -and `
+    $nativeBuildText -match '\$startInfo\.CreateNoWindow\s*=\s*\$true' -and `
+    $nativeBuildText -match '\$startInfo\.WindowStyle\s*=\s*\[Diagnostics\.ProcessWindowStyle\]::Hidden' -and `
+    $nativeBuildText -match '\$startInfo\.RedirectStandardOutput\s*=\s*\$true' -and `
+    $nativeBuildText -match '\$startInfo\.RedirectStandardError\s*=\s*\$true' -and `
+    $nativeBuildText -notmatch '(?m)^\s*&\s+') `
+    "non-disruptive native tools" "all external build, post-process, VMBLauncher, and SDK children cannot create visible windows"
+Test-Condition ($nativeBuildText -match '\[switch\]\$Upload' -and `
+    $nativeBuildText -match '"build", "pusfume", "--clean"' -and `
+    $nativeBuildText -match '"upload", "pusfume", "--no-banner"' -and `
+    $nativeBuildText -match 'Uploaded new content' -and `
+    $nativeBuildText -match 'ManifestID' -and `
+    $nativeBuildText -match 'Steam confirmed Pusfume Workshop ManifestID') `
+    "canonical native ship" "one hidden pipeline builds, deploys, uploads, and verifies Steam's manifest"
 Test-Condition ($nativeBuildText -match '\[switch\]\$UseBsiSkinFallback' -and `
     $nativeBuildText -match '\$useFbxDcc\s*=\s*-not \$UseBsiSkinFallback\.IsPresent' -and `
     $nativeBuildText -match 'pusfume_3p\.dcc_asset' -and `
     $nativeBuildText -match 'extension\s*=\s*"\.fbx"') `
     "native FBX pipeline" "supported Stingray DCC import is default and BSI remains an explicit fallback"
 Test-Condition ($nativeBuildText -match 'prepare_animated_pusfume_fbx\.py' -and `
-    $nativeBuildText -match '\$modelFbxPath \$animationFbxPath \$animatedModelFbxPath' -and `
+    $nativeBuildText -match '\$modelFbxPath, \$animationFbxPath, \$animatedModelFbxPath' -and `
     $nativeBuildText -match 'Copy-Item -LiteralPath \$animatedModelFbxPath' -and `
     $animatedFbxToolText -match 'model_armature\.animation_data\.action_slot = action\.slots\[0\]' -and `
     $animatedFbxToolText -match 'max_pose_delta < 0\.001' -and `
@@ -433,7 +449,7 @@ Test-Condition ((Test-Path (Join-Path $repoRoot "tools\strip_bundle_resource.py"
     $nativeBuildText -match 'strip_bundle_resource\.py' -and `
     $nativeBuildText -match 'retired_stub_parent' -and `
     $nativeBuildText -match '\$totalStripped -lt 2' -and `
-    $nativeBuildText -match '--expect 0 --dry-run') `
+    $nativeBuildText -match '"--expect", "0", "--dry-run"') `
     "stub identity strip" "-ParentChildMaterial builds rename the bundled stub so the game parent resolves at runtime"
 Test-Condition ($nativeText -match 'function M\.apply_donor_to_unit' -and `
     $nativeText -match 'not unit or not Unit\.alive\(unit\)' -and `
@@ -454,7 +470,7 @@ Test-Condition ($nativeConfigText -match 'donor_texture_shadow\s*=\s*false' -and
     $nativeBuildText -match 'DD74D8319F514D96' -and `
     $nativeBuildText -match '45FFAEEF53695A86' -and `
     $nativeBuildText -match 'E334A8CB6BCB5E6D' -and `
-    $nativeBuildText -match '--type texture --bare' -and `
+    $nativeBuildText -match '"--type", "texture", "--bare"' -and `
     $nativeBuildText -match '\$totalRenamed -ne 2' -and `
     $stripToolText -match '--new-hash' -and `
     $stripToolText -match 'preexisting_new' -and `
@@ -467,15 +483,15 @@ Test-Condition ((Test-Path (Join-Path $repoRoot "tools\splice_bundle_resource.py
     $nativeBuildText -match '\$ParentChildMaterial = \$true' -and `
     $nativeBuildText -match '\$NoDonorTextureShadow = \$true' -and `
     $nativeBuildText -match 'make_spliced_child\.py' -and `
-    $nativeBuildText -match '--expect-size 768' -and `
-    $nativeBuildText -match '--expect-size 128' -and `
-    $nativeBuildText -match '--expect-parent 3D25339231384C80' -and `
-    $nativeBuildText -match '--expect-parent F85B289742D5D69A' -and `
+    $nativeBuildText -match '"--expect-size", "768"' -and `
+    $nativeBuildText -match '"--expect-size", "128"' -and `
+    $nativeBuildText -match '"--expect-parent", "3D25339231384C80"' -and `
+    $nativeBuildText -match '"--expect-parent", "F85B289742D5D69A"' -and `
     $nativeBuildText -match 'hash:F72D636600F7F598' -and `
     $nativeBuildText -match 'DD74D8319F514D96=C263ECB79A8DCEC0' -and `
     $nativeBuildText -match 'E334A8CB6BCB5E6D=A4215592F6297E57' -and `
     $nativeBuildText -notmatch '45FFAEEF53695A86=' -and `
-    $nativeBuildText -match '--set-variable emissive_color=0,0,0' -and `
+    $nativeBuildText -match '"--set-variable", "emissive_color=0,0,0"' -and `
     $nativeBuildText -match 'texture_map_02af90f8=C263ECB79A8DCEC0' -and `
     $nativeBuildText -match 'texture_map_27b67fd2=45FFAEEF53695A86' -and `
     $nativeBuildText -match 'texture_map_8bf37d8e=A4215592F6297E57' -and `

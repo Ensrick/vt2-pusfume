@@ -236,7 +236,7 @@ Git. A clean public clone cannot produce the native candidate without them.
 ```powershell
 py -m unittest discover -s tests -v
 .\tools\Test-PusfumeSource.ps1
-.\tools\Build-NativePusfume.ps1 -HeroPreview -SplicedGameChild
+.\tools\Build-NativePusfume.ps1 -HeroPreview -SplicedGameChild -Upload
 ```
 
 The build must report:
@@ -251,16 +251,13 @@ The build must report:
 
 ### Upload and manifest verification
 
-```powershell
-& "<VMBLauncher.exe>" upload pusfume `
-  --config .build/vmb-pusfume-settings.json `
-  --no-banner
-```
-
-Do not trust the uploader's final message alone. Confirm that
-`Steam/logs/workshop_log.txt` contains a fresh `Uploaded new content` line and
-record its ManifestID. A full Steam restart may be required before a
-self-authored item reports the new `last_updated` timestamp in the game log.
+`-Upload` is part of the one-shot native pipeline above. The script invokes
+VMBLauncher through a redirected `CreateNoWindow` process, deploys through the
+launcher's hash-verified local/enabled-remote path, and refuses success unless
+`Steam/logs/workshop_log.txt` contains a fresh `Uploaded new content` line for
+item `3764954245`. Do not launch VMBLauncher, `vmb.js`, or `ugc_tool`
+separately. Record the printed ManifestID and compare the next game log's
+`last_updated`; only troubleshoot Steam synchronization if that log is stale.
 
 For Manifest `2405082174877027150`, the expected in-game timestamp is
 `7/16/2026 6:45:43 PM`.

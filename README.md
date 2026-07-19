@@ -182,8 +182,14 @@ py -m unittest discover -s tests -v
   -AnimationFbx ".build\generated-native\pusfume_3p_retargeted_walk.fbx" `
   -IdleAnimationFbx ".build\generated-native\pusfume_3p_authored_idle_clip.fbx" `
   -FirstPersonBlend ".build\janfon_1p_20260717\pusfume_1p_arms 2.blend" `
-  -FirstPersonDonorUnit ".build\donor_1p_extract\units\beings\player\dwarf_ranger\first_person_base\chr_first_person_mesh.unit"
+  -FirstPersonDonorUnit ".build\donor_1p_extract\units\beings\player\dwarf_ranger\first_person_base\chr_first_person_mesh.unit" `
+  -Upload
 ```
+
+This is the only native ship entry point. It runs Blender, VMBLauncher, the VT2
+SDK, deploy, and upload as redirected `CreateNoWindow` children, preserving the
+desktop while retaining captured diagnostics. Do not invoke `vmb.js`,
+VMBLauncher, or `ugc_tool` separately for Pusfume.
 
 See [LIVE_TEST_CHECKLIST.md](docs/LIVE_TEST_CHECKLIST.md) for the in-game pass,
 [CAREER_SYSTEM.md](docs/CAREER_SYSTEM.md) for the reverse-engineered career

@@ -24,9 +24,32 @@ class AnimationHandoffContractTests(unittest.TestCase):
         build = self.read("tools/Build-NativePusfume.ps1")
         self.assertIn('[string]$AnimationFbx', build)
         self.assertIn('[string]$IdleAnimationFbx', build)
-        self.assertIn('$modelFbxPath $idleFbxPath $animationFbxPath', build)
+        self.assertIn('$modelFbxPath, $idleFbxPath, $animationFbxPath', build)
         self.assertIn('pusfume_3p_walk.fbx', build)
         self.assertIn('pusfume_3p_idle.fbx', build)
+
+    def test_native_build_never_opens_external_tool_windows(self):
+        build = self.read("tools/Build-NativePusfume.ps1")
+        self.assertIn("function Invoke-HiddenTool", build)
+        self.assertIn("$startInfo.UseShellExecute = $false", build)
+        self.assertIn("$startInfo.CreateNoWindow = $true", build)
+        self.assertIn(
+            "$startInfo.WindowStyle = [Diagnostics.ProcessWindowStyle]::Hidden",
+            build,
+        )
+        self.assertIn("$startInfo.RedirectStandardOutput = $true", build)
+        self.assertIn("$startInfo.RedirectStandardError = $true", build)
+        self.assertIn("MainWindowHandle = $process.MainWindowHandle", build)
+        self.assertNotRegex(build, r"(?m)^\s*&\s+")
+
+    def test_native_ship_uses_vmblauncher_for_every_distribution_step(self):
+        build = self.read("tools/Build-NativePusfume.ps1")
+        self.assertIn('"build", "pusfume", "--clean"', build)
+        self.assertIn('"deploy", "pusfume", "--no-banner"', build)
+        self.assertIn('"upload", "pusfume", "--no-banner"', build)
+        self.assertIn("[switch]$Upload", build)
+        self.assertIn("[switch]$NoRemote", build)
+        self.assertIn("Steam confirmed Pusfume Workshop ManifestID", build)
 
     def test_walk_retarget_is_rotation_only_and_guarded(self):
         tool = self.read("tools/retarget_pusfume_walk.py")

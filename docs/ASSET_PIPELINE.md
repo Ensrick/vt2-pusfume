@@ -75,12 +75,13 @@ Stage and deploy the native unit without copying generated assets into the publi
   -SplicedGameChild `
   -FirstPersonBlend ".build\janfon_1p_20260717\pusfume_1p_arms 2.blend" `
   -FirstPersonDonorUnit ".build\donor_1p_extract\units\beings\player\dwarf_ranger\first_person_base\chr_first_person_mesh.unit" `
-  -TextureSource ".build\pusfume_handoff\textures conv"
+  -TextureSource ".build\pusfume_handoff\textures conv" `
+  -Upload
 ```
 
 The command first runs `tools/prepare_animated_pusfume_fbx.py` through Blender 5.2. That step merges Janfon's skinned model and baked walk into one character FBX, rigidly retargets each licensed legacy fur card to the current body, and fails unless the transferred action moves the armature, body, and fur without changing authored fur edge lengths. The source FBXs remain unchanged; generated output stays under ignored `.build/generated-native`.
 
-The command then writes only beneath ignored `.build/native-workshop`, generates VT2 texture recipes and materials from the untracked handoff, enables the native cosmetic in that staged copy, compiles it with VMB, and copies the resulting bundles into Workshop item `3764954245` by default.
+The command then writes only beneath ignored `.build/native-workshop`, generates VT2 texture recipes and materials from the untracked handoff, and enables the native cosmetic in that staged copy. It mirrors the machine VMBLauncher settings into ignored staging with only `ProjectRoot` changed, then uses VMBLauncher for compilation, hash-verified local and enabled-remote deployment, and the optional friends-only Workshop upload.
 
 When `-FirstPersonBlend` is supplied, `tools/prepare_pusfume_1p_blend.py`
 finds the single armature-bound arm mesh, requires the expected left and right
@@ -103,13 +104,7 @@ so it is retained as a diagnostic clip rather than installed as the gameplay
 controller. Normal first-person movement, attacks, blocks, jumps, and
 interactions should drive the linked arms through VT2's native rig.
 
-A local deploy alone is not a release: Steam can re-sync a subscribed item back to the last uploaded manifest at any time, so testers only reliably run the last UPLOAD. The staging root carries a `.vmbrc` so the monorepo's `VMBLauncher.exe` resolves it directly; upload with a settings file whose `ProjectRoot` is the staging root:
-
-```powershell
-& "<vermintide-2-tweaker>\tools\vmb-launcher\...\VMBLauncher.exe" upload pusfume --config <settings.json> --no-banner
-```
-
-Then confirm `Steam\logs\workshop_log.txt` gained a fresh `Uploaded new content ... for item 3764954245` line; `ugc_tool` prints success even when nothing transferred. Record the ManifestID and verify the next game log's `last_updated` timestamp after a full Steam restart. Use `-HeroPreview` for this intentional private selector build and `-NoDeploy` only for CI or a compiler-only check. Pass `-BlenderExe` if Blender 5.2 is installed outside the default location. The tracked config intentionally leaves native mode and native preview disabled so a normal public build cannot reference absent or unreviewed assets.
+A local deploy alone is not a release: Steam can re-sync a subscribed item back to the last uploaded manifest at any time, so testers only reliably run the last upload. Use `-Upload` on the same build command; never invoke VMBLauncher or `ugc_tool` separately. The script starts every external tool with `UseShellExecute=false`, redirected output, `CreateNoWindow=true`, and hidden window style, so Blender, VMBLauncher, and SDK consoles cannot disrupt the desktop. It rejects uploader success unless `Steam\logs\workshop_log.txt` gains a fresh `Uploaded new content ... for item 3764954245` record and prints the confirmed ManifestID. Use `-NoRemote` only to intentionally skip an enabled tester target and report that omission. Use `-HeroPreview` for this intentional private selector build and `-NoDeploy` only for CI or a compiler-only check. Pass `-BlenderExe` if Blender 5.2 is installed outside the default location. The tracked config intentionally leaves native mode and native preview disabled so a normal public build cannot reference absent or unreviewed assets.
 
 The third-person body, first-person arms, hats, and equipment should be separate exports. Preserve compatible VT2 bone names, hierarchy, and rest pose exactly. Send raw albedo, normal, emissive, roughness, metallic, and mask maps instead of relying on embedded FBX materials.
 
