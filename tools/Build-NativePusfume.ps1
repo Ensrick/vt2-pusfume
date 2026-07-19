@@ -914,28 +914,38 @@ function Set-PusfumeEmissionProbe {
     }
 }
 
-function Set-PusfumeEyeEmission {
-    # Bake the character's only authored emissive (the eyes) into the normal
-    # atlas's BLUE channel, which is where the game character shader reads its
-    # emission mask. Ground truth: the vanilla Globadier normal (E334, BC7) has
-    # blue 99.8% black - the engine reconstructs the normal Z from RG and
-    # repurposes blue as the emissive mask, so real emissive pixels are the rare
-    # nonzero-blue ones. Janfon's authored _nm blue is a genuine Z (mean ~117),
-    # which would self-illuminate the whole body, so blue is zeroed everywhere
-    # first, then skaven_eyemask (the eye emission-strength mask) is stamped into
-    # the eye tile's blue, tiled to match the layout's df/s eye cells.
+function Set-PusfumeEmissionMask {
+    # Emission on this character rides the MA atlas ALPHA channel - confirmed
+    # in-game 2026-07-19 (v0.6.40 screenshot): with the _s tile alphas passed
+    # through, the whole body self-illuminated and ONLY the eyes were dark
+    # (the eye tile has no _s source, so its MA alpha stayed at the cleared 0) -
+    # the exact inverse of intent. That settles the A/B test: the game shader
+    # reads MA.alpha, NOT normal.blue. Janfon's normal-blue claim described his
+    # Blender ubershader, not the shipped game shader (disproven here).
+    #
+    # This helper zeros the emission channel across a whole atlas so no tile's
+    # source alpha/blue leaks in, then optionally stamps skaven_eyemask (the eye
+    # emission-strength mask) into the eye tile, tiled to the layout cells. Used:
+    #   - MA atlas, channel "alpha", -StampEye: kills the body/outfit glow and
+    #     lights only the eyes; the eye cells keep RGB at the neutral MA clear
+    #     (metallic=0 / AO=255 / B=255) with alpha = mask.
+    #   - normal atlas, channel "blue", no stamp: keeps blue at 0 for vanilla
+    #     parity (engine reconstructs Z from RG; donor E334 blue is 99.8% black),
+    #     proven harmless in-game.
     param(
-        [Parameter(Mandatory)][string]$NormalAtlasPath,
-        [Parameter(Mandatory)][string]$EyeMaskPath,
-        [Parameter(Mandatory)][int]$AtlasSize,
-        [Parameter(Mandatory)][int]$EyeOriginX,
-        [Parameter(Mandatory)][int]$EyeOriginY,
-        [Parameter(Mandatory)][int]$EyeCell,
-        [Parameter(Mandatory)][int]$EyeGrid
+        [Parameter(Mandatory)][string]$AtlasPath,
+        [Parameter(Mandatory)][ValidateSet("blue", "alpha")][string]$Channel,
+        [switch]$StampEye,
+        [string]$EyeMaskPath,
+        [int]$AtlasSize,
+        [int]$EyeOriginX,
+        [int]$EyeOriginY,
+        [int]$EyeCell,
+        [int]$EyeGrid
     )
 
     Add-Type -AssemblyName System.Drawing
-    $source = [Drawing.Image]::FromFile($NormalAtlasPath)
+    $source = [Drawing.Image]::FromFile($AtlasPath)
     $mask = $null
     try {
         $width = $source.Width
@@ -946,47 +956,59 @@ function Set-PusfumeEyeEmission {
         $graphics.CompositingMode = [Drawing.Drawing2D.CompositingMode]::SourceCopy
         $graphics.InterpolationMode = [Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
         $graphics.PixelOffsetMode = [Drawing.Drawing2D.PixelOffsetMode]::HighQuality
-        # 1) Zero blue across the whole normal atlas (keep RG normal + A gloss).
-        $zeroBlue = New-Object Drawing.Imaging.ImageAttributes
+        # 1) Zero the emission channel across the whole atlas.
+        $zeroAttributes = New-Object Drawing.Imaging.ImageAttributes
         $zeroMatrix = New-Object Drawing.Imaging.ColorMatrix
-        $zeroMatrix.Matrix22 = 0
-        $zeroBlue.SetColorMatrix($zeroMatrix)
-        # 2) Eye stamp: flat normal (RG=128) + full alpha, with the mask
-        #    luminance (source red) routed into blue only.
-        $eyeAttributes = New-Object Drawing.Imaging.ImageAttributes
-        $eyeMatrix = New-Object Drawing.Imaging.ColorMatrix
-        $eyeMatrix.Matrix00 = 0
-        $eyeMatrix.Matrix11 = 0
-        $eyeMatrix.Matrix22 = 0
-        $eyeMatrix.Matrix33 = 0
-        $eyeMatrix.Matrix02 = 1   # source red -> destination blue (emission mask)
-        $eyeMatrix.Matrix40 = 0.5 # destination red   = 128 (flat normal x)
-        $eyeMatrix.Matrix41 = 0.5 # destination green = 128 (flat normal y)
-        $eyeMatrix.Matrix43 = 1   # destination alpha = 255 (gloss)
-        $eyeAttributes.SetColorMatrix($eyeMatrix)
+        if ($Channel -eq "blue") { $zeroMatrix.Matrix22 = 0 } else { $zeroMatrix.Matrix33 = 0 }
+        $zeroAttributes.SetColorMatrix($zeroMatrix)
+        # 2) Optional eye stamp: route the mask luminance (source red) into the
+        #    emission channel while pinning the other channels to neutral.
+        $eyeAttributes = $null
+        if ($StampEye) {
+            $eyeAttributes = New-Object Drawing.Imaging.ImageAttributes
+            $eyeMatrix = New-Object Drawing.Imaging.ColorMatrix
+            $eyeMatrix.Matrix00 = 0
+            $eyeMatrix.Matrix11 = 0
+            $eyeMatrix.Matrix22 = 0
+            $eyeMatrix.Matrix33 = 0
+            if ($Channel -eq "blue") {
+                $eyeMatrix.Matrix02 = 1   # source red -> blue (emission mask)
+                $eyeMatrix.Matrix40 = 0.5 # red   = 128 (flat normal x)
+                $eyeMatrix.Matrix41 = 0.5 # green = 128 (flat normal y)
+                $eyeMatrix.Matrix43 = 1   # alpha = 255 (gloss)
+            } else {
+                $eyeMatrix.Matrix03 = 1   # source red -> alpha (emission mask)
+                $eyeMatrix.Matrix41 = 1   # green = 255 (AO neutral)
+                $eyeMatrix.Matrix42 = 1   # blue  = 255 (unused neutral)
+                # red stays 0 (metallic neutral); alpha diagonal zeroed above.
+            }
+            $eyeAttributes.SetColorMatrix($eyeMatrix)
+        }
         try {
             $full = New-Object Drawing.Rectangle(0, 0, $width, $height)
             $graphics.DrawImage($source, $full, 0, 0, $width, $height, `
-                [Drawing.GraphicsUnit]::Pixel, $zeroBlue)
+                [Drawing.GraphicsUnit]::Pixel, $zeroAttributes)
             # GDI+ keeps the FromFile handle locked; release it before Save
             # targets the same path or Save throws a generic GDI+ error.
             $source.Dispose()
             $source = $null
-            $mask = [Drawing.Image]::FromFile($EyeMaskPath)
-            foreach ($row in 0..($EyeGrid - 1)) {
-                foreach ($column in 0..($EyeGrid - 1)) {
-                    $cellX = $EyeOriginX + $column * $EyeCell
-                    $cellY = $EyeOriginY + $row * $EyeCell
-                    $top = $AtlasSize - $cellY - $EyeCell
-                    $cell = New-Object Drawing.Rectangle($cellX, $top, $EyeCell, $EyeCell)
-                    $graphics.DrawImage($mask, $cell, 0, 0, $mask.Width, $mask.Height, `
-                        [Drawing.GraphicsUnit]::Pixel, $eyeAttributes)
+            if ($StampEye) {
+                $mask = [Drawing.Image]::FromFile($EyeMaskPath)
+                foreach ($row in 0..($EyeGrid - 1)) {
+                    foreach ($column in 0..($EyeGrid - 1)) {
+                        $cellX = $EyeOriginX + $column * $EyeCell
+                        $cellY = $EyeOriginY + $row * $EyeCell
+                        $top = $AtlasSize - $cellY - $EyeCell
+                        $cell = New-Object Drawing.Rectangle($cellX, $top, $EyeCell, $EyeCell)
+                        $graphics.DrawImage($mask, $cell, 0, 0, $mask.Width, $mask.Height, `
+                            [Drawing.GraphicsUnit]::Pixel, $eyeAttributes)
+                    }
                 }
             }
-            $output.Save($NormalAtlasPath, [Drawing.Imaging.ImageFormat]::Png)
+            $output.Save($AtlasPath, [Drawing.Imaging.ImageFormat]::Png)
         } finally {
-            $zeroBlue.Dispose()
-            $eyeAttributes.Dispose()
+            $zeroAttributes.Dispose()
+            if ($null -ne $eyeAttributes) { $eyeAttributes.Dispose() }
             $graphics.Dispose()
             $output.Dispose()
         }
@@ -1002,14 +1024,14 @@ Write-PusfumeAtlas "pusfume_atlas_s" "s" ([Drawing.Color]::Black)
 # MA (metallic / AO / unused / mask) atlas fed to the spliced body child's third
 # slot (channel 909D00F3, build alias texture_map_27b67fd2). Verified against the
 # installed Globadier's own MA texture 45FFAEEF53695A86 (BC3/DXT5, dxgi=77):
-# R=metallic, G=AO, B=255 unused, A a clean localized mask; Fatshark's
-# "M/AO/x/EM" packing. Janfon's _s maps carry the same R/G order (skaven_body_s:
-# R=0 skin non-metal, G high), so the s-suffix sources compose straight in for
-# metallic + AO. The _s alpha is treated as unknown/unused (Janfon: VT2 has no
-# tint-mask concept - that was a community-ubershader toggle). Emission does NOT
-# ride this slot: the game character shader reads its emissive mask from the
-# NORMAL atlas blue channel (see Set-PusfumeEyeEmission). The clear is the
-# neutral value metallic=0 / AO=255 / B=255 / alpha=0.
+# R=metallic, G=AO, B=255 unused, A = the EMISSION mask; Fatshark's "M/AO/x/EM"
+# packing. Janfon's _s maps carry the same R/G order (skaven_body_s: R=0 skin
+# non-metal, G high), so the s-suffix sources compose straight in for metallic +
+# AO. Emission rides THIS slot's ALPHA - confirmed in-game 2026-07-19 v0.6.40:
+# letting the _s alphas pass through lit the whole body and left the eyes dark
+# (normal.blue was disproven). So Set-PusfumeEmissionMask later zeros this alpha
+# and stamps ONLY the eye mask into it. The clear is the neutral value
+# metallic=0 / AO=255 / B=255 / alpha=0.
 Write-PusfumeAtlas "pusfume_atlas_ma" "s" ([Drawing.Color]::FromArgb(0, 0, 255, 255))
 Write-NativeTextureRecipe "pusfume_atlas_df" $true
 Write-NativeTextureRecipe "pusfume_atlas_nm" $false
@@ -1035,19 +1057,23 @@ if ($EmissionProbe) {
         "This is a DIAGNOSTIC build, not a shippable candidate.")
 } elseif ($SplicedGameChild) {
     # Shipped emission (Janfon: the eyes are the ONLY emissive on the character;
-    # the red arm is plain diffuse). Bake the eye emission mask into the normal
-    # atlas blue and zero body blue so nothing else self-illuminates. The eye
-    # tile geometry is read from the layout so it always tracks the df/s cells.
+    # the red arm is plain diffuse). The game reads emission from MA.alpha, so
+    # zero the MA alpha - otherwise the body/outfit _s alphas light the whole
+    # model - then stamp the eye mask into the eye tile's MA alpha. The normal
+    # atlas keeps its blue zeroed for vanilla parity (no stamp). Eye tile
+    # geometry is read from the layout so it always tracks the df/s cells.
     $eyeLayout = Get-Content -LiteralPath (Join-Path $repoRoot `
         "tools\pusfume_atlas_layout.json") -Raw | ConvertFrom-Json
     $eyeTile = $eyeLayout.tiles.eye
-    Set-PusfumeEyeEmission `
-        -NormalAtlasPath (Join-Path $textureRoot "pusfume_atlas_nm.png") `
+    Set-PusfumeEmissionMask `
+        -AtlasPath (Join-Path $textureRoot "pusfume_atlas_ma.png") -Channel "alpha" -StampEye `
         -EyeMaskPath (Join-Path $textureSourcePath "skaven_eyemask.png") `
         -AtlasSize ([int]$eyeLayout.atlas_size) `
         -EyeOriginX ([int]$eyeTile.origin[0]) -EyeOriginY ([int]$eyeTile.origin[1]) `
         -EyeCell ([int]$eyeTile.size[0]) -EyeGrid ([int]$eyeTile.grid[0])
-    Write-Host "Eye emission baked into normal.blue (eye tile, 3x3); body blue zeroed."
+    Set-PusfumeEmissionMask `
+        -AtlasPath (Join-Path $textureRoot "pusfume_atlas_nm.png") -Channel "blue"
+    Write-Host "Eye emission baked into MA.alpha (eye tile, 3x3); body/outfit MA alpha and normal blue zeroed."
 }
 
 # Shadow builds must keep the atlas out of the startup package. These fallback
@@ -1558,8 +1584,8 @@ if ($SplicedGameChild) {
     # emission mask (his normal.B is standard normal-Z, his _s.A is a TINT mask
     # per his V2 Ubershader graph). Lighting the red arm needs Janfon's emission
     # mask + an in-game A/B test of which channel the shader reads - see report.
-    # Emissive tint (C985395A). The mask is the eyes (baked into normal.blue by
-    # Set-PusfumeEyeEmission), so this tint colours the eye glow. Hue is taken
+    # Emissive tint (C985395A). The mask is the eyes (baked into MA.alpha by
+    # Set-PusfumeEmissionMask), so this tint colours the eye glow. Hue is taken
     # from Janfon's authored eye colour pusfume_eyenormal (dominant 138,9,2 =
     # a warpstone red), its 138:9:2 ratio scaled so the red channel is ~15 HDR -
     # the middle of the donor's own emissive_color magnitudes (green was

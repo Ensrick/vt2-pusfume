@@ -1553,6 +1553,29 @@ local function install_first_person_hook(registry, config)
 
         return func(extension, new_state_machine)
     end)
+    mod:hook(PlayerUnitFirstPerson, "animation_event", function(func, extension, event)
+        -- The native Skaven 1P rig lacks the hero item wield events
+        -- (to_potion, to_healthkit, to_grenade, ...). Playing an unknown
+        -- event resolves to a negative Stingray animation index and CTDs
+        -- (2026-07-19 22:41 potion wield). Skip any event the rig does not
+        -- carry; weapons keep their sanitized contracts.
+        if extension._pusfume_first_person then
+            local first_person_unit = extension.first_person_unit
+            if first_person_unit and Unit.alive(first_person_unit)
+                    and not Unit.has_animation_event(first_person_unit, event) then
+                extension._pusfume_skipped_anim_events =
+                    extension._pusfume_skipped_anim_events or {}
+                if not extension._pusfume_skipped_anim_events[event] then
+                    extension._pusfume_skipped_anim_events[event] = true
+                    mod:info("[pusfume] Skipped 1P animation event missing on native rig: %s",
+                        tostring(event))
+                end
+                return
+            end
+        end
+
+        return func(extension, event)
+    end)
     mod:hook_safe(PlayerUnitFirstPerson, "update", function(extension)
         if extension._pusfume_first_person then
             -- Clear the old hand-diagnostic hide reason after hot reloads.

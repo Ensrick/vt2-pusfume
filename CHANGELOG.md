@@ -10,6 +10,18 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Corrected the emission channel after the v0.6.40 live test lit the whole
+  body except the eyes: the shader reads its emission mask from the MA
+  texture's ALPHA, not the normal map's blue (that convention was the Blender
+  ubershader's, not the game's). The MA atlas now ships zeroed alpha with
+  `skaven_eyemask` stamped into the eye tile only; the normal atlas keeps its
+  vanilla-parity zeroed blue with no stamp. Eyes glow warpstone red, body
+  stays dark.
+- Fixed the potion-wield CTD (2026-07-19 22:41): consumable wield events
+  (`to_potion`, `to_healthkit`, ...) do not exist on the native Skaven 1P rig
+  and resolved to a negative Stingray animation index. A first-person
+  animation-event guard now skips any event the rig does not carry, logging
+  each skipped event once.
 - Lit the authored eye glow (issue [#36](https://github.com/Ensrick/vt2-pusfume/issues/36)):
   Janfon confirmed character emission rides the normal map's BLUE channel and
   that the eyes are the model's only emissive. The normal atlas now ships a
