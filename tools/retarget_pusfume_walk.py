@@ -127,8 +127,20 @@ def main(model_path, walk_path, output_path):
         if action != walk_action:
             bpy.data.actions.remove(action)
     model_armature.animation_data_create()
-    frame_start = int(round(walk_action.frame_range[0]))
-    frame_end = int(round(walk_action.frame_range[1]))
+    # Prefer the action's Manual Frame Range: helper keys outside the intended
+    # loop window (negative lead-ins, overshoot tails) must not widen the clip.
+    if walk_action.use_frame_range:
+        window_start, window_end = walk_action.frame_start, walk_action.frame_end
+        window_source = "manual"
+    else:
+        window_start, window_end = walk_action.frame_range
+        window_source = "keyed"
+    print(
+        f"[anim-window] action={walk_action.name} source={window_source} "
+        f"start={window_start} end={window_end}"
+    )
+    frame_start = int(round(window_start))
+    frame_end = int(round(window_end))
     bpy.context.scene.render.fps = 30
     bpy.context.scene.frame_start = frame_start
     bpy.context.scene.frame_end = frame_end
