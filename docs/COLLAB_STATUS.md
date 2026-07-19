@@ -11,6 +11,15 @@ architecture and reproduction contract are in
 
 ## Latest shipment
 
+- 2026-07-19 local: v0.6.32 LIVE RESULT / v0.6.33 CANDIDATE `[unverified]` -
+  coherent hands and native hold poses were confirmed, but the hook was inert,
+  Ranger Veteran's weapon catalog remained visible, the Warpfire heat HUD was
+  absent, and Bardin dialogue still played. v0.6.33 adds an exact four-item
+  allowlist, direct 4.5-meter hook damage, native Ratling and networked gas
+  prototypes, Globadier dialogue-context routing, and a Pusfume Warpfire HUD
+  alias. The chest seam remains isolated in #28. All 72 tests, source
+  preflight, and Lua 5.1 parsing pass; no live behavior is claimed yet.
+
 - 2026-07-19 local: v0.6.32 CANDIDATE - crash
   `cd33e247-dc5e-4aa6-96ed-840258a1bde5` proved the v0.6.31 Warpfire adapter
   removed `dark_pact_action_one` while Fatshark's synchronized action retained

@@ -117,7 +117,8 @@ function M.loadout_status(registry, weapons)
     for _, slot_name in ipairs({ "slot_melee", "slot_ranged" }) do
         local ok, item = pcall(BackendUtils.get_loadout_item, registry.CAREER_NAME, slot_name, false)
 
-        local expected_key = weapons.ITEM_KEYS[slot_name]
+        local expected_item = weapons.item_for_slot(slot_name)
+        local expected_key = expected_item and expected_item.key
 
         if ok and item and item.data and item.key == expected_key then
             resolved[#resolved + 1] = string.format("%s=%s", slot_name,
@@ -134,7 +135,7 @@ function M.loadout_status(registry, weapons)
     return true, table.concat(resolved, " ")
 end
 
-local function install_weapon_grid_guard(registry)
+local function install_weapon_grid_guard(registry, weapons)
     if status.weapon_grid_guard_installed or not ItemGridUI then
         return status.weapon_grid_guard_installed
     end
@@ -147,8 +148,20 @@ local function install_weapon_grid_guard(registry)
                 or string.find(item_filter, "slot_type == ranged", 1, true))
 
         if career and career.name == registry.CAREER_NAME and is_weapon_filter then
+            local slot_name = string.find(item_filter, "slot_type == melee", 1, true)
+                and "slot_melee" or "slot_ranged"
+            local item_keys = weapons.allowed_item_keys(slot_name)
+            local identity_filters = {}
+
             item_filter = string.gsub(item_filter,
                 "can_wield_by_current_hero", "can_wield_by_current_career")
+
+            for _, item_key in ipairs(item_keys) do
+                identity_filters[#identity_filters + 1] = "item_key == " .. item_key
+            end
+
+            item_filter = string.format("( %s ) and ( %s )",
+                item_filter, table.concat(identity_filters, " or "))
         end
 
         return func(self, item_filter, ...)
@@ -161,7 +174,7 @@ end
 
 function M.install_runtime_guards(registry, weapons)
     M.refresh_runtime_aliases(registry, weapons)
-    install_weapon_grid_guard(registry)
+    install_weapon_grid_guard(registry, weapons)
 
     if status.runtime_guards_installed then
         return true
@@ -199,7 +212,7 @@ function M.install_runtime_guards(registry, weapons)
         local slot_name = select(1, ...)
 
         if career_name == registry.CAREER_NAME and weapons.is_weapon_slot(slot_name) then
-            return backend_id == weapons.backend_id_for_slot(slot_name)
+            return weapons.select_backend_id(slot_name, backend_id)
         end
 
         return func(backend_id, alias_career(career_name, registry), ...)
@@ -211,7 +224,7 @@ function M.install_runtime_guards(registry, weapons)
         local item_key = select(2, ...)
 
         if career_name == registry.CAREER_NAME and weapons.is_weapon_slot(slot_name) then
-            if item_key == weapons.ITEM_KEYS[slot_name] then
+            if weapons.select_item_key(slot_name, item_key) then
                 return weapons.item_for_slot(slot_name)
             end
 
@@ -381,7 +394,7 @@ function M.install(registry, weapons)
         local slot_name = select(1, ...)
 
         if career_name == registry.CAREER_NAME and weapons.is_weapon_slot(slot_name) then
-            return item_id == weapons.backend_id_for_slot(slot_name)
+            return weapons.select_backend_id(slot_name, item_id)
         end
 
         return func(self, item_id, alias_career(career_name, registry), ...)

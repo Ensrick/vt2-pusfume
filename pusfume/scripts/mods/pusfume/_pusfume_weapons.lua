@@ -18,6 +18,37 @@ M.VERSUS_ITEM_KEYS = {
     slot_melee = "vs_packmaster_claw",
     slot_ranged = "vs_warpfire_thrower_gun",
 }
+M.RANGED_VARIANTS = {
+    warpfire_thrower = {
+        backend_id = "pusfume_item_warpfire_thrower_v1",
+        description = "pusfume_warpfire_thrower_description",
+        display_name = "pusfume_warpfire_thrower_name",
+        item_key = "pusfume_warpfire_thrower",
+        source_item = "vs_warpfire_thrower_gun",
+        template_name = "pusfume_warpfire_thrower_template",
+    },
+    ratling_gun = {
+        backend_id = "pusfume_item_ratling_gun_v1",
+        description = "pusfume_ratling_gun_description",
+        display_name = "pusfume_ratling_gun_name",
+        item_key = "pusfume_ratling_gun",
+        source_item = "vs_ratling_gunner_gun",
+        template_name = "pusfume_ratling_gun_template",
+    },
+    poison_wind_globe = {
+        backend_id = "pusfume_item_poison_wind_globe_v1",
+        description = "pusfume_poison_wind_globe_description",
+        display_name = "pusfume_poison_wind_globe_name",
+        item_key = "pusfume_poison_wind_globe",
+        source_item = "vs_poison_wind_globadier_orb",
+        template_name = "pusfume_poison_wind_globe_template",
+    },
+}
+M.RANGED_VARIANT_ORDER = {
+    "warpfire_thrower",
+    "ratling_gun",
+    "poison_wind_globe",
+}
 M.UNIT_PATHS = {
     slot_melee = nil,
     slot_ranged = nil,
@@ -33,6 +64,10 @@ local state = {
     templates_registered = false,
     target_adapter_installed = false,
     warpfire_action_adapter_installed = false,
+    selected_backend_ids = {
+        slot_melee = "pusfume_item_packmaster_hook_v1",
+        slot_ranged = "pusfume_item_warpfire_thrower_v1",
+    },
 }
 
 local installed_registry
@@ -223,6 +258,162 @@ local function adapt_warpfire_template(template)
     return true
 end
 
+local function hero_ratling_condition(action_user, input_extension, ammo_extension)
+    local status_extension = ScriptUnit.has_extension(action_user, "status_system")
+
+    if status_extension and type(status_extension.is_climbing) == "function"
+            and status_extension:is_climbing() then
+        return false
+    end
+
+    return not ammo_extension or ammo_extension:ammo_count() > 0
+end
+
+local function hero_ratling_reload_condition(action_user, input_extension, ammo_extension)
+    local status_extension = ScriptUnit.has_extension(action_user, "status_system")
+
+    if status_extension and type(status_extension.is_climbing) == "function"
+            and status_extension:is_climbing() then
+        return false
+    end
+
+    return ammo_extension and ammo_extension:can_reload()
+end
+
+local function adapt_ratling_template(template)
+    local action_one = template.actions and template.actions.dark_pact_action_one
+    local action_reload = template.actions and template.actions.dark_pact_reload
+    local action_two = template.actions and template.actions.dark_pact_action_two
+
+    if not action_one or not action_one.default or not action_one.fire
+            or not action_reload or not action_reload.default
+            or not action_two or not action_two.default then
+        return false
+    end
+
+    action_one.default.condition_func = hero_ratling_condition
+    action_one.fire.chain_condition_func = hero_ratling_condition
+    action_reload.default.condition_func = hero_ratling_reload_condition
+    action_reload.default.chain_condition_func = hero_ratling_reload_condition
+    action_one.fire.lightweight_projectile_info.collision_filter =
+        "filter_player_ray_projectile"
+
+    for _, actions in ipairs({ action_one, action_reload, action_two }) do
+        rewrite_chain_inputs(actions, "dark_pact_action_one", "action_one",
+            "dark_pact_action_one_hold", "action_one_hold")
+        rewrite_chain_inputs(actions, "dark_pact_reload", "weapon_reload",
+            "dark_pact_reload_hold", "weapon_reload_hold")
+        rewrite_chain_inputs(actions, "dark_pact_action_two", "action_two",
+            "dark_pact_action_two_hold", "action_two_hold")
+    end
+
+    template.actions.action_one = action_one
+    template.actions.weapon_reload = action_reload
+    template.actions.action_two = action_two
+    bind_action_lookup_data(action_one, "action_one")
+    bind_action_lookup_data(action_reload, "weapon_reload")
+    bind_action_lookup_data(action_two, "action_two")
+
+    template.actions.dark_pact_action_one = deep_clone(action_one)
+    template.actions.dark_pact_reload = deep_clone(action_reload)
+    template.actions.dark_pact_action_two = deep_clone(action_two)
+    bind_action_lookup_data(template.actions.dark_pact_action_one,
+        "dark_pact_action_one")
+    bind_action_lookup_data(template.actions.dark_pact_reload,
+        "dark_pact_reload")
+    bind_action_lookup_data(template.actions.dark_pact_action_two,
+        "dark_pact_action_two")
+
+    -- Versus state callbacks depend on VCE and a Pactsworn "fire" career
+    -- ability. The weapon actions retain their native spin, ammo and
+    -- projectile behavior; empty synchronized callbacks keep network state
+    -- transitions valid without invoking those unavailable managers.
+    for _, synced_state in pairs(template.synced_states or {}) do
+        synced_state.enter = nil
+        synced_state.update = nil
+        synced_state.leave = nil
+    end
+
+    template.pusfume_role_pose = "to_ratling_gunner"
+
+    return true
+end
+
+local function throw_poison_wind_globe(owner_unit)
+    local first_person_extension = ScriptUnit.has_extension(
+        owner_unit, "first_person_system")
+    local first_person_unit = first_person_extension
+        and first_person_extension:get_first_person_unit()
+
+    if not first_person_unit or not Unit.alive(first_person_unit) then
+        return
+    end
+
+    CharacterStateHelper.play_animation_event(owner_unit, "globe_throw")
+    CharacterStateHelper.play_animation_event_first_person(
+        first_person_extension, "globe_throw")
+
+    local rotation = Unit.world_rotation(first_person_unit, 0)
+    local angle = ActionUtils.pitch_from_rotation(rotation)
+    local direction = Vector3.normalize(
+        Vector3.flat(Quaternion.forward(rotation)) + Vector3(0, 0, 0.2))
+    local node = Unit.has_node(first_person_unit, "j_rightweaponattach")
+        and Unit.node(first_person_unit, "j_rightweaponattach") or 0
+    local position = Unit.world_position(first_person_unit, node)
+    local projectile_system = Managers.state.entity:system("projectile_system")
+
+    if projectile_system then
+        projectile_system:spawn_globadier_globe(
+            position, direction, angle, 1600, 3.5, 4.5, 6,
+            owner_unit, M.RANGED_VARIANTS.poison_wind_globe.item_key,
+            3, 5, 1, true, false)
+    end
+end
+
+local function create_globadier_template(source_template)
+    local template = deep_clone(source_template)
+
+    template.actions = {
+        action_one = {
+            default = {
+                anim_event = "globe_throw",
+                anim_event_1p = "globe_throw",
+                kind = "dummy",
+                total_time = 0.9,
+                weapon_action_hand = "right",
+                enter_function = function(owner_unit, input_extension)
+                    input_extension:clear_input_buffer()
+                    input_extension:reset_release_input()
+                    throw_poison_wind_globe(owner_unit)
+                end,
+                allowed_chain_actions = {
+                    {
+                        action = "action_one",
+                        input = "action_one",
+                        start_time = 0.8,
+                        sub_action = "default",
+                    },
+                    {
+                        action = "action_wield",
+                        input = "action_wield",
+                        start_time = 0.2,
+                        sub_action = "default",
+                    },
+                },
+            },
+        },
+        action_wield = deep_clone(ActionTemplates.wield),
+    }
+    bind_action_lookup_data(template.actions.action_one, "action_one")
+    template.buff_type = "RANGED"
+    template.crosshair_style = "dot"
+    template.pusfume_role_pose = "to_globadier"
+    template.weapon_type = "THROWING_AXE"
+    template.wield_anim = "to_globadier"
+
+    return template
+end
+
 local PACKMASTER_UNSAFE_HIT_ANIMATION_FIELDS = {
     "dual_hit_stop_anims",
     "first_person_hit_anim",
@@ -231,6 +422,68 @@ local PACKMASTER_UNSAFE_HIT_ANIMATION_FIELDS = {
     "hit_stop_anim",
     "hit_stop_kill_anim",
 }
+
+local function packmaster_hook_target(owner_unit)
+    local side_manager = Managers.state.side
+    local side = side_manager and side_manager.side_by_unit[owner_unit]
+    local enemy_units = side and side:enemy_units()
+
+    if not enemy_units then
+        return nil
+    end
+
+    local first_person_extension = ScriptUnit.has_extension(
+        owner_unit, "first_person_system")
+    local first_person_unit = first_person_extension
+        and first_person_extension:get_first_person_unit()
+    local origin_unit = first_person_unit or owner_unit
+    local origin = POSITION_LOOKUP[origin_unit]
+        or Unit.world_position(origin_unit, 0)
+    local direction = Quaternion.forward(Unit.world_rotation(origin_unit, 0))
+    local best_target
+    local best_dot = 0.9
+
+    for _, target_unit in ipairs(enemy_units) do
+        if Unit.alive(target_unit) and DamageUtils.is_enemy(owner_unit, target_unit) then
+            local target_position = POSITION_LOOKUP[target_unit]
+                or Unit.world_position(target_unit, 0)
+            local offset = target_position - origin
+            local distance = Vector3.length(offset)
+            local dot = distance > 0
+                and Vector3.dot(direction, Vector3.normalize(offset)) or -1
+
+            if distance <= 4.5 and dot > best_dot then
+                best_target = target_unit
+                best_dot = dot
+            end
+        end
+    end
+
+    return best_target
+end
+
+local function strike_with_packmaster_hook(owner_unit)
+    local target_unit = packmaster_hook_target(owner_unit)
+
+    if not target_unit then
+        return false
+    end
+
+    local target_position = POSITION_LOOKUP[target_unit]
+        or Unit.world_position(target_unit, 0)
+    local owner_position = POSITION_LOOKUP[owner_unit]
+        or Unit.world_position(owner_unit, 0)
+    local attack_direction = Vector3.normalize(target_position - owner_position)
+
+    DamageUtils.add_damage_network(target_unit, owner_unit, 15, "torso",
+        "medium_slashing_smiter_2h", nil, attack_direction,
+        M.ITEM_KEYS.slot_melee, nil, nil, nil, nil, nil, nil, nil,
+        nil, nil, nil, 1)
+    mod:info("[pusfume] Packmaster hook strike target=%s range=4.5",
+        tostring(target_unit))
+
+    return true
+end
 
 local function sanitize_packmaster_melee_actions(actions)
     local removed = 0
@@ -280,6 +533,8 @@ local function add_packmaster_weapon_events(actions)
                         if inventory_system then
                             inventory_system:weapon_anim_event(owner_unit, "attack_grab")
                         end
+
+                        strike_with_packmaster_hook(owner_unit)
                     end
                     action.pusfume_packmaster_event = true
                     wrapped = wrapped + 1
@@ -404,8 +659,11 @@ local function register_templates()
     local melee_source = Weapons and Weapons.vs_packmaster_claw
     local melee_actions = Weapons and Weapons.two_handed_axes_template_1
     local ranged_source = Weapons and Weapons.vs_warpfire_thrower_gun
+    local ratling_source = Weapons and Weapons.vs_ratling_gunner_gun
+    local globadier_source = Weapons and Weapons.vs_poison_wind_globadier_orb
 
-    if not melee_source or not melee_actions or not ranged_source then
+    if not melee_source or not melee_actions or not ranged_source
+            or not ratling_source or not globadier_source then
         return false
     end
 
@@ -422,6 +680,7 @@ local function register_templates()
         state.melee_actions_wrapped, state.melee_pose_actions =
             add_packmaster_weapon_events(template.actions)
         template.wield_anim = "to_packmaster_claw"
+        template.pusfume_role_pose = "to_packmaster"
         Weapons[M.TEMPLATE_NAMES.slot_melee] = template
     else
         -- Hot reloads can retain the previous template table. Sanitize it in
@@ -434,6 +693,7 @@ local function register_templates()
         state.melee_actions_wrapped, state.melee_pose_actions =
             add_packmaster_weapon_events(installed_melee.actions)
         installed_melee.wield_anim = "to_packmaster_claw"
+        installed_melee.pusfume_role_pose = "to_packmaster"
     end
 
     local installed_ranged = rawget(Weapons, M.TEMPLATE_NAMES.slot_ranged)
@@ -452,13 +712,46 @@ local function register_templates()
         Weapons[M.TEMPLATE_NAMES.slot_ranged] = template
     end
 
+    Weapons[M.TEMPLATE_NAMES.slot_ranged].pusfume_role_pose =
+        "to_warpfire_thrower"
+
+    local ratling_definition = M.RANGED_VARIANTS.ratling_gun
+    local installed_ratling = rawget(Weapons, ratling_definition.template_name)
+
+    if not installed_ratling or not installed_ratling.actions
+            or not installed_ratling.actions.action_one
+            or not installed_ratling.actions.dark_pact_action_one then
+        local template = deep_clone(ratling_source)
+
+        if not adapt_ratling_template(template) then
+            return false
+        end
+
+        Weapons[ratling_definition.template_name] = template
+    end
+
+    local globe_definition = M.RANGED_VARIANTS.poison_wind_globe
+    local installed_globe = rawget(Weapons, globe_definition.template_name)
+
+    if not installed_globe or not installed_globe.actions
+            or not installed_globe.actions.action_one then
+        Weapons[globe_definition.template_name] =
+            create_globadier_template(globadier_source)
+    end
+
     local melee_graph_ready, melee_graph_error = validate_action_graph(
         Weapons[M.TEMPLATE_NAMES.slot_melee].actions)
     local ranged_graph_ready, ranged_graph_error = validate_action_graph(
         Weapons[M.TEMPLATE_NAMES.slot_ranged].actions)
+    local ratling_graph_ready, ratling_graph_error = validate_action_graph(
+        Weapons[ratling_definition.template_name].actions)
+    local globe_graph_ready, globe_graph_error = validate_action_graph(
+        Weapons[globe_definition.template_name].actions)
 
     state.action_graph_ready = melee_graph_ready and ranged_graph_ready
+        and ratling_graph_ready and globe_graph_ready
     state.action_graph_error = melee_graph_error or ranged_graph_error
+        or ratling_graph_error or globe_graph_error
 
     if not state.action_graph_ready then
         mod:error("[pusfume] Invalid weapon action graph: %s",
@@ -473,9 +766,18 @@ end
 
 local function item_definitions(registry)
     local packmaster_item = resolve_versus_item("slot_melee")
-    local warpfire_item = resolve_versus_item("slot_ranged")
+    local source_items = {}
 
-    if not packmaster_item or not warpfire_item then
+    for _, variant_name in ipairs(M.RANGED_VARIANT_ORDER) do
+        local definition = M.RANGED_VARIANTS[variant_name]
+
+        source_items[variant_name] = ItemMasterList
+            and rawget(ItemMasterList, definition.source_item)
+    end
+
+    if not packmaster_item or not source_items.warpfire_thrower
+            or not source_items.ratling_gun
+            or not source_items.poison_wind_globe then
         return nil
     end
 
@@ -491,22 +793,29 @@ local function item_definitions(registry)
     melee.source_item = M.VERSUS_ITEM_KEYS.slot_melee
     melee.template = M.TEMPLATE_NAMES.slot_melee
 
-    local ranged = deep_clone(warpfire_item)
-    ranged.can_wield = { registry.CAREER_NAME }
-    ranged.description = "pusfume_warpfire_thrower_description"
-    ranged.display_name = "pusfume_warpfire_thrower_name"
-    ranged.mechanisms = nil
-    ranged.name = M.ITEM_KEYS.slot_ranged
-    ranged.property_table_name = "ranged"
-    ranged.slot_type = "ranged"
-    ranged.source_item = M.VERSUS_ITEM_KEYS.slot_ranged
-    ranged.template = M.TEMPLATE_NAMES.slot_ranged
-    ranged.trait_table_name = "ranged_heat"
-
-    return {
+    local definitions = {
         [M.ITEM_KEYS.slot_melee] = melee,
-        [M.ITEM_KEYS.slot_ranged] = ranged,
     }
+
+    for _, variant_name in ipairs(M.RANGED_VARIANT_ORDER) do
+        local definition = M.RANGED_VARIANTS[variant_name]
+        local ranged = deep_clone(source_items[variant_name])
+
+        ranged.can_wield = { registry.CAREER_NAME }
+        ranged.description = definition.description
+        ranged.display_name = definition.display_name
+        ranged.mechanisms = nil
+        ranged.name = definition.item_key
+        ranged.property_table_name = "ranged"
+        ranged.slot_type = "ranged"
+        ranged.source_item = definition.source_item
+        ranged.template = definition.template_name
+        ranged.trait_table_name = variant_name == "warpfire_thrower"
+            and "ranged_heat" or "ranged"
+        definitions[definition.item_key] = ranged
+    end
+
+    return definitions
 end
 
 local function action_hand_contract_ready(item_data, template)
@@ -577,8 +886,28 @@ local function register_items(registry)
 
     local hand_contract_ready = true
 
-    for _, slot_name in ipairs({ "slot_melee", "slot_ranged" }) do
-        local item_key = M.ITEM_KEYS[slot_name]
+    local item_registrations = {
+        {
+            backend_id = M.BACKEND_IDS.slot_melee,
+            item_key = M.ITEM_KEYS.slot_melee,
+            slot_name = "slot_melee",
+            template_name = M.TEMPLATE_NAMES.slot_melee,
+        },
+    }
+
+    for _, variant_name in ipairs(M.RANGED_VARIANT_ORDER) do
+        local definition = M.RANGED_VARIANTS[variant_name]
+
+        item_registrations[#item_registrations + 1] = {
+            backend_id = definition.backend_id,
+            item_key = definition.item_key,
+            slot_name = "slot_ranged",
+            template_name = definition.template_name,
+        }
+    end
+
+    for _, registration in ipairs(item_registrations) do
+        local item_key = registration.item_key
         local item_data = rawget(ItemMasterList, item_key)
 
         if not item_data then
@@ -589,9 +918,9 @@ local function register_items(registry)
         append_lookup(NetworkLookup.item_names, item_key)
         append_lookup(NetworkLookup.damage_sources, item_key)
         hand_contract_ready = hand_contract_ready and action_hand_contract_ready(
-            item_data, Weapons[M.TEMPLATE_NAMES[slot_name]])
-        state.backend_items[M.BACKEND_IDS[slot_name]] = make_backend_item(
-            item_key, M.BACKEND_IDS[slot_name], item_data)
+            item_data, Weapons[registration.template_name])
+        state.backend_items[registration.backend_id] = make_backend_item(
+            item_key, registration.backend_id, item_data)
     end
 
     state.hand_contract_ready = hand_contract_ready
@@ -646,22 +975,82 @@ function M.inject_backend_items(items)
 end
 
 function M.backend_id_for_slot(slot_name)
-    return M.BACKEND_IDS[slot_name]
+    return state.selected_backend_ids[slot_name] or M.BACKEND_IDS[slot_name]
 end
 
 function M.item_for_slot(slot_name)
-    return state.backend_items[M.BACKEND_IDS[slot_name]]
+    return state.backend_items[M.backend_id_for_slot(slot_name)]
 end
 
 function M.is_weapon_slot(slot_name)
     return slot_name == "slot_melee" or slot_name == "slot_ranged"
 end
 
+function M.allowed_backend_ids(slot_name)
+    if slot_name == "slot_melee" then
+        return { M.BACKEND_IDS.slot_melee }
+    end
+
+    if slot_name == "slot_ranged" then
+        local result = {}
+
+        for _, variant_name in ipairs(M.RANGED_VARIANT_ORDER) do
+            result[#result + 1] = M.RANGED_VARIANTS[variant_name].backend_id
+        end
+
+        return result
+    end
+
+    return {}
+end
+
+function M.allowed_item_keys(slot_name)
+    if slot_name == "slot_melee" then
+        return { M.ITEM_KEYS.slot_melee }
+    end
+
+    if slot_name == "slot_ranged" then
+        local result = {}
+
+        for _, variant_name in ipairs(M.RANGED_VARIANT_ORDER) do
+            result[#result + 1] = M.RANGED_VARIANTS[variant_name].item_key
+        end
+
+        return result
+    end
+
+    return {}
+end
+
+
+function M.select_backend_id(slot_name, backend_id)
+    for _, allowed_id in ipairs(M.allowed_backend_ids(slot_name)) do
+        if backend_id == allowed_id then
+            state.selected_backend_ids[slot_name] = backend_id
+            mod:info("[pusfume] selected weapon slot=%s backend_id=%s",
+                slot_name, backend_id)
+            return true
+        end
+    end
+
+    return false
+end
+
+function M.select_item_key(slot_name, item_key)
+    for backend_id, item in pairs(state.backend_items) do
+        if item and item.key == item_key then
+            return M.select_backend_id(slot_name, backend_id)
+        end
+    end
+
+    return false
+end
+
 function M.overlay_loadout(loadout)
     local result = type(loadout) == "table" and table.clone(loadout) or {}
 
-    result.slot_melee = M.BACKEND_IDS.slot_melee
-    result.slot_ranged = M.BACKEND_IDS.slot_ranged
+    result.slot_melee = M.backend_id_for_slot("slot_melee")
+    result.slot_ranged = M.backend_id_for_slot("slot_ranged")
 
     return result
 end

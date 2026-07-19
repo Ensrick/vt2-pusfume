@@ -51,6 +51,7 @@ local state = {
     donor_material_applied = false,
     whisker_material_applied = false,
     fur_material_applied = false,
+    dialogue_voice_hook_installed = false,
     donor_texture_errors = {},
     donor_weapons_hidden = false,
     locomotion_events_available = false,
@@ -64,6 +65,18 @@ local PUSFUME_CHARACTER_VO = "vs_poison_wind_globadier"
 local PUSFUME_SOUND_CHARACTER = "dwarf_slayer"
 
 local installed_config
+
+local function apply_pusfume_voice_switch(unit)
+    if not unit or not Unit.alive(unit) then
+        return false
+    end
+
+    Unit.set_flow_variable(unit, "character_vo", PUSFUME_CHARACTER_VO)
+    Unit.set_flow_variable(unit, "sound_character", PUSFUME_SOUND_CHARACTER)
+    Unit.flow_event(unit, "character_vo_set")
+
+    return true
+end
 
 local function ensure_native_skaven_first_person_packages(config)
     if not config.native_skaven_first_person then
@@ -122,7 +135,10 @@ local function update_first_person_weapon_pose(extension, equipment)
     local wielded_slot = equipment and equipment.wielded_slot
 
     if extension._pusfume_weapon_pose_slot ~= wielded_slot then
-        local role_event = wielded_slot == "slot_melee" and "to_packmaster"
+        local item_template = extension.inventory_extension
+            and extension.inventory_extension:get_wielded_slot_item_template()
+        local role_event = item_template and item_template.pusfume_role_pose
+            or wielded_slot == "slot_melee" and "to_packmaster"
             or wielded_slot == "slot_ranged" and "to_warpfire_thrower"
 
         extension._pusfume_weapon_pose_slot = wielded_slot
@@ -894,9 +910,7 @@ local function initialize_link_probe(extension, unit, config)
     -- Versus Pactsworn profiles drive their rat vocalizations through the
     -- character_vo flow switch. Apply it to this Pusfume unit only; mutating
     -- the shared dwarf profile would also change every Bardin career.
-    Unit.set_flow_variable(unit, "character_vo", PUSFUME_CHARACTER_VO)
-    Unit.set_flow_variable(unit, "sound_character", PUSFUME_SOUND_CHARACTER)
-    Unit.flow_event(unit, "character_vo_set")
+    apply_pusfume_voice_switch(unit)
 
     if not extension._pusfume_voice_switch_logged then
         extension._pusfume_voice_switch_logged = true
@@ -1526,6 +1540,8 @@ local function install_first_person_hook(registry, config)
             extension._pusfume_first_person = true
             extension._pusfume_donor_default_state_machine = donor_default_state_machine
             extension._pusfume_weapon_hide_pending = true
+            apply_pusfume_voice_switch(extension.first_person_unit)
+            apply_pusfume_voice_switch(extension.first_person_attachment_unit)
             restore_first_person_weapons(extension)
             apply_first_person_materials(extension, config)
             if config.first_person_direct_link then
@@ -1569,6 +1585,35 @@ local function install_first_person_hook(registry, config)
         end
     end)
     state.first_person_hook_installed = true
+
+    return true
+end
+
+local function install_dialogue_voice_hook(registry)
+    if state.dialogue_voice_hook_installed or not DialogueContextSystem then
+        return state.dialogue_voice_hook_installed
+    end
+
+    mod:hook_safe(DialogueContextSystem, "extensions_ready", function(system,
+            world, unit)
+        local career_extension = ScriptUnit.has_extension(unit, "career_system")
+
+        if career_extension
+                and type(career_extension.career_name) == "function"
+                and career_extension:career_name() == registry.CAREER_NAME then
+            local dialogue_extension = ScriptUnit.has_extension(
+                unit, "dialogue_system")
+
+            if dialogue_extension and dialogue_extension.context then
+                dialogue_extension.context.player_profile = PUSFUME_CHARACTER_VO
+                mod:info("[pusfume] Dialogue profile routed to %s",
+                    PUSFUME_CHARACTER_VO)
+            end
+
+            apply_pusfume_voice_switch(unit)
+        end
+    end)
+    state.dialogue_voice_hook_installed = true
 
     return true
 end
@@ -1669,6 +1714,7 @@ function M.install(registry, config)
 
     install_cosmetic_hook(registry, config)
     local first_person_hook_ready = install_first_person_hook(registry, config)
+    install_dialogue_voice_hook(registry)
     install_probe_hook()
     install_material_probe_command(config)
 

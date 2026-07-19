@@ -10,6 +10,28 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Recorded the v0.6.32 live result: Pusfume's hands and native weapon poses
+  remained coherent, but the hook did not damage enemies, the shared Hero View
+  still listed Ranger Veteran weapons, the Warpfire heat HUD was absent, and
+  Bardin dialogue continued to play. The localized chest atlas seam remains
+  isolated in issue [#28](https://github.com/Ensrick/vt2-pusfume/issues/28).
+- Added a Pusfume-only hard identity allowlist to Hero View and loadout writes.
+  The only permitted melee item is the Packmaster Hook; the ranged inventory
+  now contains Warpfire Thrower, Ratling Gun, and Poison Wind Globe prototypes.
+  Ranger Veteran weapons can no longer enter either Pusfume weapon slot.
+- Added a 4.5-meter, forward-cone Adventure strike to the Packmaster hook.
+  This provides reliable damage independently of the Versus-only disable
+  character state; full Packmaster capture and dragging are still out of scope.
+- Adapted Fatshark's native Ratling Gun actions, ammo, projectiles, and poses to
+  normal hero inputs, and added a networked Globadier globe throw prototype.
+  Both use complete cloned Versus item/unit records and isolated templates.
+- Routed Pusfume's dialogue context to the playable Globadier profile and
+  retained Fatshark's corresponding per-unit Wwise switch. Added Pusfume's own
+  clone of the Warpfire overcharge data so heat uses the Pactsworn-green HUD.
+- Expanded regression coverage to 72 tests, added exact roster, hook damage,
+  Ratling, globe, voice, role-pose, and overcharge-HUD contracts, and verified
+  all 14 Lua files with the Lua 5.1 parser.
+
 - Fixed release-pipeline issue
   [#29](https://github.com/Ensrick/vt2-pusfume/issues/29) by replacing
   Pusfume's disruptive direct Blender/Node/VMB upload sequence with a

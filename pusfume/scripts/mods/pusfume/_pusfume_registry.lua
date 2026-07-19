@@ -214,6 +214,16 @@ function M.register()
     career.attributes = career.attributes or {}
     career.attributes.max_hp = 100
 
+    -- Warpfire uses the ordinary hero overcharge extension in Adventure. The
+    -- HUD resolves its presentation by career name, so the synthetic career
+    -- needs an explicit alias rather than Bardin's non-visible fallback.
+    OverchargeData = OverchargeData or {}
+
+    if OverchargeData.vs_warpfire_thrower then
+        OverchargeData[M.CAREER_NAME] = deep_clone(
+            OverchargeData.vs_warpfire_thrower)
+    end
+
     CareerSettingsOriginal[M.CAREER_NAME] = deep_clone(career)
 
     local career_index

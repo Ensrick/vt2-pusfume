@@ -595,6 +595,8 @@ Test-Condition ($mainText -match 'registry\.refresh_item_permissions\(\)') `
 Test-Condition ($mainText -match 'weapons\.install\(registry\)' -and `
     $weaponsText -match 'pusfume_packmaster_hook' -and `
     $weaponsText -match 'pusfume_warpfire_thrower' -and `
+    $weaponsText -match 'pusfume_ratling_gun' -and `
+    $weaponsText -match 'pusfume_poison_wind_globe' -and `
     $weaponsText -match 'vs_packmaster_claw' -and `
     $weaponsText -match 'vs_warpfire_thrower_gun' -and `
     $weaponsText -match 'two_handed_axes_template_1' -and `
@@ -612,6 +614,10 @@ Test-Condition ($mainText -match 'weapons\.install\(registry\)' -and `
     $weaponsText -match 'mod:hook\(ActionWarpfireThrower, "fire"' -and `
     $weaponsText -match 'DamageUtils\.add_damage_network\(target\.unit, owner_unit, 2' -and `
     $weaponsText -match 'sanitize_packmaster_melee_actions' -and `
+    $weaponsText -match 'strike_with_packmaster_hook' -and `
+    $weaponsText -match 'DamageUtils\.add_damage_network\(target_unit, owner_unit, 15' -and `
+    $weaponsText -match 'adapt_ratling_template' -and `
+    $weaponsText -match 'spawn_globadier_globe' -and `
     $weaponsText -match 'action\.anim_event_1p\s*=\s*"attack_grab"' -and `
     $weaponsText -match 'template\.wield_anim\s*=\s*"to_packmaster_claw"' -and `
     $weaponsText -match 'first_person_hit_anim' -and `
@@ -622,6 +628,10 @@ Test-Condition ($weaponsText -match 'can_wield\s*=\s*\{ registry\.CAREER_NAME \}
     $registryText -match 'local is_weapon = item\.slot_type == "melee" or item\.slot_type == "ranged"' -and `
     $registryText -match 'if not is_weapon and type\(can_wield\)' -and `
     $backendText -match 'can_wield_by_current_career' -and `
+    $backendText -match 'weapons\.allowed_item_keys\(slot_name\)' -and `
+    $backendText -match 'item_key == ' -and `
+    $backendText -match 'weapons\.select_backend_id\(slot_name, backend_id\)' -and `
+    $backendText -match 'weapons\.select_item_key\(slot_name, item_key\)' -and `
     $backendText -match 'slot_type == melee' -and `
     $backendText -match 'slot_type == ranged') `
     "Pusfume weapon isolation" "prototype items and weapon grids are career-only; Bardin weapons are not inherited"

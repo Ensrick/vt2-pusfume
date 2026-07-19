@@ -16,6 +16,14 @@ return {
     pusfume_warpfire_thrower_description = {
         en = "A temperamental Warpfire Thrower using a temporary Adventure firing pattern.",
     },
+    pusfume_ratling_gun_name = { en = "Warpstone Ratling Gun (Prototype)" },
+    pusfume_ratling_gun_description = {
+        en = "A recovered Gun Rat rotary weapon adapted for Pusfume's Adventure loadout.",
+    },
+    pusfume_poison_wind_globe_name = { en = "Poison Wind Globes (Prototype)" },
+    pusfume_poison_wind_globe_description = {
+        en = "Globadier gas globes adapted as a repeatable Pusfume ranged weapon.",
+    },
     pusfume_passive_name = { en = "Aggressive Iteration" },
     pusfume_passive_description = {
         en = "Killing a Special captures a minor form of its power for Pusfume's next ranged attack.",

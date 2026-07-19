@@ -17,7 +17,17 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn('PUSFUME_CHARACTER_VO = "vs_poison_wind_globadier"', self.native)
         self.assertIn('Unit.set_flow_variable(unit, "character_vo", PUSFUME_CHARACTER_VO)', self.native)
         self.assertIn('Unit.flow_event(unit, "character_vo_set")', self.native)
+        self.assertIn("install_dialogue_voice_hook", self.native)
+        self.assertIn("DialogueContextSystem, \"extensions_ready\"", self.native)
+        self.assertIn(
+            "dialogue_extension.context.player_profile = PUSFUME_CHARACTER_VO",
+            self.native,
+        )
         self.assertIn('career.sound_character = "dwarf_slayer"', self.registry)
+
+    def test_pusfume_has_warpfire_overcharge_hud_data(self):
+        self.assertIn("OverchargeData[M.CAREER_NAME] = deep_clone(", self.registry)
+        self.assertIn("OverchargeData.vs_warpfire_thrower", self.registry)
 
     def test_first_person_weapons_are_restored_for_prototype_loadout(self):
         self.assertIn('FIRST_PERSON_WEAPON_HIDE_REASON = "pusfume_hands_diagnostic"', self.native)
@@ -35,6 +45,7 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn('Unit.animation_has_variable(first_person_unit, "armed")', helper)
         self.assertIn('extension:animation_set_variable("armed", 1)', helper)
         self.assertIn("update_first_person_weapon_pose(extension, equipment)", helper)
+        self.assertIn("item_template.pusfume_role_pose", self.native)
         self.assertIn('wielded_slot == "slot_melee" and "to_packmaster"', self.native)
         self.assertIn('wielded_slot == "slot_ranged" and "to_warpfire_thrower"', self.native)
         self.assertIn(

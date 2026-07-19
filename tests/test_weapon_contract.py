@@ -13,6 +13,8 @@ class WeaponContractTests(unittest.TestCase):
     def test_prototype_items_use_shipped_rat_units_with_safe_hero_actions(self):
         self.assertIn('slot_melee = "vs_packmaster_claw"', WEAPONS)
         self.assertIn('slot_ranged = "vs_warpfire_thrower_gun"', WEAPONS)
+        self.assertIn('source_item = "vs_ratling_gunner_gun"', WEAPONS)
+        self.assertIn('source_item = "vs_poison_wind_globadier_orb"', WEAPONS)
         self.assertIn("ItemMasterList", WEAPONS)
         self.assertIn("two_handed_axes_template_1", WEAPONS)
         self.assertIn("Weapons.vs_warpfire_thrower_gun", WEAPONS)
@@ -21,18 +23,18 @@ class WeaponContractTests(unittest.TestCase):
 
     def test_custom_items_are_complete_clones_of_the_native_versus_records(self):
         self.assertIn("local melee = deep_clone(packmaster_item)", WEAPONS)
-        self.assertIn("local ranged = deep_clone(warpfire_item)", WEAPONS)
+        self.assertIn("local ranged = deep_clone(source_items[variant_name])", WEAPONS)
         self.assertIn("melee.source_item = M.VERSUS_ITEM_KEYS.slot_melee", WEAPONS)
-        self.assertIn("ranged.source_item = M.VERSUS_ITEM_KEYS.slot_ranged", WEAPONS)
+        self.assertIn("ranged.source_item = definition.source_item", WEAPONS)
         self.assertIn("melee.mechanisms = nil", WEAPONS)
         self.assertIn("ranged.mechanisms = nil", WEAPONS)
 
     def test_hero_actions_always_have_a_matching_wielded_hand_unit(self):
         self.assertIn("action_hand_contract_ready", WEAPONS)
         self.assertIn('local hand = action.weapon_action_hand or "right"', WEAPONS)
-        ranged = WEAPONS[WEAPONS.index("[M.ITEM_KEYS.slot_ranged]") :]
-        self.assertIn("local ranged = deep_clone(warpfire_item)", WEAPONS)
-        self.assertNotIn("ranged.right_hand_unit =", ranged)
+        self.assertIn("item_data.right_hand_unit", WEAPONS)
+        self.assertIn("item_data.left_hand_unit", WEAPONS)
+        self.assertIn("hand_contract_ready = hand_contract_ready and", WEAPONS)
 
     def test_warpfire_uses_native_versus_actions_with_adventure_inputs(self):
         self.assertIn("adapt_warpfire_template", WEAPONS)
@@ -72,6 +74,23 @@ class WeaponContractTests(unittest.TestCase):
         self.assertIn('weapon_anim_event(owner_unit, "attack_grab")', WEAPONS)
         self.assertIn('action.anim_event_1p = "attack_grab"', WEAPONS)
         self.assertIn('template.wield_anim = "to_packmaster_claw"', WEAPONS)
+
+    def test_packmaster_hook_has_an_adventure_damage_strike(self):
+        self.assertIn("packmaster_hook_target", WEAPONS)
+        self.assertIn("side:enemy_units()", WEAPONS)
+        self.assertIn("distance <= 4.5", WEAPONS)
+        self.assertIn("strike_with_packmaster_hook(owner_unit)", WEAPONS)
+        self.assertIn("DamageUtils.add_damage_network(target_unit, owner_unit, 15", WEAPONS)
+        self.assertIn('M.ITEM_KEYS.slot_melee', WEAPONS)
+
+    def test_ratling_and_globadier_have_adventure_adapters(self):
+        self.assertIn("adapt_ratling_template", WEAPONS)
+        self.assertIn('"filter_player_ray_projectile"', WEAPONS)
+        self.assertIn("template.synced_states or {}", WEAPONS)
+        self.assertIn('template.pusfume_role_pose = "to_ratling_gunner"', WEAPONS)
+        self.assertIn("create_globadier_template", WEAPONS)
+        self.assertIn("spawn_globadier_globe", WEAPONS)
+        self.assertIn('template.pusfume_role_pose = "to_globadier"', WEAPONS)
 
     def test_every_weapon_chain_target_is_validated_before_registration(self):
         self.assertIn("local function validate_action_graph(actions)", WEAPONS)
@@ -113,13 +132,32 @@ class WeaponContractTests(unittest.TestCase):
             REGISTRY,
         )
         self.assertIn("if not is_weapon and type(can_wield)", REGISTRY)
-        self.assertIn('"can_wield_by_current_hero", "can_wield_by_current_career"', BACKEND)
         self.assertIn('string.find(item_filter, "slot_type == melee"', BACKEND)
         self.assertIn('string.find(item_filter, "slot_type == ranged"', BACKEND)
+        self.assertIn(
+            '"can_wield_by_current_hero", "can_wield_by_current_career"',
+            BACKEND,
+        )
+        self.assertIn("weapons.allowed_item_keys(slot_name)", BACKEND)
+        self.assertIn('"item_key == " .. item_key', BACKEND)
+        self.assertIn("weapons.select_backend_id(slot_name, backend_id)", BACKEND)
+        self.assertIn("weapons.select_item_key(slot_name, item_key)", BACKEND)
         runtime_install = BACKEND[BACKEND.index("function M.install_runtime_guards") :]
-        install_call = runtime_install.index("install_weapon_grid_guard(registry)")
+        install_call = runtime_install.index("install_weapon_grid_guard(registry, weapons)")
         early_return = runtime_install.index("if status.runtime_guards_installed then")
         self.assertLess(install_call, early_return)
+
+    def test_weapon_roster_contains_only_hook_and_three_rat_ranged_variants(self):
+        for key in (
+            "pusfume_packmaster_hook",
+            "pusfume_warpfire_thrower",
+            "pusfume_ratling_gun",
+            "pusfume_poison_wind_globe",
+        ):
+            self.assertIn(key, WEAPONS)
+        self.assertIn("function M.allowed_backend_ids(slot_name)", WEAPONS)
+        self.assertIn("function M.allowed_item_keys(slot_name)", WEAPONS)
+        self.assertIn("function M.select_backend_id(slot_name, backend_id)", WEAPONS)
 
     def test_custom_items_have_network_and_backend_registration(self):
         self.assertIn("append_lookup(NetworkLookup.item_names, item_key)", WEAPONS)
