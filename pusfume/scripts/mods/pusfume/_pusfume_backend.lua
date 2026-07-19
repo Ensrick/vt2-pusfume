@@ -3,13 +3,14 @@ local mod = get_mod("pusfume")
 local M = {}
 local status = {
     expected_hook_count = 24,
-    expected_runtime_guard_count = 4,
+    expected_runtime_guard_count = 5,
     hook_count = 0,
     installed = false,
     runtime_guard_count = 0,
     runtime_guards_installed = false,
     used_empty_loadout_fallback = false,
     wire_guard_installed = false,
+    weapon_grid_guard_installed = false,
     stripped_sync_keys = {},
 }
 
@@ -133,8 +134,34 @@ function M.loadout_status(registry, weapons)
     return true, table.concat(resolved, " ")
 end
 
+local function install_weapon_grid_guard(registry)
+    if status.weapon_grid_guard_installed or not ItemGridUI then
+        return status.weapon_grid_guard_installed
+    end
+
+    mod:hook(ItemGridUI, "change_item_filter", function(func, self, item_filter, ...)
+        local profile = PROFILES_BY_NAME[self._hero_name]
+        local career = profile and profile.careers[self._career_index]
+        local is_weapon_filter = type(item_filter) == "string"
+            and (string.find(item_filter, "slot_type == melee", 1, true)
+                or string.find(item_filter, "slot_type == ranged", 1, true))
+
+        if career and career.name == registry.CAREER_NAME and is_weapon_filter then
+            item_filter = string.gsub(item_filter,
+                "can_wield_by_current_hero", "can_wield_by_current_career")
+        end
+
+        return func(self, item_filter, ...)
+    end)
+    status.weapon_grid_guard_installed = true
+    status.runtime_guard_count = status.runtime_guard_count + 1
+
+    return true
+end
+
 function M.install_runtime_guards(registry, weapons)
     M.refresh_runtime_aliases(registry, weapons)
+    install_weapon_grid_guard(registry)
 
     if status.runtime_guards_installed then
         return true

@@ -34,11 +34,32 @@ class WeaponContractTests(unittest.TestCase):
         self.assertIn("local ranged = deep_clone(warpfire_item)", WEAPONS)
         self.assertNotIn("ranged.right_hand_unit =", ranged)
 
-    def test_warpfire_uses_native_versus_actions_without_adventure_only_dependencies(self):
-        self.assertIn("sanitize_warpfire_template", WEAPONS)
+    def test_warpfire_uses_native_versus_actions_with_adventure_inputs(self):
+        self.assertIn("adapt_warpfire_template", WEAPONS)
         self.assertIn("template.actions.dark_pact_action_one", WEAPONS)
         self.assertIn("hero_warpfire_condition", WEAPONS)
-        self.assertIn("template.synced_states = nil", WEAPONS)
+        self.assertIn("template.actions.action_one = action_one", WEAPONS)
+        self.assertIn("template.actions.weapon_reload = action_reload", WEAPONS)
+        self.assertIn('"action_one_hold"', WEAPONS)
+        self.assertIn('"weapon_reload_hold"', WEAPONS)
+        self.assertIn("template.synced_states.priming.enter = nil", WEAPONS)
+        self.assertNotIn("template.synced_states = nil", WEAPONS)
+
+    def test_warpfire_has_a_pusfume_only_adventure_enemy_target_adapter(self):
+        self.assertIn("pusfume_warpfire_targets", WEAPONS)
+        self.assertIn("side:enemy_units()", WEAPONS)
+        self.assertIn("DamageUtils.is_enemy(player_unit, target_unit)", WEAPONS)
+        self.assertIn("PerceptionUtils.is_position_in_line_of_sight", WEAPONS)
+        self.assertIn('career_extension:career_name() == installed_registry.CAREER_NAME', WEAPONS)
+        self.assertIn('mod:hook(ActionWarpfireThrower, "fire"', WEAPONS)
+        self.assertIn("DamageUtils.add_damage_network(target.unit, owner_unit, 2", WEAPONS)
+        self.assertIn('"warpfire_ground"', WEAPONS)
+        self.assertIn("M.ITEM_KEYS.slot_ranged", WEAPONS)
+
+    def test_packmaster_hook_keeps_safe_sweeps_and_animates_the_native_claw(self):
+        self.assertIn("add_packmaster_weapon_events", WEAPONS)
+        self.assertIn('action.kind == "sweep"', WEAPONS)
+        self.assertIn('weapon_anim_event(owner_unit, "attack_grab")', WEAPONS)
 
     def test_warpfire_guards_pactsworn_only_status_api_in_adventure(self):
         self.assertIn(
@@ -74,6 +95,13 @@ class WeaponContractTests(unittest.TestCase):
             REGISTRY,
         )
         self.assertIn("if not is_weapon and type(can_wield)", REGISTRY)
+        self.assertIn('"can_wield_by_current_hero", "can_wield_by_current_career"', BACKEND)
+        self.assertIn('string.find(item_filter, "slot_type == melee"', BACKEND)
+        self.assertIn('string.find(item_filter, "slot_type == ranged"', BACKEND)
+        runtime_install = BACKEND[BACKEND.index("function M.install_runtime_guards") :]
+        install_call = runtime_install.index("install_weapon_grid_guard(registry)")
+        early_return = runtime_install.index("if status.runtime_guards_installed then")
+        self.assertLess(install_call, early_return)
 
     def test_custom_items_have_network_and_backend_registration(self):
         self.assertIn("append_lookup(NetworkLookup.item_names, item_key)", WEAPONS)

@@ -11,6 +11,18 @@ architecture and reproduction contract are in
 
 ## Latest shipment
 
+- 2026-07-19 local: v0.6.30 LIVE RESULT / v0.6.31 CANDIDATE - no Pusfume crash;
+  hands were coherent, visible, and animated, and the native hook armed at the
+  correct identity transform. The weapons remained inert because Warpfire used
+  Pactsworn-only input tokens and its target helper dispatched on a Versus
+  breed, while Hero View deliberately exposed every Bardin-career weapon.
+  v0.6.31 maps Adventure fire/reload input onto the native Warpfire action and
+  synchronized FX states, adds career-scoped Adventure targeting and safe
+  network damage, animates the hook unit during its temporary sweeps, and
+  career-filters Pusfume's weapon grids. Blender 5.2 independently found zero
+  escaped UV loops but one missing expected material, `p_eye_g`; that body
+  issue remains isolated. All 65 tests and source preflight pass; live
+  verification is pending.
 - 2026-07-18 local: v0.6.29 LIVE RESULT / v0.6.30 SHIPPED - preserving the
   native Skaven controller fixed the gross hand deformation: Pusfume's hands
   were visible, coherent, and animated. The apparent Globadier gestures are

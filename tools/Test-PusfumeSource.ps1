@@ -583,7 +583,13 @@ Test-Condition ($mainText -match 'weapons\.install\(registry\)' -and `
     $weaponsText -match 'vs_warpfire_thrower_gun' -and `
     $weaponsText -match 'two_handed_axes_template_1' -and `
     $weaponsText -match 'Weapons\.vs_warpfire_thrower_gun' -and `
-    $weaponsText -match 'sanitize_warpfire_template' -and `
+    $weaponsText -match 'adapt_warpfire_template' -and `
+    $weaponsText -match 'template\.actions\.action_one\s*=\s*action_one' -and `
+    $weaponsText -match 'template\.actions\.weapon_reload\s*=\s*action_reload' -and `
+    $weaponsText -match 'pusfume_warpfire_targets' -and `
+    $weaponsText -match 'side:enemy_units\(\)' -and `
+    $weaponsText -match 'mod:hook\(ActionWarpfireThrower, "fire"' -and `
+    $weaponsText -match 'DamageUtils\.add_damage_network\(target\.unit, owner_unit, 2' -and `
     $weaponsText -match 'sanitize_packmaster_melee_actions' -and `
     $weaponsText -match 'first_person_hit_anim' -and `
     $weaponsText -match 'action\[field_name\] = nil' -and `
@@ -591,8 +597,11 @@ Test-Condition ($mainText -match 'weapons\.install\(registry\)' -and `
     "Pusfume weapon templates" "base Versus items retain coherent native hand contracts with guarded Adventure and animation adapters"
 Test-Condition ($weaponsText -match 'can_wield\s*=\s*\{ registry\.CAREER_NAME \}' -and `
     $registryText -match 'local is_weapon = item\.slot_type == "melee" or item\.slot_type == "ranged"' -and `
-    $registryText -match 'if not is_weapon and type\(can_wield\)') `
-    "Pusfume weapon isolation" "prototype items are Pusfume-only and Ranger weapons are no longer inherited"
+    $registryText -match 'if not is_weapon and type\(can_wield\)' -and `
+    $backendText -match 'can_wield_by_current_career' -and `
+    $backendText -match 'slot_type == melee' -and `
+    $backendText -match 'slot_type == ranged') `
+    "Pusfume weapon isolation" "prototype items and weapon grids are career-only; Bardin weapons are not inherited"
 Test-Condition ($weaponsText -match 'append_lookup\(NetworkLookup\.item_names, item_key\)' -and `
     $weaponsText -match 'append_lookup\(NetworkLookup\.damage_sources, item_key\)' -and `
     $backendText -match 'get_all_backend_items' -and `
@@ -766,9 +775,10 @@ $actualHookCount = ($hookSets.Values | ForEach-Object { $_.Count } | Measure-Obj
 Test-Condition ($declaredHookCount -eq $actualHookCount) "hook accounting" "$declaredHookCount methods"
 
 $declaredGuardCount = [int][regex]::Match($backendText, 'expected_runtime_guard_count\s*=\s*(\d+)').Groups[1].Value
-$actualGuardCount = [regex]::Matches($backendText, 'mod:hook\(BackendUtils,').Count
+$actualGuardCount = [regex]::Matches($backendText, 'mod:hook\(BackendUtils,').Count + `
+    [regex]::Matches($backendText, 'mod:hook\(ItemGridUI,').Count
 Test-Condition ($declaredGuardCount -eq $actualGuardCount) `
-    "runtime guard accounting" "$declaredGuardCount BackendUtils methods"
+    "runtime guard accounting" "$declaredGuardCount loadout and inventory methods"
 
 $trackedBundleFiles = @(git -C $repoRoot ls-files "pusfume/bundleV2/**")
 Test-Condition ($trackedBundleFiles.Count -eq 0) "generated output" "bundleV2 is not tracked"

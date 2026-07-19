@@ -21,17 +21,19 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current friends-only live-test candidate is **v0.6.30-dev**. It keeps the
+The current friends-only live-test candidate is **v0.6.31-dev**. It keeps the
 working v0.6.22 third-person materials, authored idle, and restored original
 walk. It replaces the Ranger first-person base with Fatshark's shared Skaven
 base and native Packmaster arms, establishing an unwarped Pactsworn weapon-rig
 baseline before Janfon's cosmetic arms are rebound to that exact skeleton.
 Pusfume's Packmaster hook and Warpfire Thrower are complete clones of the
-official Versus base-item records, with only ownership, identity, Adventure
-slot metadata, and isolated templates changed. Warpfire retains Fatshark's
-native left-handed actions with mechanism-only callbacks removed. The claw's
-temporary hero attacks remain isolated because the native Packmaster grab is a
-character state rather than an ordinary weapon action.
+official Versus base-item records. v0.6.31 maps normal hero fire/reload input
+onto Fatshark's native Warpfire heat, FX, and timing, supplies Adventure enemy
+targets, and replaces its player-breed-only burn callback with network-safe
+Adventure damage. The claw retains crash-safe hero sweeps and now receives its
+native `attack_grab` presentation event; exact Packmaster dragging remains a
+larger career-state feature. Pusfume's weapon inventory is career-filtered, so
+the shared Bardin profile no longer exposes Bardin weapons to him.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person
 inventory packages resident before vanilla spawned Pusfume. v0.6.27 loads and
 verifies those unit packages synchronously with a dedicated reference before
@@ -57,7 +59,9 @@ corrects a reversed visibility helper, performs Fatshark's guarded Packmaster
 `to_armed` handshake after the weapon exists, and strips every hero-only hit
 reaction from the temporary claw attacks. Source commit `be6f63a` was compiled,
 locally hash-verified, and uploaded as Workshop ManifestID
-`3684913542981979356`; the v0.6.30 live result is pending.
+`3684913542981979356`. Its live result was crash-free with coherent hands and
+the armed hook unit, but neither weapon had usable Adventure actions and
+Bardin's weapon catalog remained visible. v0.6.31 addresses those boundaries.
 Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,

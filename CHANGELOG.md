@@ -10,6 +10,33 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Recorded the v0.6.30 live result: Pusfume spawned without a crash, the native
+  Skaven hands were coherent, animated, and remained visible, and the real
+  Packmaster claw unit completed its armed presentation. Both weapons still
+  lacked usable Adventure input/action behavior, the hands retained their
+  Globadier hold pose, Bardin weapons remained visible in the shared-profile
+  inventory, and localized body regions still appeared incorrectly mapped.
+- Added the v0.6.31 Adventure weapon adapter. Normal `action_one` and
+  `weapon_reload` inputs now drive Fatshark's native Warpfire action, heat,
+  synchronized shooting/cooling states, sounds, and effects. A Pusfume-only
+  target adapter supplies Adventure enemies, while a networked two-damage
+  pulse replaces the Versus burn callback that unsafely requires a
+  `vs_warpfire_thrower` player breed.
+- Kept the Packmaster hook on the crash-safe Adventure sweep contract and now
+  sends its native `attack_grab` event for articulated claw presentation.
+  Exact Versus dragging remains a career-state feature and is not claimed by
+  this weapon adapter.
+- Restricted Pusfume's melee and ranged Hero View grids to
+  `can_wield_by_current_career`. This removes Bardin's weapon catalog without
+  changing permissions or inventory behavior for his four native careers.
+- Audited the handoff body in Blender 5.2: all 76,334 mapped loops remain
+  inside their declared atlas regions, but the atlas expects `p_eye_g` while
+  the model does not provide that material slot. The visual mismatch is tracked
+  independently rather than changing the known-good body in this candidate.
+- Expanded weapon and inventory regression coverage to 65 tests and updated
+  source preflight for the native-action, target, damage, and career-filter
+  contracts.
+
 - Fixed crash `9970472a-2b65-409b-b45d-1421516dbc88` in
   `ActionSweep._play_hit_animations`. The real Packmaster hook was equipped,
   but its temporary two-handed-axe actions tried to play the hero-only

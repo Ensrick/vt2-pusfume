@@ -31,7 +31,11 @@ local state = {
     hand_contract_ready = false,
     resolved_unit_paths = {},
     templates_registered = false,
+    target_adapter_installed = false,
+    warpfire_action_adapter_installed = false,
 }
+
+local installed_registry
 
 local function deep_clone(value, seen)
     if type(value) ~= "table" then
@@ -112,7 +116,29 @@ local function hero_warpfire_reload_condition(action_user)
 end
 
 
-local function sanitize_warpfire_template(template)
+local function rewrite_chain_inputs(sub_actions, old_action, new_action, old_hold, new_hold)
+    for _, action in pairs(sub_actions or {}) do
+        if type(action) == "table" then
+            if action.hold_input == old_hold then
+                action.hold_input = new_hold
+            end
+
+            for _, chain in ipairs(action.allowed_chain_actions or {}) do
+                if chain.action == old_action then
+                    chain.action = new_action
+                end
+                if chain.input == old_action then
+                    chain.input = new_action
+                end
+                if chain.input == old_hold then
+                    chain.input = new_hold
+                end
+            end
+        end
+    end
+end
+
+local function adapt_warpfire_template(template)
     local action_one = template.actions and template.actions.dark_pact_action_one
     local action_reload = template.actions and template.actions.dark_pact_reload
 
@@ -121,19 +147,30 @@ local function sanitize_warpfire_template(template)
         return false
     end
 
-    -- Versus ghost-mode and VCE state callbacks are absent in Adventure.
-    -- Keep Fatshark's Warpfire action class, damage, input, heat, and FX data,
-    -- but remove only callbacks that cross that mechanism boundary.
+    -- Preserve Fatshark's Warpfire action class, heat, damage and synchronized
+    -- shooting/cooling states. Only translate Pactsworn inputs and remove the
+    -- priming VCE callback, whose manager does not exist in Adventure.
     action_one.default.condition_func = hero_warpfire_condition
-    action_one.default.enter_function = nil
-    action_one.default.finish_function = nil
-    action_one.fire.enter_function = nil
-    action_one.fire.finish_function = nil
-    action_reload.default.enter_function = nil
-    action_reload.default.finish_function = nil
     action_reload.default.condition_func = hero_warpfire_reload_condition
     action_reload.default.chain_condition_func = hero_warpfire_reload_condition
-    template.synced_states = nil
+
+    rewrite_chain_inputs(action_one, "dark_pact_action_one", "action_one",
+        "dark_pact_action_one_hold", "action_one_hold")
+    rewrite_chain_inputs(action_one, "dark_pact_reload", "weapon_reload",
+        "dark_pact_reload_hold", "weapon_reload_hold")
+    rewrite_chain_inputs(action_reload, "dark_pact_action_one", "action_one",
+        "dark_pact_action_one_hold", "action_one_hold")
+    rewrite_chain_inputs(action_reload, "dark_pact_reload", "weapon_reload",
+        "dark_pact_reload_hold", "weapon_reload_hold")
+
+    template.actions.action_one = action_one
+    template.actions.weapon_reload = action_reload
+    template.actions.dark_pact_action_one = nil
+    template.actions.dark_pact_reload = nil
+
+    if template.synced_states and template.synced_states.priming then
+        template.synced_states.priming.enter = nil
+    end
 
     return true
 end
@@ -168,6 +205,146 @@ local function sanitize_packmaster_melee_actions(actions)
     return removed
 end
 
+local function add_packmaster_weapon_events(actions)
+    local wrapped = 0
+
+    for _, sub_actions in pairs(actions or {}) do
+        if type(sub_actions) == "table" then
+            for _, action in pairs(sub_actions) do
+                if type(action) == "table" and action.kind == "sweep"
+                        and not action.pusfume_packmaster_event then
+                    local original_enter = action.enter_function
+
+                    action.enter_function = function(owner_unit, ...)
+                        if original_enter then
+                            original_enter(owner_unit, ...)
+                        end
+
+                        local inventory_system = Managers.state.entity:system("inventory_system")
+
+                        if inventory_system then
+                            inventory_system:weapon_anim_event(owner_unit, "attack_grab")
+                        end
+                    end
+                    action.pusfume_packmaster_event = true
+                    wrapped = wrapped + 1
+                end
+            end
+        end
+    end
+
+    return wrapped
+end
+
+local function is_pusfume_unit(unit)
+    if not installed_registry or not Unit.alive(unit) then
+        return false
+    end
+
+    local career_extension = ScriptUnit.has_extension(unit, "career_system")
+
+    return career_extension
+        and type(career_extension.career_name) == "function"
+        and career_extension:career_name() == installed_registry.CAREER_NAME
+end
+
+local function pusfume_warpfire_targets(player_unit, first_person_unit, physics_world)
+    local side_manager = Managers.state.side
+    local side = side_manager and side_manager.side_by_unit[player_unit]
+    local enemy_units = side and side:enemy_units()
+
+    if not enemy_units then
+        return nil
+    end
+
+    local origin = POSITION_LOOKUP[first_person_unit]
+        or Unit.world_position(first_person_unit, 0)
+    local rotation = Unit.world_rotation(first_person_unit, 0)
+    local direction = Vector3.normalize(Quaternion.forward(rotation))
+    local targets = {}
+
+    for _, target_unit in ipairs(enemy_units) do
+        if Unit.alive(target_unit) and DamageUtils.is_enemy(player_unit, target_unit) then
+            local node = Unit.has_node(target_unit, "c_spine")
+                and Unit.node(target_unit, "c_spine") or 0
+            local target_position = POSITION_LOOKUP[target_unit]
+                or Unit.world_position(target_unit, node)
+            local offset = target_position - origin
+            local distance = Vector3.length(offset)
+
+            if distance > 0 and distance <= 10 then
+                local target_direction = Vector3.normalize(offset)
+                local in_cone = Vector3.dot(direction, target_direction) >= 0.75
+                local in_los = in_cone and PerceptionUtils.is_position_in_line_of_sight(
+                    player_unit, origin, target_position, physics_world,
+                    "filter_ai_line_of_sight_check")
+
+                if in_los then
+                    targets[#targets + 1] = {
+                        unit = target_unit,
+                        distance = distance,
+                    }
+                end
+            end
+        end
+    end
+
+    return #targets > 0 and targets or nil
+end
+
+local function install_target_adapter()
+    if state.target_adapter_installed or not EnemyCharacterStateHelper then
+        return state.target_adapter_installed
+    end
+
+    mod:hook(EnemyCharacterStateHelper, "get_enemies_in_line_of_sight",
+        function(func, player_unit, first_person_unit, physics_world, ...)
+            if is_pusfume_unit(player_unit) then
+                return pusfume_warpfire_targets(
+                    player_unit, first_person_unit, physics_world)
+            end
+
+            return func(player_unit, first_person_unit, physics_world, ...)
+        end)
+
+    state.target_adapter_installed = true
+
+    return true
+end
+
+local function install_warpfire_action_adapter()
+    if state.warpfire_action_adapter_installed or not ActionWarpfireThrower then
+        return state.warpfire_action_adapter_installed
+    end
+
+    mod:hook(ActionWarpfireThrower, "fire", function(func, self, owner_unit,
+            current_action, t)
+        if not is_pusfume_unit(owner_unit) then
+            return func(self, owner_unit, current_action, t)
+        end
+
+        local targets = EnemyCharacterStateHelper.get_enemies_in_line_of_sight(
+            owner_unit, self.first_person_unit, self.physics_world)
+
+        for _, target in ipairs(targets or {}) do
+            local target_position = POSITION_LOOKUP[target.unit]
+                or Unit.world_position(target.unit, 0)
+            local owner_position = POSITION_LOOKUP[owner_unit]
+                or Unit.world_position(owner_unit, 0)
+            local attack_direction = Vector3.normalize(target_position - owner_position)
+
+            DamageUtils.add_damage_network(target.unit, owner_unit, 2, "torso",
+                "warpfire_ground", nil, attack_direction,
+                M.ITEM_KEYS.slot_ranged, nil, nil, nil, nil, nil, nil, nil,
+                nil, nil, nil, 1)
+        end
+    end)
+
+    state.warpfire_action_adapter_installed = true
+
+    return true
+end
+
 local function register_templates()
     local melee_source = Weapons and Weapons.vs_packmaster_claw
     local melee_actions = Weapons and Weapons.two_handed_axes_template_1
@@ -187,6 +364,7 @@ local function register_templates()
         state.melee_animation_fields_sanitized =
             (state.melee_animation_fields_sanitized or 0)
             + sanitize_packmaster_melee_actions(template.actions)
+        state.melee_actions_wrapped = add_packmaster_weapon_events(template.actions)
         Weapons[M.TEMPLATE_NAMES.slot_melee] = template
     else
         -- Hot reloads can retain the previous template table. Sanitize it in
@@ -195,12 +373,18 @@ local function register_templates()
             (state.melee_animation_fields_sanitized or 0)
             + sanitize_packmaster_melee_actions(
                 Weapons[M.TEMPLATE_NAMES.slot_melee].actions)
+        state.melee_actions_wrapped = add_packmaster_weapon_events(
+            Weapons[M.TEMPLATE_NAMES.slot_melee].actions)
     end
 
-    if not rawget(Weapons, M.TEMPLATE_NAMES.slot_ranged) then
+    local installed_ranged = rawget(Weapons, M.TEMPLATE_NAMES.slot_ranged)
+
+    if not installed_ranged or not installed_ranged.actions
+            or not installed_ranged.actions.action_one
+            or not installed_ranged.synced_states then
         local template = deep_clone(ranged_source)
 
-        if not sanitize_warpfire_template(template) then
+        if not adapt_warpfire_template(template) then
             return false
         end
 
@@ -343,17 +527,24 @@ local function register_items(registry)
 end
 
 function M.install(registry)
+    installed_registry = registry
     local templates_ready = register_templates()
     local items_ready = templates_ready and register_items(registry)
+    local target_adapter_ready = install_target_adapter()
+    local action_adapter_ready = install_warpfire_action_adapter()
 
-    state.installed = templates_ready and items_ready
+    state.installed = templates_ready and items_ready and target_adapter_ready
+        and action_adapter_ready
 
     if state.installed then
-        mod:info("[pusfume] registered Pusfume-only Versus weapons melee=%s unit=%s ranged=%s unit=%s hand_contract=%s sanitized_melee_hit_events=%d",
+        mod:info("[pusfume] registered Pusfume-only Versus weapons melee=%s unit=%s ranged=%s unit=%s hand_contract=%s sanitized_melee_hit_events=%d claw_actions=%d adventure_target_adapter=%s action_adapter=%s",
             M.ITEM_KEYS.slot_melee, M.UNIT_PATHS.slot_melee,
             M.ITEM_KEYS.slot_ranged, M.UNIT_PATHS.slot_ranged,
             tostring(state.hand_contract_ready),
-            state.melee_animation_fields_sanitized or 0)
+            state.melee_animation_fields_sanitized or 0,
+            state.melee_actions_wrapped or 0,
+            tostring(state.target_adapter_installed),
+            tostring(state.warpfire_action_adapter_installed))
     else
         mod:warning("[pusfume] Pusfume weapon dependencies are not ready; registration deferred")
     end
