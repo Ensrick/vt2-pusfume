@@ -28,6 +28,17 @@ class RuntimePresentationTests(unittest.TestCase):
     def test_pusfume_has_warpfire_overcharge_hud_data(self):
         self.assertIn("OverchargeData[M.CAREER_NAME] = deep_clone(", self.registry)
         self.assertIn("OverchargeData.vs_warpfire_thrower", self.registry)
+        self.assertIn("install_overcharge_hook", self.ui)
+        self.assertIn("UIWidgets.create_dark_pact_overcharge_bar_widget", self.ui)
+        self.assertIn('"charge_bar_dark_pact"', self.ui)
+
+    def test_menu_preview_is_authored_idle_without_donor_weapons(self):
+        self.assertIn('career.preview_animation = "idle"', self.registry)
+        self.assertIn("career.preview_items = {}", self.registry)
+        self.assertIn("career.preview_wield_slot = nil", self.registry)
+        self.assertIn('mod:hook(MenuWorldPreviewer, "equip_item"', self.ui)
+        self.assertIn('slot_type == "melee" or slot_type == "ranged"', self.ui)
+        self.assertIn("Menu preview weaponless idle enforced", self.ui)
 
     def test_first_person_weapons_are_restored_for_prototype_loadout(self):
         self.assertIn('FIRST_PERSON_WEAPON_HIDE_REASON = "pusfume_hands_diagnostic"', self.native)
@@ -52,6 +63,7 @@ class RuntimePresentationTests(unittest.TestCase):
             'extension._pusfume_weapon_pose_pending = "to_packmaster_claw"',
             self.native,
         )
+        self.assertIn('if role_event == "to_packmaster" then', self.native)
         self.assertIn("extension._pusfume_weapon_hide_pending = false", self.native)
         self.assertIn("restore_first_person_weapons(extension)", self.native)
 

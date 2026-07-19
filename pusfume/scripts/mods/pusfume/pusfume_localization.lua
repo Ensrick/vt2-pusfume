@@ -10,7 +10,11 @@ return {
     },
     pusfume_packmaster_hook_name = { en = "Packmaster Hook (Prototype)" },
     pusfume_packmaster_hook_description = {
-        en = "A recovered Packmaster hook using a temporary Adventure combat pattern.",
+        en = "A recovered Packmaster hook that strikes and pulls Adventure enemies closer.",
+    },
+    pusfume_assassin_claws_name = { en = "Assassin Claws (Prototype)" },
+    pusfume_assassin_claws_description = {
+        en = "Recovered Gutter Runner claws using a temporary dual-dagger combat pattern.",
     },
     pusfume_warpfire_thrower_name = { en = "Warpfire Thrower (Prototype)" },
     pusfume_warpfire_thrower_description = {
@@ -23,6 +27,10 @@ return {
     pusfume_poison_wind_globe_name = { en = "Poison Wind Globes (Prototype)" },
     pusfume_poison_wind_globe_description = {
         en = "Globadier gas globes adapted as a repeatable Pusfume ranged weapon.",
+    },
+    pusfume_crossbow_name = { en = "Skaven Crossbow Stand-in (Prototype)" },
+    pusfume_crossbow_description = {
+        en = "A functional copy of Bardin's crossbow reserved as the stand-in for Pusfume's future Skaven crossbow.",
     },
     pusfume_passive_name = { en = "Aggressive Iteration" },
     pusfume_passive_description = {

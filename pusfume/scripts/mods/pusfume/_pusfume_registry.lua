@@ -209,6 +209,10 @@ function M.register()
     career.picking_image = "medium_portrait_pusfume"
     career.portrait_image_picking = "medium_portrait_pusfume"
     career.portrait_thumbnail = "small_portrait_pusfume"
+    career.preview_animation = "idle"
+    career.preview_idle_animation = "idle"
+    career.preview_items = {}
+    career.preview_wield_slot = nil
     career.activated_ability = ActivatedAbilitySettings.pusfume
     career.passive_ability = PassiveAbilitySettings.pusfume
     career.attributes = career.attributes or {}

@@ -15,6 +15,8 @@ class WeaponContractTests(unittest.TestCase):
         self.assertIn('slot_ranged = "vs_warpfire_thrower_gun"', WEAPONS)
         self.assertIn('source_item = "vs_ratling_gunner_gun"', WEAPONS)
         self.assertIn('source_item = "vs_poison_wind_globadier_orb"', WEAPONS)
+        self.assertIn('source_item = "vs_gutter_runner_claws"', WEAPONS)
+        self.assertIn('source_item = "dr_crossbow"', WEAPONS)
         self.assertIn("ItemMasterList", WEAPONS)
         self.assertIn("two_handed_axes_template_1", WEAPONS)
         self.assertIn("Weapons.vs_warpfire_thrower_gun", WEAPONS)
@@ -22,9 +24,11 @@ class WeaponContractTests(unittest.TestCase):
         self.assertNotIn('template = "vs_warpfire_thrower_gun"', WEAPONS)
 
     def test_custom_items_are_complete_clones_of_the_native_versus_records(self):
-        self.assertIn("local melee = deep_clone(packmaster_item)", WEAPONS)
-        self.assertIn("local ranged = deep_clone(source_items[variant_name])", WEAPONS)
-        self.assertIn("melee.source_item = M.VERSUS_ITEM_KEYS.slot_melee", WEAPONS)
+        self.assertIn('resolve_versus_item("slot_melee")', WEAPONS)
+        self.assertIn('resolve_versus_item("slot_ranged")', WEAPONS)
+        self.assertIn("local melee = deep_clone(melee_source_items[variant_name])", WEAPONS)
+        self.assertIn("local ranged = deep_clone(ranged_source_items[variant_name])", WEAPONS)
+        self.assertIn("melee.source_item = definition.source_item", WEAPONS)
         self.assertIn("ranged.source_item = definition.source_item", WEAPONS)
         self.assertIn("melee.mechanisms = nil", WEAPONS)
         self.assertIn("ranged.mechanisms = nil", WEAPONS)
@@ -82,6 +86,8 @@ class WeaponContractTests(unittest.TestCase):
         self.assertIn("strike_with_packmaster_hook(owner_unit)", WEAPONS)
         self.assertIn("DamageUtils.add_damage_network(target_unit, owner_unit, 15", WEAPONS)
         self.assertIn('M.ITEM_KEYS.slot_melee', WEAPONS)
+        self.assertIn('"light_slashing_smiter_pull"', WEAPONS)
+        self.assertNotIn('"medium_slashing_smiter_2h", nil, attack_direction', WEAPONS)
 
     def test_ratling_and_globadier_have_adventure_adapters(self):
         self.assertIn("adapt_ratling_template", WEAPONS)
@@ -91,6 +97,19 @@ class WeaponContractTests(unittest.TestCase):
         self.assertIn("create_globadier_template", WEAPONS)
         self.assertIn("spawn_globadier_globe", WEAPONS)
         self.assertIn('template.pusfume_role_pose = "to_globadier"', WEAPONS)
+        self.assertIn("template.ammo_data.infinite_ammo = false", WEAPONS)
+        self.assertIn("template.ammo_data.starting_reserve_ammo = 0", WEAPONS)
+        self.assertIn("install_ratling_audio_adapter", WEAPONS)
+        self.assertIn('mod:hook(ActionMinigun, "_play_vo"', WEAPONS)
+
+    def test_assassin_claws_use_complete_native_units_and_safe_actions(self):
+        self.assertIn("M.MELEE_VARIANTS", WEAPONS)
+        self.assertIn('source_item = "vs_gutter_runner_claws"', WEAPONS)
+        self.assertIn("Weapons.vs_gutter_runner_claws", WEAPONS)
+        self.assertIn("Weapons.dual_wield_daggers_template_1", WEAPONS)
+        self.assertIn("prepare_assassin_claw_actions", WEAPONS)
+        self.assertIn('action.anim_event_1p = "jump_start"', WEAPONS)
+        self.assertIn('template.pusfume_role_pose = "to_gutter_runner"', WEAPONS)
 
     def test_every_weapon_chain_target_is_validated_before_registration(self):
         self.assertIn("local function validate_action_graph(actions)", WEAPONS)
@@ -147,14 +166,17 @@ class WeaponContractTests(unittest.TestCase):
         early_return = runtime_install.index("if status.runtime_guards_installed then")
         self.assertLess(install_call, early_return)
 
-    def test_weapon_roster_contains_only_hook_and_three_rat_ranged_variants(self):
+    def test_weapon_roster_contains_two_melee_and_four_ranged_variants(self):
         for key in (
             "pusfume_packmaster_hook",
             "pusfume_warpfire_thrower",
             "pusfume_ratling_gun",
             "pusfume_poison_wind_globe",
+            "pusfume_assassin_claws",
+            "pusfume_crossbow",
         ):
             self.assertIn(key, WEAPONS)
+        self.assertIn("M.MELEE_VARIANT_ORDER", WEAPONS)
         self.assertIn("function M.allowed_backend_ids(slot_name)", WEAPONS)
         self.assertIn("function M.allowed_item_keys(slot_name)", WEAPONS)
         self.assertIn("function M.select_backend_id(slot_name, backend_id)", WEAPONS)

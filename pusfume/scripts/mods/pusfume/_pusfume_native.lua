@@ -147,7 +147,7 @@ local function update_first_person_weapon_pose(extension, equipment)
         if role_event and play_first_person_pose(extension, role_event) then
             -- The role transition must settle before the claw wield pose or
             -- Stingray replaces the first event with the second in one frame.
-            if wielded_slot == "slot_melee" then
+            if role_event == "to_packmaster" then
                 extension._pusfume_weapon_pose_pending = "to_packmaster_claw"
             end
 

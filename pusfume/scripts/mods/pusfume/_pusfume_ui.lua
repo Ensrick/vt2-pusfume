@@ -29,6 +29,8 @@ local state = {
     loot_identity_hook_installed = false,
     identity_widget_seen = false,
     native_preview_enabled = false,
+    preview_weapons_suppressed = false,
+    overcharge_hook_installed = false,
     selection_seen = false,
     target_column = nil,
 }
@@ -561,6 +563,24 @@ local function install_previewer_purity_hooks(registry, native)
 
     end)
 
+    mod:hook(MenuWorldPreviewer, "equip_item", function(func, previewer,
+            item_name, slot, backend_id, skin, skip_wield_anim)
+        local slot_type = slot and slot.type
+
+        if previewer._pusfume_preview_active
+                and (slot_type == "melee" or slot_type == "ranged") then
+            if not previewer._pusfume_preview_weapons_logged then
+                previewer._pusfume_preview_weapons_logged = true
+                state.preview_weapons_suppressed = true
+                mod:info("[pusfume] Menu preview weaponless idle enforced")
+            end
+
+            return
+        end
+
+        return func(previewer, item_name, slot, backend_id, skin, skip_wield_anim)
+    end)
+
     state.previewer_purity_installed = true
 end
 
@@ -607,6 +627,40 @@ local function install_preview_hooks(registry, native)
     state.preview_hook_installed = true
 end
 
+local function install_overcharge_hook(registry)
+    if state.overcharge_hook_installed or not OverchargeBarUI then
+        return
+    end
+
+    mod:hook(OverchargeBarUI, "update", function(func, overcharge_ui, dt, t, player)
+        local pusfume = player ~= nil and type(player.career_name) == "function"
+            and player:career_name() == registry.CAREER_NAME
+
+        if pusfume ~= (overcharge_ui._pusfume_dark_pact_widget == true) then
+            local definition
+
+            if pusfume then
+                definition = UIWidgets.create_dark_pact_overcharge_bar_widget(
+                    "charge_bar_dark_pact", nil, nil, nil, nil, { 250, 70 })
+            else
+                definition = UIWidgets.create_overcharge_bar_widget(
+                    "charge_bar", nil, nil, nil, nil, { 250, 16 })
+            end
+
+            overcharge_ui.charge_bar = UIWidget.init(definition)
+            overcharge_ui._pusfume_dark_pact_widget = pusfume or nil
+            overcharge_ui.initialize_charge_bar = true
+
+            if pusfume then
+                mod:info("[pusfume] Full Pactsworn Warpfire HUD widget active")
+            end
+        end
+
+        return func(overcharge_ui, dt, t, player)
+    end)
+    state.overcharge_hook_installed = true
+end
+
 local function install_hud_hook(registry)
     if state.hud_hook_installed or not UnitFramesHandler then
         return
@@ -647,6 +701,7 @@ function M.install(registry, native)
     install_preview_hooks(registry, native)
     install_previewer_purity_hooks(registry, native)
     install_hud_hook(registry)
+    install_overcharge_hook(registry)
     install_identity_surface_hooks(registry)
 
     state.hook_installed = state.modern_hook_installed or state.legacy_hook_installed

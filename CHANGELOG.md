@@ -10,6 +10,23 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Made the Ratling Gun a finite 120-round Adventure weapon. It now consumes
+  ammunition, becomes eligible for normal ammo-box refills, and no longer
+  triggers the donor Bardin `activate_ability` bark on spin-up.
+- Replaced the Packmaster hook's damage-only helper with Fatshark's shipped
+  billhook pulling damage profile. Valid non-boss Adventure enemies now receive
+  a networked pulling stagger toward Pusfume while retaining the prototype hit.
+- Added Pusfume-only Assassin Claws using the complete Gutter Runner claw units
+  and a guarded dual-dagger action graph, plus a functional Bardin-crossbow
+  duplicate reserved as the future Skaven-crossbow stand-in.
+- Forced Pusfume's character-selection and inventory previews to remain on the
+  authored idle with no equipped weapons. Added the complete 250x70 Pactsworn
+  Warpfire HUD widget instead of recoloring the ordinary hero heat bar.
+- Audited the exact v0.6.33 compiled 3P FBX in Blender 5.2: all 73,254 mapped
+  loops remain inside their assigned atlas regions with zero escapes. The
+  missing unused `p_eye_g` slot and reported chest appearance remain tracked
+  for textured-render and live validation rather than speculative UV edits.
+
 - Recorded the v0.6.32 live result: Pusfume's hands and native weapon poses
   remained coherent, but the hook did not damage enemies, the shared Hero View
   still listed Ranger Veteran weapons, the Warpfire heat HUD was absent, and

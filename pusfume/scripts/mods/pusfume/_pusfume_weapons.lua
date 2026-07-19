@@ -18,6 +18,28 @@ M.VERSUS_ITEM_KEYS = {
     slot_melee = "vs_packmaster_claw",
     slot_ranged = "vs_warpfire_thrower_gun",
 }
+M.MELEE_VARIANTS = {
+    packmaster_hook = {
+        backend_id = "pusfume_item_packmaster_hook_v1",
+        description = "pusfume_packmaster_hook_description",
+        display_name = "pusfume_packmaster_hook_name",
+        item_key = "pusfume_packmaster_hook",
+        source_item = "vs_packmaster_claw",
+        template_name = "pusfume_packmaster_hook_template",
+    },
+    assassin_claws = {
+        backend_id = "pusfume_item_assassin_claws_v1",
+        description = "pusfume_assassin_claws_description",
+        display_name = "pusfume_assassin_claws_name",
+        item_key = "pusfume_assassin_claws",
+        source_item = "vs_gutter_runner_claws",
+        template_name = "pusfume_assassin_claws_template",
+    },
+}
+M.MELEE_VARIANT_ORDER = {
+    "packmaster_hook",
+    "assassin_claws",
+}
 M.RANGED_VARIANTS = {
     warpfire_thrower = {
         backend_id = "pusfume_item_warpfire_thrower_v1",
@@ -43,11 +65,20 @@ M.RANGED_VARIANTS = {
         source_item = "vs_poison_wind_globadier_orb",
         template_name = "pusfume_poison_wind_globe_template",
     },
+    crossbow = {
+        backend_id = "pusfume_item_crossbow_v1",
+        description = "pusfume_crossbow_description",
+        display_name = "pusfume_crossbow_name",
+        item_key = "pusfume_crossbow",
+        source_item = "dr_crossbow",
+        template_name = "crossbow_template_1",
+    },
 }
 M.RANGED_VARIANT_ORDER = {
     "warpfire_thrower",
     "ratling_gun",
     "poison_wind_globe",
+    "crossbow",
 }
 M.UNIT_PATHS = {
     slot_melee = nil,
@@ -64,6 +95,7 @@ local state = {
     templates_registered = false,
     target_adapter_installed = false,
     warpfire_action_adapter_installed = false,
+    ratling_audio_adapter_installed = false,
     selected_backend_ids = {
         slot_melee = "pusfume_item_packmaster_hook_v1",
         slot_ranged = "pusfume_item_warpfire_thrower_v1",
@@ -336,6 +368,12 @@ local function adapt_ratling_template(template)
 
     template.pusfume_role_pose = "to_ratling_gunner"
 
+    -- The Versus Ratling gun is intentionally inexhaustible. Adventure ammo
+    -- pickups only recognize finite ranged weapons, so keep one 120-round
+    -- hopper and let ordinary ammo boxes refill it directly.
+    template.ammo_data.infinite_ammo = false
+    template.ammo_data.starting_reserve_ammo = 0
+
     return true
 end
 
@@ -476,16 +514,42 @@ local function strike_with_packmaster_hook(owner_unit)
     local attack_direction = Vector3.normalize(target_position - owner_position)
 
     DamageUtils.add_damage_network(target_unit, owner_unit, 15, "torso",
-        "medium_slashing_smiter_2h", nil, attack_direction,
+        "light_slashing_smiter_pull", nil, attack_direction,
         M.ITEM_KEYS.slot_melee, nil, nil, nil, nil, nil, nil, nil,
         nil, nil, nil, 1)
-    mod:info("[pusfume] Packmaster hook strike target=%s range=4.5",
+    mod:info("[pusfume] Packmaster hook pull target=%s range=4.5 profile=light_slashing_smiter_pull",
         tostring(target_unit))
 
     return true
 end
 
-local function sanitize_packmaster_melee_actions(actions)
+local sanitize_packmaster_melee_actions
+
+local function prepare_assassin_claw_actions(actions)
+    local posed = 0
+
+    sanitize_packmaster_melee_actions(actions)
+
+    for _, sub_actions in pairs(actions or {}) do
+        if type(sub_actions) == "table" then
+            for _, action in pairs(sub_actions) do
+                if type(action) == "table"
+                        and (action.kind == "melee_start" or action.kind == "sweep") then
+                    -- jump_start/attack_finished are native Gutter Runner 1P
+                    -- events; the Elf dagger event names are not present on
+                    -- the shared Skaven first-person controller.
+                    action.anim_event_1p = "jump_start"
+                    action.anim_end_event_1p = "attack_finished"
+                    posed = posed + 1
+                end
+            end
+        end
+    end
+
+    return posed
+end
+
+sanitize_packmaster_melee_actions = function(actions)
     local removed = 0
 
     for _, sub_actions in pairs(actions or {}) do
@@ -655,16 +719,57 @@ local function install_warpfire_action_adapter()
     return true
 end
 
+local function install_ratling_audio_adapter()
+    if state.ratling_audio_adapter_installed or not ActionMinigun then
+        return state.ratling_audio_adapter_installed
+    end
+
+    -- ActionMinigun treats every spin-up as a hero career activation. On the
+    -- shared Bardin profile that produces a Bardin ability bark even after the
+    -- unit-level Skaven Wwise switches are set.
+    mod:hook(ActionMinigun, "_play_vo", function(func, action)
+        if is_pusfume_unit(action.owner_unit) then
+            return
+        end
+
+        return func(action)
+    end)
+    state.ratling_audio_adapter_installed = true
+
+    return true
+end
+
 local function register_templates()
     local melee_source = Weapons and Weapons.vs_packmaster_claw
     local melee_actions = Weapons and Weapons.two_handed_axes_template_1
+    local assassin_source = Weapons and Weapons.vs_gutter_runner_claws
+    local assassin_actions = Weapons and Weapons.dual_wield_daggers_template_1
     local ranged_source = Weapons and Weapons.vs_warpfire_thrower_gun
     local ratling_source = Weapons and Weapons.vs_ratling_gunner_gun
     local globadier_source = Weapons and Weapons.vs_poison_wind_globadier_orb
 
-    if not melee_source or not melee_actions or not ranged_source
+    if not melee_source or not melee_actions or not assassin_source
+            or not assassin_actions or not ranged_source
             or not ratling_source or not globadier_source then
         return false
+    end
+
+    local assassin_definition = M.MELEE_VARIANTS.assassin_claws
+    local installed_assassin = rawget(Weapons, assassin_definition.template_name)
+
+    if not installed_assassin or not installed_assassin.actions
+            or not installed_assassin.actions.action_one then
+        local template = deep_clone(assassin_source)
+
+        template.actions = deep_clone(assassin_actions.actions)
+        template.wield_anim = "idle"
+        template.pusfume_role_pose = "to_gutter_runner"
+        state.assassin_pose_actions = prepare_assassin_claw_actions(template.actions)
+        Weapons[assassin_definition.template_name] = template
+    else
+        installed_assassin.pusfume_role_pose = "to_gutter_runner"
+        state.assassin_pose_actions = prepare_assassin_claw_actions(
+            installed_assassin.actions)
     end
 
     if not rawget(Weapons, M.TEMPLATE_NAMES.slot_melee) then
@@ -747,11 +852,13 @@ local function register_templates()
         Weapons[ratling_definition.template_name].actions)
     local globe_graph_ready, globe_graph_error = validate_action_graph(
         Weapons[globe_definition.template_name].actions)
+    local assassin_graph_ready, assassin_graph_error = validate_action_graph(
+        Weapons[assassin_definition.template_name].actions)
 
     state.action_graph_ready = melee_graph_ready and ranged_graph_ready
-        and ratling_graph_ready and globe_graph_ready
+        and ratling_graph_ready and globe_graph_ready and assassin_graph_ready
     state.action_graph_error = melee_graph_error or ranged_graph_error
-        or ratling_graph_error or globe_graph_error
+        or ratling_graph_error or globe_graph_error or assassin_graph_error
 
     if not state.action_graph_ready then
         mod:error("[pusfume] Invalid weapon action graph: %s",
@@ -766,40 +873,59 @@ end
 
 local function item_definitions(registry)
     local packmaster_item = resolve_versus_item("slot_melee")
-    local source_items = {}
+    local warpfire_item = resolve_versus_item("slot_ranged")
+    local melee_source_items = {}
+    local ranged_source_items = {}
+
+    for _, variant_name in ipairs(M.MELEE_VARIANT_ORDER) do
+        local definition = M.MELEE_VARIANTS[variant_name]
+
+        melee_source_items[variant_name] = ItemMasterList
+            and rawget(ItemMasterList, definition.source_item)
+    end
 
     for _, variant_name in ipairs(M.RANGED_VARIANT_ORDER) do
         local definition = M.RANGED_VARIANTS[variant_name]
 
-        source_items[variant_name] = ItemMasterList
+        ranged_source_items[variant_name] = variant_name == "warpfire_thrower"
+            and warpfire_item or ItemMasterList
             and rawget(ItemMasterList, definition.source_item)
     end
 
-    if not packmaster_item or not source_items.warpfire_thrower
-            or not source_items.ratling_gun
-            or not source_items.poison_wind_globe then
+    if not packmaster_item or not warpfire_item
+            or not melee_source_items.assassin_claws
+            or not ranged_source_items.warpfire_thrower
+            or not ranged_source_items.ratling_gun
+            or not ranged_source_items.poison_wind_globe
+            or not ranged_source_items.crossbow then
         return nil
     end
 
     -- Start from Fatshark's complete records so future Pusfume variants retain
     -- every native unit and presentation field. Only ownership, identity, the
     -- Adventure slot adapter, and our isolated templates differ from Versus.
-    local melee = deep_clone(packmaster_item)
-    melee.can_wield = { registry.CAREER_NAME }
-    melee.description = "pusfume_packmaster_hook_description"
-    melee.display_name = "pusfume_packmaster_hook_name"
-    melee.mechanisms = nil
-    melee.name = M.ITEM_KEYS.slot_melee
-    melee.source_item = M.VERSUS_ITEM_KEYS.slot_melee
-    melee.template = M.TEMPLATE_NAMES.slot_melee
+    local definitions = {}
 
-    local definitions = {
-        [M.ITEM_KEYS.slot_melee] = melee,
-    }
+    for _, variant_name in ipairs(M.MELEE_VARIANT_ORDER) do
+        local definition = M.MELEE_VARIANTS[variant_name]
+        local melee = deep_clone(melee_source_items[variant_name])
+
+        melee.can_wield = { registry.CAREER_NAME }
+        melee.description = definition.description
+        melee.display_name = definition.display_name
+        melee.mechanisms = nil
+        melee.name = definition.item_key
+        melee.property_table_name = "melee"
+        melee.slot_type = "melee"
+        melee.source_item = definition.source_item
+        melee.template = definition.template_name
+        melee.trait_table_name = "melee"
+        definitions[definition.item_key] = melee
+    end
 
     for _, variant_name in ipairs(M.RANGED_VARIANT_ORDER) do
         local definition = M.RANGED_VARIANTS[variant_name]
-        local ranged = deep_clone(source_items[variant_name])
+        local ranged = deep_clone(ranged_source_items[variant_name])
 
         ranged.can_wield = { registry.CAREER_NAME }
         ranged.description = definition.description
@@ -810,8 +936,11 @@ local function item_definitions(registry)
         ranged.slot_type = "ranged"
         ranged.source_item = definition.source_item
         ranged.template = definition.template_name
-        ranged.trait_table_name = variant_name == "warpfire_thrower"
-            and "ranged_heat" or "ranged"
+        if variant_name == "warpfire_thrower" then
+            ranged.trait_table_name = "ranged_heat"
+        else
+            ranged.trait_table_name = ranged.trait_table_name or "ranged"
+        end
         definitions[definition.item_key] = ranged
     end
 
@@ -886,14 +1015,18 @@ local function register_items(registry)
 
     local hand_contract_ready = true
 
-    local item_registrations = {
-        {
-            backend_id = M.BACKEND_IDS.slot_melee,
-            item_key = M.ITEM_KEYS.slot_melee,
+    local item_registrations = {}
+
+    for _, variant_name in ipairs(M.MELEE_VARIANT_ORDER) do
+        local definition = M.MELEE_VARIANTS[variant_name]
+
+        item_registrations[#item_registrations + 1] = {
+            backend_id = definition.backend_id,
+            item_key = definition.item_key,
             slot_name = "slot_melee",
-            template_name = M.TEMPLATE_NAMES.slot_melee,
-        },
-    }
+            template_name = definition.template_name,
+        }
+    end
 
     for _, variant_name in ipairs(M.RANGED_VARIANT_ORDER) do
         local definition = M.RANGED_VARIANTS[variant_name]
@@ -936,12 +1069,14 @@ function M.install(registry)
     local items_ready = templates_ready and register_items(registry)
     local target_adapter_ready = install_target_adapter()
     local action_adapter_ready = install_warpfire_action_adapter()
+    local ratling_audio_ready = install_ratling_audio_adapter()
 
     state.installed = templates_ready and items_ready and target_adapter_ready
-        and action_adapter_ready
+        and action_adapter_ready and ratling_audio_ready
 
     if state.installed then
-        mod:info("[pusfume] registered Pusfume-only Versus weapons melee=%s unit=%s ranged=%s unit=%s hand_contract=%s action_graph=%s sanitized_melee_hit_events=%d claw_actions=%d claw_pose_actions=%d adventure_target_adapter=%s action_adapter=%s",
+        mod:info("[pusfume] registered Pusfume-only rat weapons melee=%d ranged=%d default_melee=%s unit=%s default_ranged=%s unit=%s hand_contract=%s action_graph=%s sanitized_melee_hit_events=%d hook_actions=%d hook_pose_actions=%d assassin_pose_actions=%d adventure_target_adapter=%s action_adapter=%s ratling_audio_adapter=%s",
+            #M.MELEE_VARIANT_ORDER, #M.RANGED_VARIANT_ORDER,
             M.ITEM_KEYS.slot_melee, M.UNIT_PATHS.slot_melee,
             M.ITEM_KEYS.slot_ranged, M.UNIT_PATHS.slot_ranged,
             tostring(state.hand_contract_ready),
@@ -949,8 +1084,10 @@ function M.install(registry)
             state.melee_animation_fields_sanitized or 0,
             state.melee_actions_wrapped or 0,
             state.melee_pose_actions or 0,
+            state.assassin_pose_actions or 0,
             tostring(state.target_adapter_installed),
-            tostring(state.warpfire_action_adapter_installed))
+            tostring(state.warpfire_action_adapter_installed),
+            tostring(state.ratling_audio_adapter_installed))
     else
         mod:warning("[pusfume] Pusfume weapon dependencies are not ready; registration deferred")
     end
@@ -988,7 +1125,13 @@ end
 
 function M.allowed_backend_ids(slot_name)
     if slot_name == "slot_melee" then
-        return { M.BACKEND_IDS.slot_melee }
+        local result = {}
+
+        for _, variant_name in ipairs(M.MELEE_VARIANT_ORDER) do
+            result[#result + 1] = M.MELEE_VARIANTS[variant_name].backend_id
+        end
+
+        return result
     end
 
     if slot_name == "slot_ranged" then
@@ -1006,7 +1149,13 @@ end
 
 function M.allowed_item_keys(slot_name)
     if slot_name == "slot_melee" then
-        return { M.ITEM_KEYS.slot_melee }
+        local result = {}
+
+        for _, variant_name in ipairs(M.MELEE_VARIANT_ORDER) do
+            result[#result + 1] = M.MELEE_VARIANTS[variant_name].item_key
+        end
+
+        return result
     end
 
     if slot_name == "slot_ranged" then
