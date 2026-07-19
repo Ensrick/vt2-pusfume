@@ -53,6 +53,20 @@ class WeaponContractTests(unittest.TestCase):
             2,
         )
 
+    def test_packmaster_adapter_removes_hero_only_hit_animation_events(self):
+        self.assertIn("sanitize_packmaster_melee_actions", WEAPONS)
+        self.assertIn("PACKMASTER_UNSAFE_HIT_ANIMATION_FIELDS", WEAPONS)
+        for field_name in (
+            "dual_hit_stop_anims",
+            "first_person_hit_anim",
+            "hit_armor_anim",
+            "hit_shield_stop_anim",
+            "hit_stop_anim",
+            "hit_stop_kill_anim",
+        ):
+            self.assertIn(f'"{field_name}"', WEAPONS)
+        self.assertIn("action[field_name] = nil", WEAPONS)
+
     def test_weapon_items_are_pusfume_only_and_ranger_weapons_are_not_inherited(self):
         self.assertEqual(WEAPONS.count("can_wield = { registry.CAREER_NAME }"), 2)
         self.assertIn(
@@ -71,7 +85,7 @@ class WeaponContractTests(unittest.TestCase):
     def test_old_weapon_visibility_diagnostics_are_disabled(self):
         self.assertNotIn("Unit.set_unit_visibility(weapon_unit, false)", UI)
         self.assertIn(
-            'hide_weapons(FIRST_PERSON_WEAPON_HIDE_REASON, false)',
+            "extension:unhide_weapons(FIRST_PERSON_WEAPON_HIDE_REASON)",
             (ROOT / "pusfume/scripts/mods/pusfume/_pusfume_native.lua").read_text(),
         )
 

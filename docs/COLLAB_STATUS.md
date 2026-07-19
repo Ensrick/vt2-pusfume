@@ -11,6 +11,18 @@ architecture and reproduction contract are in
 
 ## Latest shipment
 
+- 2026-07-19 local: v0.6.29 LIVE RESULT / v0.6.30 CANDIDATE - preserving the
+  native Skaven controller fixed the gross hand deformation: Pusfume's hands
+  were visible, coherent, and animated. The apparent Globadier gestures are
+  supplied by Fatshark's shared Skaven first-person controller; live crash
+  locals prove `pusfume_packmaster_hook` and the native Packmaster claw unit
+  remained equipped. The hook was hidden because the mod's restore helper was
+  calling `hide_weapons` every frame, and crash
+  `9970472a-2b65-409b-b45d-1421516dbc88` occurred when the borrowed axe sweep
+  sent `attack_hit_alt_effect` to the Pactsworn controller. v0.6.30 performs
+  the native guarded armed/unhide handshake after weapon spawn, sanitizes all
+  hero-only hit reactions, and adds a live articulated-weapon probe. Pending
+  build, shipment, and live verification.
 - 2026-07-18 local: v0.6.28 LIVE RESULT / v0.6.29 SHIPPED - the native
   Packmaster base and arms spawned at identity scale with `0.0000m` error at
   every available arm/hand link, but appeared as a huge fur-and-claw lump.

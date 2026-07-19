@@ -21,12 +21,19 @@ class RuntimePresentationTests(unittest.TestCase):
 
     def test_first_person_weapons_are_restored_for_prototype_loadout(self):
         self.assertIn('FIRST_PERSON_WEAPON_HIDE_REASON = "pusfume_hands_diagnostic"', self.native)
+        self.assertIn('PACKMASTER_WEAPON_HIDE_REASON = "catapulted"', self.native)
         helper = self.native.split("local function restore_first_person_weapons", 1)[1].split(
             "local DONOR_PACKAGE_REFERENCE", 1
         )[0]
 
         self.assertIn("if not extension.inventory_extension then", helper)
-        self.assertIn("extension:hide_weapons(FIRST_PERSON_WEAPON_HIDE_REASON, false)", helper)
+        self.assertIn("equipment.right_hand_wielded_unit", helper)
+        self.assertIn("extension:unhide_weapons(PACKMASTER_WEAPON_HIDE_REASON)", helper)
+        self.assertIn("extension:unhide_weapons(FIRST_PERSON_WEAPON_HIDE_REASON)", helper)
+        self.assertNotIn("extension:hide_weapons(", helper)
+        self.assertIn('Unit.has_animation_event(first_person_unit, "to_armed")', helper)
+        self.assertIn('Unit.animation_has_variable(first_person_unit, "armed")', helper)
+        self.assertIn('extension:animation_set_variable("armed", 1)', helper)
         self.assertIn("extension._pusfume_weapon_hide_pending = false", self.native)
         self.assertIn("restore_first_person_weapons(extension)", self.native)
 

@@ -502,9 +502,12 @@ Test-Condition ($backendText -match 'mod:hook\(LoadoutUtils, "properties_to_rpc_
     "loadout sync wire guard" "unencodable item properties and traits are stripped sender-side before the vanilla RPC encoder, unconditionally"
 Test-Condition ($nativeConfigText -match 'hide_donor_weapons\s*=\s*false' -and `
     $nativeBuildText -match 'hide_donor_weapons\s*=\s*false' -and `
-    $nativeText -match 'hide_weapons\(FIRST_PERSON_WEAPON_HIDE_REASON, false\)' -and `
+    $nativeText -match 'unhide_weapons\(PACKMASTER_WEAPON_HIDE_REASON\)' -and `
+    $nativeText -match 'unhide_weapons\(FIRST_PERSON_WEAPON_HIDE_REASON\)' -and `
+    $nativeText -match 'Unit\.has_animation_event\(first_person_unit, "to_armed"\)' -and `
+    $nativeText -match 'Unit\.animation_has_variable\(first_person_unit, "armed"\)' -and `
     $uiText -notmatch 'Unit\.set_unit_visibility\(weapon_unit, false\)') `
-    "prototype weapon visibility" "staged builds clear the old diagnostic hide seams in first person and previews"
+    "prototype weapon visibility" "staged builds clear diagnostic and Packmaster hide seams, then capability-guard the native armed presentation"
 Test-Condition ($idleFbxToolText -match 'j_tail1' -and `
     $idleFbxToolText -match 'BONE_MOTIONS' -and `
     $idleFbxToolText -match 'max_pose_delta < 0\.02') `
@@ -581,8 +584,11 @@ Test-Condition ($mainText -match 'weapons\.install\(registry\)' -and `
     $weaponsText -match 'two_handed_axes_template_1' -and `
     $weaponsText -match 'Weapons\.vs_warpfire_thrower_gun' -and `
     $weaponsText -match 'sanitize_warpfire_template' -and `
+    $weaponsText -match 'sanitize_packmaster_melee_actions' -and `
+    $weaponsText -match 'first_person_hit_anim' -and `
+    $weaponsText -match 'action\[field_name\] = nil' -and `
     $weaponsText -match 'action_hand_contract_ready') `
-    "Pusfume weapon templates" "base Versus items retain coherent native hand contracts with guarded Adventure adapters"
+    "Pusfume weapon templates" "base Versus items retain coherent native hand contracts with guarded Adventure and animation adapters"
 Test-Condition ($weaponsText -match 'can_wield\s*=\s*\{ registry\.CAREER_NAME \}' -and `
     $registryText -match 'local is_weapon = item\.slot_type == "melee" or item\.slot_type == "ranged"' -and `
     $registryText -match 'if not is_weapon and type\(can_wield\)') `

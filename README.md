@@ -21,7 +21,7 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current friends-only live-test candidate is **v0.6.29-dev**. It keeps the
+The current friends-only live-test candidate is **v0.6.30-dev**. It keeps the
 working v0.6.22 third-person materials, authored idle, and restored original
 walk. It replaces the Ranger first-person base with Fatshark's shared Skaven
 base and native Packmaster arms, establishing an unwarped Pactsworn weapon-rig
@@ -49,9 +49,13 @@ the hero common state machine to the native Skaven base at spawn and after
 weapon swaps; real Pactsworn profiles intentionally do not do this. v0.6.29
 suppresses only that mismatched controller and capability-guards the Versus
 Warpfire callbacks after crash
-`3e42f9dd-5fbe-495d-8d55-d44ab5d0b062`. The v0.6.29 candidate is source
-commit `6c912e3`, Workshop ManifestID `3618672643934952388`; live gameplay
-validation remains pending.
+`3e42f9dd-5fbe-495d-8d55-d44ab5d0b062`. Its live test produced coherent,
+animated native Skaven hands and spawned the real Packmaster hook unit, but the
+hook remained invisible and striking scenery crashed ActionSweep while playing
+the hero-only `attack_hit_alt_effect` event on the Pactsworn controller. v0.6.30
+corrects a reversed visibility helper, performs Fatshark's guarded Packmaster
+`to_armed` handshake after the weapon exists, and strips every hero-only hit
+reaction from the temporary claw attacks. The v0.6.30 live result is pending.
 Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,

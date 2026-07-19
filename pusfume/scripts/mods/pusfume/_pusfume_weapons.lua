@@ -138,6 +138,36 @@ local function sanitize_warpfire_template(template)
     return true
 end
 
+local PACKMASTER_UNSAFE_HIT_ANIMATION_FIELDS = {
+    "dual_hit_stop_anims",
+    "first_person_hit_anim",
+    "hit_armor_anim",
+    "hit_shield_stop_anim",
+    "hit_stop_anim",
+    "hit_stop_kill_anim",
+}
+
+local function sanitize_packmaster_melee_actions(actions)
+    local removed = 0
+
+    for _, sub_actions in pairs(actions or {}) do
+        if type(sub_actions) == "table" then
+            for _, action in pairs(sub_actions) do
+                if type(action) == "table" then
+                    for _, field_name in ipairs(PACKMASTER_UNSAFE_HIT_ANIMATION_FIELDS) do
+                        if action[field_name] ~= nil then
+                            action[field_name] = nil
+                            removed = removed + 1
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return removed
+end
+
 local function register_templates()
     local melee_source = Weapons and Weapons.vs_packmaster_claw
     local melee_actions = Weapons and Weapons.two_handed_axes_template_1
@@ -154,7 +184,17 @@ local function register_templates()
         -- a Pactsworn character state. Graft only temporary hero attacks while
         -- preserving the native claw template and articulated linking.
         template.actions = deep_clone(melee_actions.actions)
+        state.melee_animation_fields_sanitized =
+            (state.melee_animation_fields_sanitized or 0)
+            + sanitize_packmaster_melee_actions(template.actions)
         Weapons[M.TEMPLATE_NAMES.slot_melee] = template
+    else
+        -- Hot reloads can retain the previous template table. Sanitize it in
+        -- place so an unsafe hero hit event cannot survive a code refresh.
+        state.melee_animation_fields_sanitized =
+            (state.melee_animation_fields_sanitized or 0)
+            + sanitize_packmaster_melee_actions(
+                Weapons[M.TEMPLATE_NAMES.slot_melee].actions)
     end
 
     if not rawget(Weapons, M.TEMPLATE_NAMES.slot_ranged) then
@@ -309,10 +349,11 @@ function M.install(registry)
     state.installed = templates_ready and items_ready
 
     if state.installed then
-        mod:info("[pusfume] registered Pusfume-only Versus weapons melee=%s unit=%s ranged=%s unit=%s hand_contract=%s",
+        mod:info("[pusfume] registered Pusfume-only Versus weapons melee=%s unit=%s ranged=%s unit=%s hand_contract=%s sanitized_melee_hit_events=%d",
             M.ITEM_KEYS.slot_melee, M.UNIT_PATHS.slot_melee,
             M.ITEM_KEYS.slot_ranged, M.UNIT_PATHS.slot_ranged,
-            tostring(state.hand_contract_ready))
+            tostring(state.hand_contract_ready),
+            state.melee_animation_fields_sanitized or 0)
     else
         mod:warning("[pusfume] Pusfume weapon dependencies are not ready; registration deferred")
     end

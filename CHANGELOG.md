@@ -10,6 +10,27 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Fixed crash `9970472a-2b65-409b-b45d-1421516dbc88` in
+  `ActionSweep._play_hit_animations`. The real Packmaster hook was equipped,
+  but its temporary two-handed-axe actions tried to play the hero-only
+  `attack_hit_alt_effect` event on Fatshark's shared Skaven controller.
+- Sanitized all first-person hit-stop, armor-hit, shield-hit, kill-hit, and
+  dual-hit animation fields from the isolated Packmaster melee adapter. Damage,
+  sweeps, native hook units, and native attachment linking are unchanged.
+- Corrected `restore_first_person_weapons`, which previously called
+  `hide_weapons` every frame while reporting the opposite. It now waits for a
+  live wielded unit, clears the Packmaster `catapulted` hide reason and the old
+  diagnostic reason, and reproduces the capability-guarded `to_armed`/`armed=1`
+  presentation step used by Fatshark's Packmaster equipping state.
+- Added a one-shot live weapon probe covering the wielded slot, weapon unit,
+  root transform, articulated claw nodes, armed event/variable support, and any
+  remaining hide reasons. Regression and source-preflight coverage now enforce
+  the complete crash and visibility contract.
+- Recorded the v0.6.29 live result: the controller fix produced coherent,
+  animated Pusfume hands. The Globadier-like gestures came from the shared
+  Skaven first-person base, while the crash locals proved the equipped item and
+  spawned weapon unit were still Pusfume's Packmaster hook.
+
 - Fixed crash `3e42f9dd-5fbe-495d-8d55-d44ab5d0b062` when attacking after
   swapping to the Warpfire Thrower. The Versus condition called the
   Pactsworn-only `is_climbing()` API on Pusfume's ordinary Adventure hero

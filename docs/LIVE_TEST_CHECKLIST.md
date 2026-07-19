@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.29-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.30-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -74,8 +74,12 @@ common state machine from replacing the native Skaven controller during spawn
 or weapon swaps. This is deliberately a controller-only visual test: no model,
 scale, attachment, or material transform changed. Source commit `6c912e3` was
 compiled, locally hash-verified, and uploaded at 2026-07-18 19:53
-America/Chicago. Steam confirmed ManifestID `3618672643934952388`; the live
-result is pending.
+America/Chicago. Steam confirmed ManifestID `3618672643934952388`. The live
+result showed coherent animated hands, but the hook was invisible and striking
+scenery crashed because the borrowed action sent `attack_hit_alt_effect` to the
+Skaven controller. v0.6.30 clears the reversed diagnostic/native hide reasons,
+runs the guarded Packmaster armed presentation after the weapon unit exists,
+and removes all hero-only hit reactions from the temporary claw action table.
 
 ## Before opening Heroes
 
@@ -106,19 +110,25 @@ result is pending.
 2. Confirm the fixed melee slot resolves **Packmaster Hook (Prototype)** and the
    ranged slot resolves **Warpfire Thrower (Prototype)**. Ranger weapons should
    not appear as Pusfume equipment.
-3. Open Talents and verify the temporary Ranger Veteran tree renders.
-4. Confirm ability, passive, and perk text displays normally with no `<pusfume_...>` placeholders.
-5. Use Moulder Ingenuity once. Confirm its 90-second cooldown starts, the armed
+3. Confirm the hook is visible in first person and is attached at the native
+   Packmaster right-hand position. In the log, find `First-person weapon armed`
+   and confirm `slot=slot_melee`, `claw_nodes=true/true`, and
+   `remaining_hide_reasons=none`.
+4. Swing the hook into open air, scenery, armor, and a normal enemy. None of
+   these hit paths may crash, including an aborted swing against scenery.
+5. Open Talents and verify the temporary Ranger Veteran tree renders.
+6. Confirm ability, passive, and perk text displays normally with no `<pusfume_...>` placeholders.
+7. Use Moulder Ingenuity once. Confirm its 90-second cooldown starts, the armed
    placeholder message appears, and `/pusfume_gameplay` reports one activation;
    no consumable transformation is expected yet.
-6. Switch to another Bardin career, then back to Pusfume, checking that neither loadout nor talents disappear.
-7. Use `/pusfume` once as a fallback test. The command should print the host request and a `success` response.
-8. Confirm the local in-game HUD portrait/name area is present, then open the player list long enough for its portrait to refresh. The log must contain `Live HUD portrait restored texture=portrait_pusfume`, and neither surface may show Ranger Veteran art.
-9. Stand still and confirm the new 138-bone body deforms the spine, head, tail, integrated fur, and whiskers.
-10. Walk and confirm the controller blends into the restored 25-frame original walk, then returns to Janfon's authored idle after stopping.
-11. Confirm Pusfume's atlas remains correctly aligned, no whole-body or dark-region green emissive glow returns, and the whisker cards have no tape-like lighting rectangle.
-12. Turn, crouch, jump, dodge, attack, and use the career ability while watching the third-person model. These actions do not yet have dedicated Pusfume clips; record translation without matching pose as missing animation coverage, not a skinning regression.
-13. Note any rest-pose offset, detached region, inverted limb, or extreme stretch.
+8. Switch to another Bardin career, then back to Pusfume, checking that neither loadout nor talents disappear.
+9. Use `/pusfume` once as a fallback test. The command should print the host request and a `success` response.
+10. Confirm the local in-game HUD portrait/name area is present, then open the player list long enough for its portrait to refresh. The log must contain `Live HUD portrait restored texture=portrait_pusfume`, and neither surface may show Ranger Veteran art.
+11. Stand still and confirm the new 138-bone body deforms the spine, head, tail, integrated fur, and whiskers.
+12. Walk and confirm the controller blends into the restored 25-frame original walk, then returns to Janfon's authored idle after stopping.
+13. Confirm Pusfume's atlas remains correctly aligned, no whole-body or dark-region green emissive glow returns, and the whisker cards have no tape-like lighting rectangle.
+14. Turn, crouch, jump, dodge, attack, and use the career ability while watching the third-person model. These actions do not yet have dedicated Pusfume clips; record translation without matching pose as missing animation coverage, not a skinning regression.
+15. Note any rest-pose offset, detached region, inverted limb, or extreme stretch.
 
 ## First-person arms
 

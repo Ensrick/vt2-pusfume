@@ -59,6 +59,7 @@ local state = {
 local WALK_ENTER_SPEED = 0.5
 local IDLE_ENTER_SPEED = 0.2
 local FIRST_PERSON_WEAPON_HIDE_REASON = "pusfume_hands_diagnostic"
+local PACKMASTER_WEAPON_HIDE_REASON = "catapulted"
 local PUSFUME_CHARACTER_VO = "vs_poison_wind_globadier"
 local PUSFUME_SOUND_CHARACTER = "dwarf_slayer"
 
@@ -113,12 +114,71 @@ local function restore_first_person_weapons(extension)
         return false
     end
 
-    extension:hide_weapons(FIRST_PERSON_WEAPON_HIDE_REASON, false)
+    if extension._pusfume_weapon_presentation_ready then
+        return true
+    end
+
+    local equipment = extension.inventory_extension:equipment()
+    local weapon_unit = equipment and (equipment.right_hand_wielded_unit
+        or equipment.left_hand_wielded_unit)
+
+    -- Wait until vanilla has spawned and linked the selected first-person
+    -- weapon. Otherwise the visibility call succeeds too early and the later
+    -- wield flow can hide the Packmaster claw again.
+    if not weapon_unit or not Unit.alive(weapon_unit) then
+        return false
+    end
+
+    extension:unhide_weapons(PACKMASTER_WEAPON_HIDE_REASON)
+
+    -- v0.6.19-v0.6.29 used this mod-owned reason while diagnosing Janfon's
+    -- hands. Clear it after a hot reload without issuing a redundant show call
+    -- in a clean process where it was never installed.
+    if extension.hide_weapon_reasons
+            and extension.hide_weapon_reasons[FIRST_PERSON_WEAPON_HIDE_REASON] then
+        extension:unhide_weapons(FIRST_PERSON_WEAPON_HIDE_REASON)
+    end
+
+    local first_person_unit = extension.first_person_unit
+    local armed_event = first_person_unit
+        and Unit.has_animation_event(first_person_unit, "to_armed")
+    local armed_variable = first_person_unit
+        and Unit.animation_has_variable(first_person_unit, "armed")
+
+    -- Fatshark performs this handshake in PackmasterStateEquipping after the
+    -- claw is spawned. Pusfume is an Adventure hero and never enters that
+    -- Pactsworn-only state, so reproduce only its presentation contract.
+    if armed_event then
+        extension:animation_event("to_armed")
+    end
+
+    if armed_variable then
+        extension:animation_set_variable("armed", 1)
+    end
+
+    local remaining_reasons = {}
+    for reason in pairs(extension.hide_weapon_reasons or {}) do
+        remaining_reasons[#remaining_reasons + 1] = tostring(reason)
+    end
+    table.sort(remaining_reasons)
+
     extension._pusfume_weapons_hidden = false
+    extension._pusfume_weapon_hide_pending = false
+    extension._pusfume_weapon_presentation_ready = true
 
     if not extension._pusfume_weapon_hide_logged then
         extension._pusfume_weapon_hide_logged = true
-        mod:info("[pusfume] First-person weapons visible for Pusfume prototype loadout testing")
+        mod:info(
+            "[pusfume] First-person weapon armed slot=%s unit=%s root=%s scale=%s claw_nodes=%s/%s event=%s variable=%s remaining_hide_reasons=%s",
+            tostring(equipment.wielded_slot),
+            tostring(weapon_unit),
+            tostring(Unit.local_position(weapon_unit, 0)),
+            tostring(Unit.local_scale(weapon_unit, 0)),
+            tostring(Unit.has_node(weapon_unit, "bottom_claw")),
+            tostring(Unit.has_node(weapon_unit, "top_claw")),
+            tostring(armed_event),
+            tostring(armed_variable),
+            #remaining_reasons > 0 and table.concat(remaining_reasons, ",") or "none")
     end
 
     return true
@@ -1420,7 +1480,7 @@ local function install_first_person_hook(registry, config)
             extension_init_data.skin_name = donor_skin_name
             extension._pusfume_first_person = true
             extension._pusfume_donor_default_state_machine = donor_default_state_machine
-            extension._pusfume_weapon_hide_pending = false
+            extension._pusfume_weapon_hide_pending = true
             restore_first_person_weapons(extension)
             apply_first_person_materials(extension, config)
             if config.first_person_direct_link then
