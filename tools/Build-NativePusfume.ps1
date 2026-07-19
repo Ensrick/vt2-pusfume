@@ -1354,22 +1354,27 @@ if ($SplicedGameChild) {
         throw "Donor bundle extraction did not produce 90BDF3BAC6F81BA8.material"
     }
 
-    # Slot semantics decoded from the donor's compiled child + its own texture
-    # CONTENT (2026-07-19 re-decode of 90BDF3BAC6F81BA8.material and the vanilla
-    # textures): texture_map_02af90f8 (child key F9292771) = diffuse
-    # (DD74D8319F514D96); texture_map_8bf37d8e (child key 9AD51991) = NORMAL +
-    # gloss-in-alpha (E334A8CB6BCB5E6D, BC7); texture_map_27b67fd2 (child key
-    # 909D00F3) = MA "M/AO/x/EM" (45FFAEEF53695A86, BC3/DXT5): full-res channel
-    # means R=83 metallic, G=116 AO, B=255 unused, A~0 with localized emissive
-    # mask, and emissive tint = reflected vector variable C985395A. Earlier
-    # builds left slot 3 pointing at the Globadier's OWN MA (its metal/AO baked
-    # to Globadier UVs, misaligned to Pusfume) and only zeroed the emissive
-    # tint. So patch all three: diffuse+normal+MA to Pusfume's atlases. Feeding
-    # the Pusfume MA restores per-pixel metallic (peg leg / buckles) and AO from
-    # Janfon's _s set. Emissive tint stays [0,0,0] here (neutral-safe): the MA
-    # alpha carries Janfon's emissive mask, but activating the glow needs an
-    # art-confirmed C985395A colour AND clean emissive alpha on the outfit _s
-    # maps (currently 255 = would self-illuminate) - see the build-report flag.
+    # Slot semantics: names resolved by matching the donor child's texture keys
+    # to the parent shader's __tex_ bindings (3D25339231384C80.shader), plus a
+    # channel-content decode of the vanilla textures (2026-07-19). The child's
+    # three character textures are texture_map_02af90f8 (key F9292771) = diffuse
+    # (DD74D8319F514D96); texture_map_8bf37d8e (key 9AD51991) = NORMAL, BC7,
+    # with gloss in ALPHA and a clean localized mask in BLUE (donor B is 99.8%
+    # black); texture_map_27b67fd2 (key 909D00F3) = MA (45FFAEEF53695A86, DXT5):
+    # R=metallic, G=AO, B=unused, A a clean localized mask. The other four child
+    # slots are shared engine defaults (vfx_mask_1/2, snow_mask, blood_decal) -
+    # there is no dedicated per-character emission map. Earlier builds left slot
+    # 3 on the Globadier's OWN MA (metal/AO baked to Globadier UVs, misaligned to
+    # Pusfume) and zeroed the emissive tint C985395A. We now patch all three to
+    # Pusfume atlases. The MA feed restores per-pixel metallic (peg leg/buckles)
+    # from Janfon's _s.R and occlusion from _s.G (Janfon authors G as roughness;
+    # the game slot reads G as AO - close enough, and true roughness still comes
+    # from the normal alpha). EMISSIVE stays OFF (tint [0,0,0]): the game's
+    # emissive mask is one of two clean donor masks (normal.B or MA.A) and the
+    # bytecode wiring is unreadable, while Janfon's handoff has NO game-ready
+    # emission mask (his normal.B is standard normal-Z, his _s.A is a TINT mask
+    # per his V2 Ubershader graph). Lighting the red arm needs Janfon's emission
+    # mask + an in-game A/B test of which channel the shader reads - see report.
     $splicePayload = Join-Path $generatedRoot "spliced_child_payload.bin"
     $result = Invoke-HiddenPython @(
         (Join-Path $repoRoot "tools\make_spliced_child.py"),
