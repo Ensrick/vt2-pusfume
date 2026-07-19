@@ -10,6 +10,20 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Fixed crash `cd33e247-dc5e-4aa6-96ed-840258a1bde5` in
+  `WeaponUnitExtension.get_action`. The adapted Warpfire state machine retained
+  a native `dark_pact_action_one` transition after Adventure input began
+  `action_one`, but v0.6.31 had removed that action group.
+- Added independent, lookup-correct native Warpfire compatibility aliases and
+  pre-registration validation for every weapon action-chain destination. An
+  unresolved chain now fails registration with a diagnostic instead of
+  reaching Fatshark's nil-unsafe action lookup during play.
+- Staged the first-person rig into `to_packmaster` followed by
+  `to_packmaster_claw` when melee is equipped, and into
+  `to_warpfire_thrower` for ranged. Temporary hook starts and sweeps now play
+  the native `attack_grab` first-person event while retaining damaging
+  Adventure sweeps when no valid grab target exists.
+
 - Recorded the v0.6.30 live result: Pusfume spawned without a crash, the native
   Skaven hands were coherent, animated, and remained visible, and the real
   Packmaster claw unit completed its armed presentation. Both weapons still

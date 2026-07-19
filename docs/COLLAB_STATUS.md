@@ -11,6 +11,13 @@ architecture and reproduction contract are in
 
 ## Latest shipment
 
+- 2026-07-19 local: v0.6.32 CANDIDATE - crash
+  `cd33e247-dc5e-4aa6-96ed-840258a1bde5` proved the v0.6.31 Warpfire adapter
+  removed `dark_pact_action_one` while Fatshark's synchronized action retained
+  that transition. v0.6.32 keeps independent native aliases, rebinds their
+  lookup metadata, validates the complete action graph before registration,
+  and stages Packmaster/claw first-person pose events. The hook remains a
+  damaging Adventure sweep and plays `attack_grab` without requiring a target.
 - 2026-07-19 local: v0.6.30 LIVE RESULT / v0.6.31 CANDIDATE - no Pusfume crash;
   hands were coherent, visible, and animated, and the native hook armed at the
   correct identity transform. The weapons remained inert because Warpfire used

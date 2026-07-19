@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.31-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.32-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -90,6 +90,11 @@ and career-filters Pusfume's weapon inventory. Its live result is pending.
 Source commit `a7cc929` was compiled and hash-verified locally, then uploaded
 at 2026-07-18 21:22 America/Chicago as friends-only Workshop ManifestID
 `1065739404025473822`.
+That build crashed in `WeaponUnitExtension.get_action` because the native
+Warpfire synchronized state retained `dark_pact_action_one` after v0.6.31
+removed that group. v0.6.32 retains lookup-correct compatibility aliases,
+validates every action-chain destination before registration, and stages the
+native Packmaster/claw first-person poses. Build and ManifestID are pending.
 
 ## Before opening Heroes
 
@@ -128,10 +133,13 @@ at 2026-07-18 21:22 America/Chicago as friends-only Workshop ManifestID
    `remaining_hide_reasons=none`.
 5. Swing the hook into open air, scenery, armor, and a normal enemy. The claw
    should receive an `attack_grab` presentation event and deal normal temporary
-   melee-sweep damage. None of these hit paths may crash.
+   melee-sweep damage. It must animate and finish even when there is no valid
+   grab target; none of these hit paths may crash.
 6. Swap to Warpfire and hold primary fire. Confirm the native flame stream,
    firing sound, heat gain, and repeated enemy damage all occur. Release fire,
    then use reload to vent heat and confirm the cooling state ends at zero.
+   Crash `cd33e247-dc5e-4aa6-96ed-840258a1bde5` must not recur, and weapon
+   registration in the log must report `action_graph=true`.
 7. Swap between both weapons repeatedly and confirm each remains visible and
    responsive; neither slot may fall back to a Bardin item.
 8. Open Talents and verify the temporary Ranger Veteran tree renders.
@@ -155,14 +163,17 @@ at 2026-07-18 21:22 America/Chicago as friends-only Workshop ManifestID
 3. Before moving, confirm the fingers retain Janfon's modeled proportions and do not appear as long, thin sticks.
 4. Confirm the Packmaster hook and Warpfire Thrower are visible, attached to the
    expected hands, and do not make either arm disappear.
-5. Confirm the arms use Pusfume's direct-UV body textures with no green donor glow, atlas scrambling, or opaque whisker-style cards.
-6. Attack, block, push, reload, swap weapons, interact, revive, crouch, jump, dodge, and move in every direction.
-7. Confirm the arms follow VT2's native first-person poses without remaining in rest pose, separating from the camera rig, changing bone lengths, or stretching fingers.
-8. Enable Tweaker: General's third-person camera and confirm the established third-person body still animates and shades correctly.
-9. Run `/pusfume_preflight` after spawning. `native first-person arms` must report PASS; preserve the log if it reports WARN or FAIL.
-10. Check the log for `First-person donor-rest direct links active`. `First-person rest retarget initialized` must not appear for v0.6.24.
-11. Check the delayed `First-person attachment probe`; it must report `direct=true`, `retarget=false`, and near-zero source/target node distances. Runtime anchor and limb corrections should remain zero because Blender already matched the compiled donor rest matrices.
-12. Treat Janfon's `positioningtest` clip as an unwired diagnostic asset. His current first-person handoff has no walk cycle; do not expect or report a Janfon-authored first-person walk in this candidate.
+5. Equip melee and confirm the hands leave the Globadier globe-holding pose for
+   the Packmaster claw pose. Swap to ranged and confirm they return to the
+   Warpfire pose.
+6. Confirm the arms use Pusfume's direct-UV body textures with no green donor glow, atlas scrambling, or opaque whisker-style cards.
+7. Attack, block, push, reload, swap weapons, interact, revive, crouch, jump, dodge, and move in every direction.
+8. Confirm the arms follow VT2's native first-person poses without remaining in rest pose, separating from the camera rig, changing bone lengths, or stretching fingers.
+9. Enable Tweaker: General's third-person camera and confirm the established third-person body still animates and shades correctly.
+10. Run `/pusfume_preflight` after spawning. `native first-person arms` must report PASS; preserve the log if it reports WARN or FAIL.
+11. Check the log for `First-person donor-rest direct links active`. `First-person rest retarget initialized` must not appear for v0.6.24.
+12. Check the delayed `First-person attachment probe`; it must report `direct=true`, `retarget=false`, and near-zero source/target node distances. Runtime anchor and limb corrections should remain zero because Blender already matched the compiled donor rest matrices.
+13. Treat Janfon's `positioningtest` clip as an unwired diagnostic asset. His current first-person handoff has no walk cycle; do not expect or report a Janfon-authored first-person walk in this candidate.
 
 ## Career-kit smoke test
 

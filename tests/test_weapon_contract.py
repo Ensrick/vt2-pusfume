@@ -40,6 +40,16 @@ class WeaponContractTests(unittest.TestCase):
         self.assertIn("hero_warpfire_condition", WEAPONS)
         self.assertIn("template.actions.action_one = action_one", WEAPONS)
         self.assertIn("template.actions.weapon_reload = action_reload", WEAPONS)
+        self.assertIn(
+            "template.actions.dark_pact_action_one = deep_clone(action_one)",
+            WEAPONS,
+        )
+        self.assertIn(
+            "template.actions.dark_pact_reload = deep_clone(action_reload)",
+            WEAPONS,
+        )
+        self.assertIn('bind_action_lookup_data(action_one, "action_one")', WEAPONS)
+        self.assertNotIn("template.actions.dark_pact_action_one = nil", WEAPONS)
         self.assertIn('"action_one_hold"', WEAPONS)
         self.assertIn('"weapon_reload_hold"', WEAPONS)
         self.assertIn("template.synced_states.priming.enter = nil", WEAPONS)
@@ -60,6 +70,14 @@ class WeaponContractTests(unittest.TestCase):
         self.assertIn("add_packmaster_weapon_events", WEAPONS)
         self.assertIn('action.kind == "sweep"', WEAPONS)
         self.assertIn('weapon_anim_event(owner_unit, "attack_grab")', WEAPONS)
+        self.assertIn('action.anim_event_1p = "attack_grab"', WEAPONS)
+        self.assertIn('template.wield_anim = "to_packmaster_claw"', WEAPONS)
+
+    def test_every_weapon_chain_target_is_validated_before_registration(self):
+        self.assertIn("local function validate_action_graph(actions)", WEAPONS)
+        self.assertIn("local target = actions[target_name]", WEAPONS)
+        self.assertIn("state.action_graph_ready = melee_graph_ready and ranged_graph_ready", WEAPONS)
+        self.assertIn("if not state.action_graph_ready then", WEAPONS)
 
     def test_warpfire_guards_pactsworn_only_status_api_in_adventure(self):
         self.assertIn(

@@ -106,6 +106,49 @@ local function ensure_native_skaven_first_person_packages(config)
     return all_loaded
 end
 
+local function play_first_person_pose(extension, event_name)
+    local first_person_unit = extension.first_person_unit
+
+    if first_person_unit and Unit.alive(first_person_unit)
+            and Unit.has_animation_event(first_person_unit, event_name) then
+        extension:animation_event(event_name)
+        return true
+    end
+
+    return false
+end
+
+local function update_first_person_weapon_pose(extension, equipment)
+    local wielded_slot = equipment and equipment.wielded_slot
+
+    if extension._pusfume_weapon_pose_slot ~= wielded_slot then
+        local role_event = wielded_slot == "slot_melee" and "to_packmaster"
+            or wielded_slot == "slot_ranged" and "to_warpfire_thrower"
+
+        extension._pusfume_weapon_pose_slot = wielded_slot
+        extension._pusfume_weapon_pose_pending = nil
+
+        if role_event and play_first_person_pose(extension, role_event) then
+            -- The role transition must settle before the claw wield pose or
+            -- Stingray replaces the first event with the second in one frame.
+            if wielded_slot == "slot_melee" then
+                extension._pusfume_weapon_pose_pending = "to_packmaster_claw"
+            end
+
+            mod:info("[pusfume] First-person role pose slot=%s event=%s",
+                tostring(wielded_slot), role_event)
+        end
+    elseif extension._pusfume_weapon_pose_pending then
+        local pending_event = extension._pusfume_weapon_pose_pending
+
+        if play_first_person_pose(extension, pending_event) then
+            extension._pusfume_weapon_pose_pending = nil
+            mod:info("[pusfume] First-person wield pose slot=%s event=%s",
+                tostring(wielded_slot), pending_event)
+        end
+    end
+end
+
 local function restore_first_person_weapons(extension)
     -- VT2 assigns inventory_extension in extensions_ready(), after init.
     -- Calling the native hide API during construction crashes before that
@@ -114,11 +157,13 @@ local function restore_first_person_weapons(extension)
         return false
     end
 
+    local equipment = extension.inventory_extension:equipment()
+    update_first_person_weapon_pose(extension, equipment)
+
     if extension._pusfume_weapon_presentation_ready then
         return true
     end
 
-    local equipment = extension.inventory_extension:equipment()
     local weapon_unit = equipment and (equipment.right_hand_wielded_unit
         or equipment.left_hand_wielded_unit)
 

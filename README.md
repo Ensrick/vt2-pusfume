@@ -21,7 +21,7 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current friends-only live-test candidate is **v0.6.31-dev**. It keeps the
+The current friends-only live-test candidate is **v0.6.32-dev**. It keeps the
 working v0.6.22 third-person materials, authored idle, and restored original
 walk. It replaces the Ranger first-person base with Fatshark's shared Skaven
 base and native Packmaster arms, establishing an unwarped Pactsworn weapon-rig
@@ -30,9 +30,11 @@ Pusfume's Packmaster hook and Warpfire Thrower are complete clones of the
 official Versus base-item records. v0.6.31 maps normal hero fire/reload input
 onto Fatshark's native Warpfire heat, FX, and timing, supplies Adventure enemy
 targets, and replaces its player-breed-only burn callback with network-safe
-Adventure damage. The claw retains crash-safe hero sweeps and now receives its
-native `attack_grab` presentation event; exact Packmaster dragging remains a
-larger career-state feature. Pusfume's weapon inventory is career-filtered, so
+Adventure damage. v0.6.32 preserves the native Warpfire action aliases needed
+by its synchronized state machine and validates all chain destinations before
+registration. The claw retains damaging hero sweeps, enters the native
+Packmaster/claw poses, and receives `attack_grab` on attack even without a grab
+target; exact dragging remains a larger career-state feature. Pusfume's weapon inventory is career-filtered, so
 the shared Bardin profile no longer exposes Bardin weapons to him.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person
 inventory packages resident before vanilla spawned Pusfume. v0.6.27 loads and

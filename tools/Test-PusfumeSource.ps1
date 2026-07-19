@@ -586,11 +586,18 @@ Test-Condition ($mainText -match 'weapons\.install\(registry\)' -and `
     $weaponsText -match 'adapt_warpfire_template' -and `
     $weaponsText -match 'template\.actions\.action_one\s*=\s*action_one' -and `
     $weaponsText -match 'template\.actions\.weapon_reload\s*=\s*action_reload' -and `
+    $weaponsText -match 'template\.actions\.dark_pact_action_one\s*=\s*deep_clone\(action_one\)' -and `
+    $weaponsText -match 'template\.actions\.dark_pact_reload\s*=\s*deep_clone\(action_reload\)' -and `
+    $weaponsText -match 'bind_action_lookup_data\(action_one, "action_one"\)' -and `
+    $weaponsText -match 'validate_action_graph' -and `
+    $weaponsText -notmatch 'template\.actions\.dark_pact_action_one\s*=\s*nil' -and `
     $weaponsText -match 'pusfume_warpfire_targets' -and `
     $weaponsText -match 'side:enemy_units\(\)' -and `
     $weaponsText -match 'mod:hook\(ActionWarpfireThrower, "fire"' -and `
     $weaponsText -match 'DamageUtils\.add_damage_network\(target\.unit, owner_unit, 2' -and `
     $weaponsText -match 'sanitize_packmaster_melee_actions' -and `
+    $weaponsText -match 'action\.anim_event_1p\s*=\s*"attack_grab"' -and `
+    $weaponsText -match 'template\.wield_anim\s*=\s*"to_packmaster_claw"' -and `
     $weaponsText -match 'first_person_hit_anim' -and `
     $weaponsText -match 'action\[field_name\] = nil' -and `
     $weaponsText -match 'action_hand_contract_ready') `

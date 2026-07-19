@@ -138,6 +138,45 @@ local function rewrite_chain_inputs(sub_actions, old_action, new_action, old_hol
     end
 end
 
+local function bind_action_lookup_data(sub_actions, action_name)
+    for sub_action_name, action in pairs(sub_actions or {}) do
+        if type(action) == "table" then
+            action.lookup_data = action.lookup_data or {}
+            action.lookup_data.action_name = action_name
+            action.lookup_data.sub_action_name = sub_action_name
+        end
+    end
+end
+
+local function validate_action_graph(actions)
+    for action_name, sub_actions in pairs(actions or {}) do
+        if type(sub_actions) == "table" then
+            for sub_action_name, action in pairs(sub_actions) do
+                if type(action) == "table" then
+                    for _, chain in ipairs(action.allowed_chain_actions or {}) do
+                        local target_name = chain.action
+
+                        if target_name then
+                            local target = actions[target_name]
+                            local target_sub_action = chain.sub_action or "default"
+
+                            if type(target) ~= "table"
+                                    or type(target[target_sub_action]) ~= "table" then
+                                return false, string.format(
+                                    "%s.%s -> %s.%s",
+                                    tostring(action_name), tostring(sub_action_name),
+                                    tostring(target_name), tostring(target_sub_action))
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return true
+end
+
 local function adapt_warpfire_template(template)
     local action_one = template.actions and template.actions.dark_pact_action_one
     local action_reload = template.actions and template.actions.dark_pact_reload
@@ -165,8 +204,17 @@ local function adapt_warpfire_template(template)
 
     template.actions.action_one = action_one
     template.actions.weapon_reload = action_reload
-    template.actions.dark_pact_action_one = nil
-    template.actions.dark_pact_reload = nil
+    bind_action_lookup_data(action_one, "action_one")
+    bind_action_lookup_data(action_reload, "weapon_reload")
+
+    -- ActionWarpfireThrower retains native Pactsworn transition names in its
+    -- synchronized state. Keep independent compatibility aliases instead of
+    -- deleting them; shared tables would corrupt lookup_data for one name.
+    template.actions.dark_pact_action_one = deep_clone(action_one)
+    template.actions.dark_pact_reload = deep_clone(action_reload)
+    bind_action_lookup_data(
+        template.actions.dark_pact_action_one, "dark_pact_action_one")
+    bind_action_lookup_data(template.actions.dark_pact_reload, "dark_pact_reload")
 
     if template.synced_states and template.synced_states.priming then
         template.synced_states.priming.enter = nil
@@ -207,10 +255,17 @@ end
 
 local function add_packmaster_weapon_events(actions)
     local wrapped = 0
+    local posed = 0
 
     for _, sub_actions in pairs(actions or {}) do
         if type(sub_actions) == "table" then
             for _, action in pairs(sub_actions) do
+                if type(action) == "table"
+                        and (action.kind == "melee_start" or action.kind == "sweep") then
+                    action.anim_event_1p = "attack_grab"
+                    posed = posed + 1
+                end
+
                 if type(action) == "table" and action.kind == "sweep"
                         and not action.pusfume_packmaster_event then
                     local original_enter = action.enter_function
@@ -233,7 +288,7 @@ local function add_packmaster_weapon_events(actions)
         end
     end
 
-    return wrapped
+    return wrapped, posed
 end
 
 local function is_pusfume_unit(unit)
@@ -364,7 +419,9 @@ local function register_templates()
         state.melee_animation_fields_sanitized =
             (state.melee_animation_fields_sanitized or 0)
             + sanitize_packmaster_melee_actions(template.actions)
-        state.melee_actions_wrapped = add_packmaster_weapon_events(template.actions)
+        state.melee_actions_wrapped, state.melee_pose_actions =
+            add_packmaster_weapon_events(template.actions)
+        template.wield_anim = "to_packmaster_claw"
         Weapons[M.TEMPLATE_NAMES.slot_melee] = template
     else
         -- Hot reloads can retain the previous template table. Sanitize it in
@@ -373,14 +430,18 @@ local function register_templates()
             (state.melee_animation_fields_sanitized or 0)
             + sanitize_packmaster_melee_actions(
                 Weapons[M.TEMPLATE_NAMES.slot_melee].actions)
-        state.melee_actions_wrapped = add_packmaster_weapon_events(
-            Weapons[M.TEMPLATE_NAMES.slot_melee].actions)
+        local installed_melee = Weapons[M.TEMPLATE_NAMES.slot_melee]
+        state.melee_actions_wrapped, state.melee_pose_actions =
+            add_packmaster_weapon_events(installed_melee.actions)
+        installed_melee.wield_anim = "to_packmaster_claw"
     end
 
     local installed_ranged = rawget(Weapons, M.TEMPLATE_NAMES.slot_ranged)
 
     if not installed_ranged or not installed_ranged.actions
             or not installed_ranged.actions.action_one
+            or not installed_ranged.actions.dark_pact_action_one
+            or not installed_ranged.actions.dark_pact_reload
             or not installed_ranged.synced_states then
         local template = deep_clone(ranged_source)
 
@@ -389,6 +450,20 @@ local function register_templates()
         end
 
         Weapons[M.TEMPLATE_NAMES.slot_ranged] = template
+    end
+
+    local melee_graph_ready, melee_graph_error = validate_action_graph(
+        Weapons[M.TEMPLATE_NAMES.slot_melee].actions)
+    local ranged_graph_ready, ranged_graph_error = validate_action_graph(
+        Weapons[M.TEMPLATE_NAMES.slot_ranged].actions)
+
+    state.action_graph_ready = melee_graph_ready and ranged_graph_ready
+    state.action_graph_error = melee_graph_error or ranged_graph_error
+
+    if not state.action_graph_ready then
+        mod:error("[pusfume] Invalid weapon action graph: %s",
+            tostring(state.action_graph_error))
+        return false
     end
 
     state.templates_registered = true
@@ -537,12 +612,14 @@ function M.install(registry)
         and action_adapter_ready
 
     if state.installed then
-        mod:info("[pusfume] registered Pusfume-only Versus weapons melee=%s unit=%s ranged=%s unit=%s hand_contract=%s sanitized_melee_hit_events=%d claw_actions=%d adventure_target_adapter=%s action_adapter=%s",
+        mod:info("[pusfume] registered Pusfume-only Versus weapons melee=%s unit=%s ranged=%s unit=%s hand_contract=%s action_graph=%s sanitized_melee_hit_events=%d claw_actions=%d claw_pose_actions=%d adventure_target_adapter=%s action_adapter=%s",
             M.ITEM_KEYS.slot_melee, M.UNIT_PATHS.slot_melee,
             M.ITEM_KEYS.slot_ranged, M.UNIT_PATHS.slot_ranged,
             tostring(state.hand_contract_ready),
+            tostring(state.action_graph_ready),
             state.melee_animation_fields_sanitized or 0,
             state.melee_actions_wrapped or 0,
+            state.melee_pose_actions or 0,
             tostring(state.target_adapter_installed),
             tostring(state.warpfire_action_adapter_installed))
     else
