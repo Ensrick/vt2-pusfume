@@ -72,7 +72,10 @@ called the Pactsworn-only `is_climbing()` status method.
 v0.6.29 guards the adapted Warpfire status/overcharge API and prevents Bardin's
 common state machine from replacing the native Skaven controller during spawn
 or weapon swaps. This is deliberately a controller-only visual test: no model,
-scale, attachment, or material transform changed.
+scale, attachment, or material transform changed. Source commit `6c912e3` was
+compiled, locally hash-verified, and uploaded at 2026-07-18 19:53
+America/Chicago. Steam confirmed ManifestID `3618672643934952388`; the live
+result is pending.
 
 ## Before opening Heroes
 

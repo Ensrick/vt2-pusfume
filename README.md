@@ -49,7 +49,9 @@ the hero common state machine to the native Skaven base at spawn and after
 weapon swaps; real Pactsworn profiles intentionally do not do this. v0.6.29
 suppresses only that mismatched controller and capability-guards the Versus
 Warpfire callbacks after crash
-`3e42f9dd-5fbe-495d-8d55-d44ab5d0b062`.
+`3e42f9dd-5fbe-495d-8d55-d44ab5d0b062`. The v0.6.29 candidate is source
+commit `6c912e3`, Workshop ManifestID `3618672643934952388`; live gameplay
+validation remains pending.
 Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,

@@ -11,6 +11,19 @@ architecture and reproduction contract are in
 
 ## Latest shipment
 
+- 2026-07-18 local: v0.6.28 LIVE RESULT / v0.6.29 SHIPPED - the native
+  Packmaster base and arms spawned at identity scale with `0.0000m` error at
+  every available arm/hand link, but appeared as a huge fur-and-claw lump.
+  Source comparison proved Bardin's profile was replacing the Skaven base's
+  embedded first-person controller at spawn and as the fallback on each wield;
+  playable Pactsworn profiles and their native weapons intentionally omit that
+  override. v0.6.29 suppresses only the donor controller. It also fixes crash
+  `3e42f9dd-5fbe-495d-8d55-d44ab5d0b062`, caused by the native Warpfire
+  condition calling Pactsworn-only `is_climbing()` on an Adventure hero status
+  extension. All 62 tests, source preflight, GitHub CI, native compilation,
+  54-node compiled-rest validation, and exact eight-file staging/live hash
+  comparison pass. Source commit `6c912e3`; Workshop ManifestID
+  `3618672643934952388`; pending live test.
 - 2026-07-18 local: v0.6.21 LIVE RESULT / v0.6.22 CANDIDATE - integrated fur
   renders again, but third-person textures remain low-resolution or incorrectly
   mapped, first-person fingers remain malformed, and no walk was visible. The

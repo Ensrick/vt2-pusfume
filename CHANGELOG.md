@@ -28,6 +28,11 @@ request rather than in release notes.
 - Added regression coverage for the Adventure/Pactsworn API boundary, safe
   Warpfire reload checks, temporary shared-profile restoration, and weapon-swap
   state-machine rejection.
+- Built and hash-verified the v0.6.29 native package from source commit
+  `6c912e3`, deployed all eight game files locally, and uploaded the identical
+  payload to the friends-only Workshop item. Steam confirmed ManifestID
+  `3618672643934952388` at 2026-07-18 19:53 America/Chicago. Live gameplay
+  validation remains pending.
 
 - Fixed the v0.6.27 delayed first-person attachment-probe crash. The native
   Packmaster control spawned successfully, but its arm unit does not expose
