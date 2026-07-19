@@ -10,6 +10,21 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Fixed the flat body shading (issue [#36](https://github.com/Ensrick/vt2-pusfume/issues/36)):
+  the spliced body child's third texture slot was left pointing at the
+  Globadier's OWN metallic/AO map (baked to Globadier UVs, misaligned to
+  Pusfume) with the emissive tint zeroed. Decoded the donor slot as Fatshark's
+  M/AO/x/EM packing (R=metallic, G=AO, A=emissive mask) from the compiled
+  `90BDF3BAC6F81BA8.material` and its vanilla texture. The build now composes
+  `pusfume_atlas_ma` from Janfon's `_s` maps and feeds it to that slot,
+  restoring per-pixel metallic (peg leg, buckles) and baked occlusion.
+  Emissive stays dark pending three art confirmations (tint colour, outfit
+  `_s` alpha cleanup, body mask extent); the plumbing is wired.
+- Confirmed from Janfon's 3P body .blend (V2 Ubershader 1.07 node graphs):
+  every material feeds `_s` into the Maskmap slot; `pusfume_eyenormal` as eye
+  albedo is intentional, but eyes are authored EMISSIVE via `skaven_eyemask`
+  (not yet wired in-game); fur normal/mask maps (`pusfume_fur_n/s.dds`) are
+  absent from the handoff and need a fresh send from Janfon.
 - Audited the texture pipeline against Fatshark's SDK examples and working
   Workshop mods after the reported in-game quality loss. Diffuse and normal
   textures (per-slot and both body atlases) now compile as `BC7` instead of

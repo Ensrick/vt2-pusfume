@@ -852,9 +852,20 @@ if ($furEnabled) {
 Write-PusfumeAtlas "pusfume_atlas_df" "df" ([Drawing.Color]::Black)
 Write-PusfumeAtlas "pusfume_atlas_nm" "nm" ([Drawing.Color]::FromArgb(255, 128, 128, 255))
 Write-PusfumeAtlas "pusfume_atlas_s" "s" ([Drawing.Color]::Black)
+# MA (metallic / AO / unused / emissive-mask) atlas fed to the spliced body
+# child's third slot (channel 909D00F3, build alias texture_map_27b67fd2).
+# Verified against the installed Globadier's own MA texture 45FFAEEF53695A86
+# (BC3/DXT5, dxgi=77): R=metallic, G=AO, B=255 unused, A=emissive mask; this is
+# Fatshark's "M/AO/x/EM" packing (SDK endurance_badges *_ma). Janfon's _s maps
+# already carry the same layout (skaven_body_s: R=0 skin non-metal, G high AO,
+# A a bimodal mask), so the s-suffix sources compose straight into it. The clear
+# is the neutral MA value metallic=0 / AO=255 / B=255 / emissive-alpha=0 so
+# unmapped atlas gutters never read as metallic or self-illuminated.
+Write-PusfumeAtlas "pusfume_atlas_ma" "s" ([Drawing.Color]::FromArgb(0, 0, 255, 255))
 Write-NativeTextureRecipe "pusfume_atlas_df" $true
 Write-NativeTextureRecipe "pusfume_atlas_nm" $false
 Write-NativeTextureRecipe "pusfume_atlas_s" $false
+Write-NativeTextureRecipe "pusfume_atlas_ma" $false
 
 # Shadow builds must keep the atlas out of the startup package. These fallback
 # materials therefore use their original per-slot maps; the runtime donor swap
@@ -1198,7 +1209,8 @@ if ($NoDonorTextureShadow) {
     $rootTextureEntries += @(
         '    "textures/pusfume/pusfume_atlas_df"',
         '    "textures/pusfume/pusfume_atlas_nm"',
-        '    "textures/pusfume/pusfume_atlas_s"'
+        '    "textures/pusfume/pusfume_atlas_s"',
+        '    "textures/pusfume/pusfume_atlas_ma"'
     )
 }
 
@@ -1342,14 +1354,22 @@ if ($SplicedGameChild) {
         throw "Donor bundle extraction did not produce 90BDF3BAC6F81BA8.material"
     }
 
-    # Slot semantics decoded from the donor's own texture CONTENT (channel
-    # statistics, 2026-07-16): texture_map_02af90f8 = diffuse (red/orange,
-    # alpha ~250); texture_map_27b67fd2 = EMISSIVE - the donor ships a pure
-    # black map (means 0/1/1/0), and putting a normal map here is what made
-    # the whole model glow; texture_map_8bf37d8e = NORMAL + gloss-in-alpha
-    # (donor: XY in RG around 128, B=0, alpha ~196). So: patch diffuse and
-    # normal to the atlas, and leave the donor's own black emissive untouched
-    # (it is resident via the donor package, which always loads first).
+    # Slot semantics decoded from the donor's compiled child + its own texture
+    # CONTENT (2026-07-19 re-decode of 90BDF3BAC6F81BA8.material and the vanilla
+    # textures): texture_map_02af90f8 (child key F9292771) = diffuse
+    # (DD74D8319F514D96); texture_map_8bf37d8e (child key 9AD51991) = NORMAL +
+    # gloss-in-alpha (E334A8CB6BCB5E6D, BC7); texture_map_27b67fd2 (child key
+    # 909D00F3) = MA "M/AO/x/EM" (45FFAEEF53695A86, BC3/DXT5): full-res channel
+    # means R=83 metallic, G=116 AO, B=255 unused, A~0 with localized emissive
+    # mask, and emissive tint = reflected vector variable C985395A. Earlier
+    # builds left slot 3 pointing at the Globadier's OWN MA (its metal/AO baked
+    # to Globadier UVs, misaligned to Pusfume) and only zeroed the emissive
+    # tint. So patch all three: diffuse+normal+MA to Pusfume's atlases. Feeding
+    # the Pusfume MA restores per-pixel metallic (peg leg / buckles) and AO from
+    # Janfon's _s set. Emissive tint stays [0,0,0] here (neutral-safe): the MA
+    # alpha carries Janfon's emissive mask, but activating the glow needs an
+    # art-confirmed C985395A colour AND clean emissive alpha on the outfit _s
+    # maps (currently 255 = would self-illuminate) - see the build-report flag.
     $splicePayload = Join-Path $generatedRoot "spliced_child_payload.bin"
     $result = Invoke-HiddenPython @(
         (Join-Path $repoRoot "tools\make_spliced_child.py"),
@@ -1358,9 +1378,10 @@ if ($SplicedGameChild) {
         "--expect-parent", "3D25339231384C80",
         "--map", "DD74D8319F514D96=C263ECB79A8DCEC0",
         "--map", "E334A8CB6BCB5E6D=A4215592F6297E57",
+        "--map", "45FFAEEF53695A86=818C87B860407405",
         "--set-variable", "emissive_color=0,0,0",
         "--expect-texture", "texture_map_02af90f8=C263ECB79A8DCEC0",
-        "--expect-texture", "texture_map_27b67fd2=45FFAEEF53695A86",
+        "--expect-texture", "texture_map_27b67fd2=818C87B860407405",
         "--expect-texture", "texture_map_8bf37d8e=A4215592F6297E57",
         "--out", $splicePayload)
     Assert-HiddenToolSuccess $result "Spliced child payload generation"

@@ -490,10 +490,10 @@ Test-Condition ((Test-Path (Join-Path $repoRoot "tools\splice_bundle_resource.py
     $nativeBuildText -match 'hash:F72D636600F7F598' -and `
     $nativeBuildText -match 'DD74D8319F514D96=C263ECB79A8DCEC0' -and `
     $nativeBuildText -match 'E334A8CB6BCB5E6D=A4215592F6297E57' -and `
-    $nativeBuildText -notmatch '45FFAEEF53695A86=' -and `
+    $nativeBuildText -match '45FFAEEF53695A86=818C87B860407405' -and `
     $nativeBuildText -match '"--set-variable", "emissive_color=0,0,0"' -and `
     $nativeBuildText -match 'texture_map_02af90f8=C263ECB79A8DCEC0' -and `
-    $nativeBuildText -match 'texture_map_27b67fd2=45FFAEEF53695A86' -and `
+    $nativeBuildText -match 'texture_map_27b67fd2=818C87B860407405' -and `
     $nativeBuildText -match 'texture_map_8bf37d8e=A4215592F6297E57' -and `
     $nativeBuildText -match 'hash:C70B1AAD3B363E24' -and `
     $nativeBuildText -match 'C9CF19C214612D75=7F060B4938ADCF12' -and `
