@@ -55,7 +55,9 @@ hook remained invisible and striking scenery crashed ActionSweep while playing
 the hero-only `attack_hit_alt_effect` event on the Pactsworn controller. v0.6.30
 corrects a reversed visibility helper, performs Fatshark's guarded Packmaster
 `to_armed` handshake after the weapon exists, and strips every hero-only hit
-reaction from the temporary claw attacks. The v0.6.30 live result is pending.
+reaction from the temporary claw attacks. Source commit `be6f63a` was compiled,
+locally hash-verified, and uploaded as Workshop ManifestID
+`3684913542981979356`; the v0.6.30 live result is pending.
 Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,

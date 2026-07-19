@@ -30,6 +30,12 @@ request rather than in release notes.
   animated Pusfume hands. The Globadier-like gestures came from the shared
   Skaven first-person base, while the crash locals proved the equipped item and
   spawned weapon unit were still Pusfume's Packmaster hook.
+- Built and hash-verified the v0.6.30 native package from source commit
+  `be6f63a`, deployed all eight game files locally, and uploaded the identical
+  payload to the friends-only Workshop item. Steam confirmed ManifestID
+  `3684913542981979356` at 2026-07-18 20:34 America/Chicago. All 63 regression
+  tests, source preflight, material/animation checks, and the 54-node compiled
+  rest validation pass; live gameplay validation remains pending.
 
 - Fixed crash `3e42f9dd-5fbe-495d-8d55-d44ab5d0b062` when attacking after
   swapping to the Warpfire Thrower. The Versus condition called the

@@ -80,6 +80,9 @@ scenery crashed because the borrowed action sent `attack_hit_alt_effect` to the
 Skaven controller. v0.6.30 clears the reversed diagnostic/native hide reasons,
 runs the guarded Packmaster armed presentation after the weapon unit exists,
 and removes all hero-only hit reactions from the temporary claw action table.
+Source commit `be6f63a` was compiled, locally hash-verified, and uploaded at
+2026-07-18 20:34 America/Chicago. Steam confirmed ManifestID
+`3684913542981979356`; the live result is pending.
 
 ## Before opening Heroes
 
