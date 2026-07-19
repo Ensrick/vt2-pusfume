@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.28-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.29-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -63,7 +63,16 @@ Janfon/Ranger `j_spine2` probe node. v0.6.28 guards all probe pairs and logs
 unavailable nodes without calling Stingray's assertion-prone lookup.
 Source commit `2fa45c5` was compiled, locally hash-verified, and uploaded at
 2026-07-18 19:21 America/Chicago. Steam confirmed ManifestID
-`2137408449754657186`; the live result is pending.
+`2137408449754657186`. The live build spawned without that assertion, and its
+first-person probe showed identity scale with `0.0000m` error at all available
+arm and hand links. The arms were nevertheless a huge deformed lump because
+the Bardin profile installed its hero controller on the Skaven base. It later
+crashed while attacking after a swap because the native Warpfire condition
+called the Pactsworn-only `is_climbing()` status method.
+v0.6.29 guards the adapted Warpfire status/overcharge API and prevents Bardin's
+common state machine from replacing the native Skaven controller during spawn
+or weapon swaps. This is deliberately a controller-only visual test: no model,
+scale, attachment, or material transform changed.
 
 ## Before opening Heroes
 

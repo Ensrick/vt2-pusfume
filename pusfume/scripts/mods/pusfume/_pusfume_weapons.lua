@@ -88,13 +88,27 @@ end
 local function hero_warpfire_condition(action_user)
     local status_extension = ScriptUnit.has_extension(action_user, "status_system")
 
-    if status_extension and status_extension:is_climbing() then
+    -- is_climbing belongs to the playable-Pactsworn status extension. Pusfume
+    -- keeps the ordinary hero extension in Adventure, where that method is
+    -- intentionally absent.
+    if status_extension and type(status_extension.is_climbing) == "function"
+            and status_extension:is_climbing() then
         return false
     end
 
     local overcharge_extension = ScriptUnit.has_extension(action_user, "overcharge_system")
 
-    return overcharge_extension and overcharge_extension:get_overcharge_value() <= 0
+    return overcharge_extension
+        and type(overcharge_extension.get_overcharge_value) == "function"
+        and overcharge_extension:get_overcharge_value() <= 0
+end
+
+local function hero_warpfire_reload_condition(action_user)
+    local overcharge_extension = ScriptUnit.has_extension(action_user, "overcharge_system")
+
+    return overcharge_extension
+        and type(overcharge_extension.get_overcharge_value) == "function"
+        and overcharge_extension:get_overcharge_value() > 0
 end
 
 
@@ -117,6 +131,8 @@ local function sanitize_warpfire_template(template)
     action_one.fire.finish_function = nil
     action_reload.default.enter_function = nil
     action_reload.default.finish_function = nil
+    action_reload.default.condition_func = hero_warpfire_reload_condition
+    action_reload.default.chain_condition_func = hero_warpfire_reload_condition
     template.synced_states = nil
 
     return true

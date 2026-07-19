@@ -52,6 +52,22 @@ class RuntimePresentationTests(unittest.TestCase):
             self.native,
         )
 
+    def test_native_skaven_rig_never_receives_bardin_state_machine(self):
+        self.assertIn(
+            "local donor_default_state_machine = profile.default_state_machine",
+            self.native,
+        )
+        self.assertIn("profile.default_state_machine = nil", self.native)
+        self.assertIn("profile.default_state_machine = donor_default_state_machine", self.native)
+        self.assertIn(
+            'mod:hook(PlayerUnitFirstPerson, "set_state_machine"',
+            self.native,
+        )
+        self.assertIn(
+            "new_state_machine == extension._pusfume_donor_default_state_machine",
+            self.native,
+        )
+
     def test_selector_name_is_guarded_at_final_write(self):
         self.assertIn('mod:hook(class, "_set_hero_info"', self.ui)
         self.assertIn('hero_name = mod:localize("pusfume_character_name")', self.ui)

@@ -21,7 +21,7 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current friends-only live-test candidate is **v0.6.28-dev**. It keeps the
+The current friends-only live-test candidate is **v0.6.29-dev**. It keeps the
 working v0.6.22 third-person materials, authored idle, and restored original
 walk. It replaces the Ranger first-person base with Fatshark's shared Skaven
 base and native Packmaster arms, establishing an unwarped Pactsworn weapon-rig
@@ -42,7 +42,14 @@ That test reached a successful native spawn, then v0.6.27's delayed diagnostic
 asserted on a Janfon/Ranger-only probe node. v0.6.28 guards every probe node;
 missing diagnostic pairs no longer affect gameplay.
 The v0.6.28 candidate is source commit `2fa45c5`, Workshop ManifestID
-`2137408449754657186`; live gameplay validation remains pending.
+`2137408449754657186`. Its live attachment probe reported identity scale and
+zero error at every available arm/hand link, but the arms were grossly
+deformed. Source comparison found that the shared Bardin profile was applying
+the hero common state machine to the native Skaven base at spawn and after
+weapon swaps; real Pactsworn profiles intentionally do not do this. v0.6.29
+suppresses only that mismatched controller and capability-guards the Versus
+Warpfire callbacks after crash
+`3e42f9dd-5fbe-495d-8d55-d44ab5d0b062`.
 Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,

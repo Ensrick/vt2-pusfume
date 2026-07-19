@@ -40,6 +40,19 @@ class WeaponContractTests(unittest.TestCase):
         self.assertIn("hero_warpfire_condition", WEAPONS)
         self.assertIn("template.synced_states = nil", WEAPONS)
 
+    def test_warpfire_guards_pactsworn_only_status_api_in_adventure(self):
+        self.assertIn(
+            'type(status_extension.is_climbing) == "function"',
+            WEAPONS,
+        )
+        self.assertIn("hero_warpfire_reload_condition", WEAPONS)
+        self.assertEqual(
+            WEAPONS.count(
+                'type(overcharge_extension.get_overcharge_value) == "function"'
+            ),
+            2,
+        )
+
     def test_weapon_items_are_pusfume_only_and_ranger_weapons_are_not_inherited(self):
         self.assertEqual(WEAPONS.count("can_wield = { registry.CAREER_NAME }"), 2)
         self.assertIn(

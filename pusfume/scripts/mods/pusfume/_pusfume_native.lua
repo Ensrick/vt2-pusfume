@@ -1402,12 +1402,24 @@ local function install_first_person_hook(registry, config)
             -- init. Substitute only for that call, then restore the shared
             -- extension data before any later system can observe the change.
             extension_init_data.skin_name = config.skin_name
+            local donor_default_state_machine = profile.default_state_machine
+
+            if state.native_skaven_skin_registered then
+                -- Playable Pactsworn profiles deliberately omit this field:
+                -- the shared Skaven base carries its own controller. Applying
+                -- Bardin's common controller deforms the Skaven skeleton even
+                -- though every attachment node is linked exactly.
+                profile.default_state_machine = nil
+            end
+
             mod:info("[pusfume] First-person skin substitution: %s -> %s",
                 tostring(donor_skin_name), config.skin_name)
             local result = func(extension, extension_init_context, unit, extension_init_data)
 
+            profile.default_state_machine = donor_default_state_machine
             extension_init_data.skin_name = donor_skin_name
             extension._pusfume_first_person = true
+            extension._pusfume_donor_default_state_machine = donor_default_state_machine
             extension._pusfume_weapon_hide_pending = false
             restore_first_person_weapons(extension)
             apply_first_person_materials(extension, config)
@@ -1422,6 +1434,18 @@ local function install_first_person_hook(registry, config)
         end
 
         return func(extension, extension_init_context, unit, extension_init_data)
+    end)
+    mod:hook(PlayerUnitFirstPerson, "set_state_machine", function(func, extension,
+            new_state_machine)
+        if extension._pusfume_first_person
+                and state.native_skaven_skin_registered
+                and new_state_machine == extension._pusfume_donor_default_state_machine then
+            mod:info("[pusfume] Ignored donor first-person state machine on native Skaven rig: %s",
+                tostring(new_state_machine))
+            return
+        end
+
+        return func(extension, new_state_machine)
     end)
     mod:hook_safe(PlayerUnitFirstPerson, "update", function(extension)
         if extension._pusfume_first_person then

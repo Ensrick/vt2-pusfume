@@ -10,6 +10,25 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Fixed crash `3e42f9dd-5fbe-495d-8d55-d44ab5d0b062` when attacking after
+  swapping to the Warpfire Thrower. The Versus condition called the
+  Pactsworn-only `is_climbing()` API on Pusfume's ordinary Adventure hero
+  status extension; all adapted status and overcharge callbacks are now
+  capability-guarded.
+- Prevented Bardin's common first-person animation state machine from being
+  installed on the native Skaven first-person base at spawn or reapplied as a
+  weapon-swap fallback. Fatshark's playable Packmaster profile and both native
+  weapon templates intentionally omit that override and retain the controller
+  embedded in the Skaven base.
+- Recorded the v0.6.28 live control result: the native base and Packmaster arms
+  spawned at identity scale, and every available arm/hand attachment pair had
+  `0.0000m` node error. This rules out the attachment transform as the primary
+  cause of the huge fur-and-claw lump and makes v0.6.29 a single-variable
+  controller test rather than another asset or transform revision.
+- Added regression coverage for the Adventure/Pactsworn API boundary, safe
+  Warpfire reload checks, temporary shared-profile restoration, and weapon-swap
+  state-machine rejection.
+
 - Fixed the v0.6.27 delayed first-person attachment-probe crash. The native
   Packmaster control spawned successfully, but its arm unit does not expose
   the old Janfon/Ranger `j_spine2` probe node; an unguarded `Unit.node` call
