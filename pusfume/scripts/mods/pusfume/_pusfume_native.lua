@@ -142,25 +142,10 @@ local function update_first_person_weapon_pose(extension, equipment)
             or wielded_slot == "slot_ranged" and "to_warpfire_thrower"
 
         extension._pusfume_weapon_pose_slot = wielded_slot
-        extension._pusfume_weapon_pose_pending = nil
 
         if role_event and play_first_person_pose(extension, role_event) then
-            -- The role transition must settle before the claw wield pose or
-            -- Stingray replaces the first event with the second in one frame.
-            if role_event == "to_packmaster" then
-                extension._pusfume_weapon_pose_pending = "to_packmaster_claw"
-            end
-
             mod:info("[pusfume] First-person role pose slot=%s event=%s",
                 tostring(wielded_slot), role_event)
-        end
-    elseif extension._pusfume_weapon_pose_pending then
-        local pending_event = extension._pusfume_weapon_pose_pending
-
-        if play_first_person_pose(extension, pending_event) then
-            extension._pusfume_weapon_pose_pending = nil
-            mod:info("[pusfume] First-person wield pose slot=%s event=%s",
-                tostring(wielded_slot), pending_event)
         end
     end
 end

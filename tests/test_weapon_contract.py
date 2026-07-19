@@ -77,7 +77,9 @@ class WeaponContractTests(unittest.TestCase):
         self.assertIn('action.kind == "sweep"', WEAPONS)
         self.assertIn('weapon_anim_event(owner_unit, "attack_grab")', WEAPONS)
         self.assertIn('action.anim_event_1p = "attack_grab"', WEAPONS)
-        self.assertIn('template.wield_anim = "to_packmaster_claw"', WEAPONS)
+        self.assertIn('template.wield_anim = "idle"', WEAPONS)
+        self.assertIn('template.pusfume_role_pose = "to_packmaster"', WEAPONS)
+        self.assertNotIn('"to_packmaster_claw"', WEAPONS)
 
     def test_packmaster_hook_has_an_adventure_damage_strike(self):
         self.assertIn("packmaster_hook_target", WEAPONS)
@@ -180,6 +182,15 @@ class WeaponContractTests(unittest.TestCase):
         self.assertIn("function M.allowed_backend_ids(slot_name)", WEAPONS)
         self.assertIn("function M.allowed_item_keys(slot_name)", WEAPONS)
         self.assertIn("function M.select_backend_id(slot_name, backend_id)", WEAPONS)
+
+    def test_crossbow_stand_in_isolated_from_bardin_animation_controller(self):
+        self.assertIn('template_name = "pusfume_crossbow_template"', WEAPONS)
+        self.assertIn("local crossbow_source = Weapons and Weapons.crossbow_template_1", WEAPONS)
+        self.assertIn("sanitize_placeholder_animation_events", WEAPONS)
+        self.assertIn("installed_crossbow.state_machine = nil", WEAPONS)
+        self.assertIn("installed_crossbow.load_state_machine = false", WEAPONS)
+        self.assertIn('installed_crossbow.wield_anim = "idle"', WEAPONS)
+        self.assertIn('installed_crossbow.reload_event = "idle"', WEAPONS)
 
     def test_custom_items_have_network_and_backend_registration(self):
         self.assertIn("append_lookup(NetworkLookup.item_names, item_key)", WEAPONS)

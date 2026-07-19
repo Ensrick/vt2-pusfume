@@ -71,7 +71,7 @@ M.RANGED_VARIANTS = {
         display_name = "pusfume_crossbow_name",
         item_key = "pusfume_crossbow",
         source_item = "dr_crossbow",
-        template_name = "crossbow_template_1",
+        template_name = "pusfume_crossbow_template",
     },
 }
 M.RANGED_VARIANT_ORDER = {
@@ -447,9 +447,32 @@ local function create_globadier_template(source_template)
     template.crosshair_style = "dot"
     template.pusfume_role_pose = "to_globadier"
     template.weapon_type = "THROWING_AXE"
-    template.wield_anim = "to_globadier"
+    template.wield_anim = "idle"
 
     return template
+end
+
+local function sanitize_placeholder_animation_events(actions)
+    local sanitized = 0
+
+    for _, sub_actions in pairs(actions or {}) do
+        if type(sub_actions) == "table" then
+            for _, action in pairs(sub_actions) do
+                if type(action) == "table" then
+                    for field_name, value in pairs(action) do
+                        if type(field_name) == "string" and type(value) == "string"
+                                and string.find(field_name, "anim", 1, true)
+                                and string.find(field_name, "event", 1, true) then
+                            action[field_name] = "idle"
+                            sanitized = sanitized + 1
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return sanitized
 end
 
 local PACKMASTER_UNSAFE_HIT_ANIMATION_FIELDS = {
@@ -747,10 +770,11 @@ local function register_templates()
     local ranged_source = Weapons and Weapons.vs_warpfire_thrower_gun
     local ratling_source = Weapons and Weapons.vs_ratling_gunner_gun
     local globadier_source = Weapons and Weapons.vs_poison_wind_globadier_orb
+    local crossbow_source = Weapons and Weapons.crossbow_template_1
 
     if not melee_source or not melee_actions or not assassin_source
             or not assassin_actions or not ranged_source
-            or not ratling_source or not globadier_source then
+            or not ratling_source or not globadier_source or not crossbow_source then
         return false
     end
 
@@ -784,7 +808,7 @@ local function register_templates()
             + sanitize_packmaster_melee_actions(template.actions)
         state.melee_actions_wrapped, state.melee_pose_actions =
             add_packmaster_weapon_events(template.actions)
-        template.wield_anim = "to_packmaster_claw"
+        template.wield_anim = "idle"
         template.pusfume_role_pose = "to_packmaster"
         Weapons[M.TEMPLATE_NAMES.slot_melee] = template
     else
@@ -797,7 +821,7 @@ local function register_templates()
         local installed_melee = Weapons[M.TEMPLATE_NAMES.slot_melee]
         state.melee_actions_wrapped, state.melee_pose_actions =
             add_packmaster_weapon_events(installed_melee.actions)
-        installed_melee.wield_anim = "to_packmaster_claw"
+        installed_melee.wield_anim = "idle"
         installed_melee.pusfume_role_pose = "to_packmaster"
     end
 
@@ -844,6 +868,28 @@ local function register_templates()
             create_globadier_template(globadier_source)
     end
 
+    local crossbow_definition = M.RANGED_VARIANTS.crossbow
+    local installed_crossbow = rawget(Weapons, crossbow_definition.template_name)
+
+    if not installed_crossbow or not installed_crossbow.actions
+            or not installed_crossbow.actions.action_one then
+        installed_crossbow = deep_clone(crossbow_source)
+        Weapons[crossbow_definition.template_name] = installed_crossbow
+    end
+
+    -- The temporary crossbow keeps Bardin's projectile and ammo behavior but
+    -- must never install his first-person controller on the native Skaven rig.
+    -- Until Pusfume receives authored crossbow poses, use inert native events.
+    installed_crossbow.state_machine = nil
+    installed_crossbow.load_state_machine = false
+    installed_crossbow.wield_anim = "idle"
+    installed_crossbow.wield_anim_no_ammo = "idle"
+    installed_crossbow.wield_anim_not_loaded = "idle"
+    installed_crossbow.reload_event = "idle"
+    installed_crossbow.pusfume_role_pose = "idle"
+    state.crossbow_animation_fields_sanitized =
+        sanitize_placeholder_animation_events(installed_crossbow.actions)
+
     local melee_graph_ready, melee_graph_error = validate_action_graph(
         Weapons[M.TEMPLATE_NAMES.slot_melee].actions)
     local ranged_graph_ready, ranged_graph_error = validate_action_graph(
@@ -854,11 +900,15 @@ local function register_templates()
         Weapons[globe_definition.template_name].actions)
     local assassin_graph_ready, assassin_graph_error = validate_action_graph(
         Weapons[assassin_definition.template_name].actions)
+    local crossbow_graph_ready, crossbow_graph_error = validate_action_graph(
+        Weapons[crossbow_definition.template_name].actions)
 
     state.action_graph_ready = melee_graph_ready and ranged_graph_ready
         and ratling_graph_ready and globe_graph_ready and assassin_graph_ready
+        and crossbow_graph_ready
     state.action_graph_error = melee_graph_error or ranged_graph_error
         or ratling_graph_error or globe_graph_error or assassin_graph_error
+        or crossbow_graph_error
 
     if not state.action_graph_ready then
         mod:error("[pusfume] Invalid weapon action graph: %s",

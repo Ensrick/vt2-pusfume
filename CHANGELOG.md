@@ -10,6 +10,15 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Fixed the ranged-to-hook switch crash by restoring Fatshark's playable
+  Pactsworn wield contract: weapon templates use `idle`, while Pusfume's native
+  rig enters its separate role pose. Removed the AI-only `to_packmaster_claw`
+  event, which produced an invalid negative Stingray animation index.
+- Gave the crossbow stand-in an isolated Pusfume template. It retains Bardin's
+  projectile and ammunition behavior but cannot install Bardin's first-person
+  state machine; placeholder animation events remain safely idle until authored
+  Skaven crossbow poses exist.
+
 - Added a Pusfume-scoped compatibility bridge for UI Tweaks/HideBuffs. The full
   Pactsworn Warpfire widget now supplies invisible legacy threshold styles and
   restores its authored height after HideBuffs updates it, preventing the

@@ -619,7 +619,12 @@ Test-Condition ($mainText -match 'weapons\.install\(registry\)' -and `
     $weaponsText -match 'adapt_ratling_template' -and `
     $weaponsText -match 'spawn_globadier_globe' -and `
     $weaponsText -match 'action\.anim_event_1p\s*=\s*"attack_grab"' -and `
-    $weaponsText -match 'template\.wield_anim\s*=\s*"to_packmaster_claw"' -and `
+    $weaponsText -match 'template\.wield_anim\s*=\s*"idle"' -and `
+    $weaponsText -match 'template\.pusfume_role_pose\s*=\s*"to_packmaster"' -and `
+    $weaponsText -notmatch 'to_packmaster_claw' -and `
+    $weaponsText -match 'template_name\s*=\s*"pusfume_crossbow_template"' -and `
+    $weaponsText -match 'installed_crossbow\.state_machine\s*=\s*nil' -and `
+    $weaponsText -match 'sanitize_placeholder_animation_events' -and `
     $weaponsText -match 'first_person_hit_anim' -and `
     $weaponsText -match 'action\[field_name\] = nil' -and `
     $weaponsText -match 'action_hand_contract_ready') `

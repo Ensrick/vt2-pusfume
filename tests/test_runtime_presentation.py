@@ -64,11 +64,7 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn("item_template.pusfume_role_pose", self.native)
         self.assertIn('wielded_slot == "slot_melee" and "to_packmaster"', self.native)
         self.assertIn('wielded_slot == "slot_ranged" and "to_warpfire_thrower"', self.native)
-        self.assertIn(
-            'extension._pusfume_weapon_pose_pending = "to_packmaster_claw"',
-            self.native,
-        )
-        self.assertIn('if role_event == "to_packmaster" then', self.native)
+        self.assertNotIn("to_packmaster_claw", self.native)
         self.assertIn("extension._pusfume_weapon_hide_pending = false", self.native)
         self.assertIn("restore_first_person_weapons(extension)", self.native)
 
