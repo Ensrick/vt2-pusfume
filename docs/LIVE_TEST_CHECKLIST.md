@@ -94,7 +94,9 @@ That build crashed in `WeaponUnitExtension.get_action` because the native
 Warpfire synchronized state retained `dark_pact_action_one` after v0.6.31
 removed that group. v0.6.32 retains lookup-correct compatibility aliases,
 validates every action-chain destination before registration, and stages the
-native Packmaster/claw first-person poses. Build and ManifestID are pending.
+native Packmaster/claw first-person poses. Source commit `b2a42a0` was
+compiled and locally hash-verified, then uploaded friends-only at 2026-07-18
+22:10 America/Chicago. Steam confirmed ManifestID `1170425049691334215`.
 
 ## Before opening Heroes
 

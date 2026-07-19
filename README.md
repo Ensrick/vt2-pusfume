@@ -36,6 +36,8 @@ registration. The claw retains damaging hero sweeps, enters the native
 Packmaster/claw poses, and receives `attack_grab` on attack even without a grab
 target; exact dragging remains a larger career-state feature. Pusfume's weapon inventory is career-filtered, so
 the shared Bardin profile no longer exposes Bardin weapons to him.
+The v0.6.32 candidate is source commit `b2a42a0`, Workshop ManifestID
+`1170425049691334215`; live gameplay verification is pending.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person
 inventory packages resident before vanilla spawned Pusfume. v0.6.27 loads and
 verifies those unit packages synchronously with a dedicated reference before

@@ -23,6 +23,11 @@ request rather than in release notes.
   `to_warpfire_thrower` for ranged. Temporary hook starts and sweeps now play
   the native `attack_grab` first-person event while retaining damaging
   Adventure sweeps when no valid grab target exists.
+- Compiled source commit `b2a42a0`, deployed and hash-verified all eight native
+  Workshop files locally, and uploaded the friends-only v0.6.32 candidate as
+  Steam ManifestID `1170425049691334215` at 2026-07-18 22:10
+  America/Chicago. Steam's Workshop log confirms the remote content manifest;
+  live gameplay verification is pending.
 
 - Recorded the v0.6.30 live result: Pusfume spawned without a crash, the native
   Skaven hands were coherent, animated, and remained visible, and the real

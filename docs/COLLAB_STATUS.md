@@ -18,6 +18,9 @@ architecture and reproduction contract are in
   lookup metadata, validates the complete action graph before registration,
   and stages Packmaster/claw first-person pose events. The hook remains a
   damaging Adventure sweep and plays `attack_grab` without requiring a target.
+  Source commit `b2a42a0` was compiled, locally hash-verified, and uploaded
+  friends-only at 2026-07-18 22:10 America/Chicago. Steam confirmed ManifestID
+  `1170425049691334215`; live verification is pending.
 - 2026-07-19 local: v0.6.30 LIVE RESULT / v0.6.31 CANDIDATE - no Pusfume crash;
   hands were coherent, visible, and animated, and the native hook armed at the
   correct identity transform. The weapons remained inert because Warpfire used
