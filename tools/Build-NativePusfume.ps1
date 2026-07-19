@@ -22,6 +22,7 @@ param(
     [switch]$ParentChildMaterial,
     [switch]$NoDonorTextureShadow,
     [switch]$SplicedGameChild,
+    [switch]$EmissionProbe,
     [switch]$UseBsiSkinFallback,
     [switch]$Upload,
     [switch]$NoRemote,
@@ -144,6 +145,11 @@ if ($furEnabled) {
 if ($SplicedGameChild) {
     $ParentChildMaterial = $true
     $NoDonorTextureShadow = $true
+}
+# Opt-in emission-channel A/B probe. It edits the spliced body child's atlases
+# and sets a red emissive tint, so it only makes sense on the Track D path.
+if ($EmissionProbe -and -not $SplicedGameChild) {
+    throw "EmissionProbe requires -SplicedGameChild (it probes the spliced body child)"
 }
 if ($ParentChildMaterial -and -not $NoDonorTextureShadow) {
     throw "Parent-child and ordered texture-shadow experiments are mutually exclusive; add -NoDonorTextureShadow"
@@ -849,23 +855,102 @@ if ($furEnabled) {
     $textureNames += @("pusfume_fur_df", "pusfume_fur_nm", "pusfume_fur_s")
 }
 
+function Set-PusfumeEmissionProbe {
+    # Opt-in A/B diagnostic (-EmissionProbe). Zero one channel of a composed
+    # atlas everywhere, then stamp a solid blob back into one region, so exactly
+    # that region can self-illuminate through that channel once the splice sets a
+    # red emissive tint. Blue mode targets the normal atlas's blue; alpha mode
+    # targets the MA atlas's alpha. Never called on a normal build.
+    param(
+        [Parameter(Mandatory)][string]$AtlasPath,
+        [Parameter(Mandatory)][ValidateSet("blue", "alpha")][string]$Channel,
+        [Parameter(Mandatory)][int]$BlobX,
+        [Parameter(Mandatory)][int]$BlobY,
+        [Parameter(Mandatory)][int]$BlobWidth,
+        [Parameter(Mandatory)][int]$BlobHeight
+    )
+
+    Add-Type -AssemblyName System.Drawing
+    $source = [Drawing.Image]::FromFile($AtlasPath)
+    try {
+        $width = $source.Width
+        $height = $source.Height
+        $output = New-Object Drawing.Bitmap($width, $height, `
+            [Drawing.Imaging.PixelFormat]::Format32bppArgb)
+        $graphics = [Drawing.Graphics]::FromImage($output)
+        $attributes = New-Object Drawing.Imaging.ImageAttributes
+        $matrix = New-Object Drawing.Imaging.ColorMatrix
+        # Zero the probed channel across the whole atlas; the blob re-adds it in
+        # exactly one region so only that region can emit.
+        if ($Channel -eq "blue") { $matrix.Matrix22 = 0 } else { $matrix.Matrix33 = 0 }
+        $attributes.SetColorMatrix($matrix)
+        try {
+            $graphics.CompositingMode = [Drawing.Drawing2D.CompositingMode]::SourceCopy
+            $full = New-Object Drawing.Rectangle(0, 0, $width, $height)
+            $graphics.DrawImage($source, $full, 0, 0, $width, $height, `
+                [Drawing.GraphicsUnit]::Pixel, $attributes)
+            # SourceCopy overwrites the blob outright: blue mode writes B=255,
+            # alpha mode writes A=255. The blob's other channels go neutral,
+            # acceptable for a throwaway diagnostic build.
+            $blobColor = if ($Channel -eq "blue") {
+                [Drawing.Color]::FromArgb(255, 0, 0, 255)
+            } else {
+                [Drawing.Color]::FromArgb(255, 0, 255, 0)
+            }
+            $brush = New-Object Drawing.SolidBrush($blobColor)
+            try {
+                $graphics.FillRectangle($brush, $BlobX, $BlobY, $BlobWidth, $BlobHeight)
+            } finally {
+                $brush.Dispose()
+            }
+            $output.Save($AtlasPath, [Drawing.Imaging.ImageFormat]::Png)
+        } finally {
+            $attributes.Dispose()
+            $graphics.Dispose()
+            $output.Dispose()
+        }
+    } finally {
+        $source.Dispose()
+    }
+}
+
 Write-PusfumeAtlas "pusfume_atlas_df" "df" ([Drawing.Color]::Black)
 Write-PusfumeAtlas "pusfume_atlas_nm" "nm" ([Drawing.Color]::FromArgb(255, 128, 128, 255))
 Write-PusfumeAtlas "pusfume_atlas_s" "s" ([Drawing.Color]::Black)
-# MA (metallic / AO / unused / emissive-mask) atlas fed to the spliced body
-# child's third slot (channel 909D00F3, build alias texture_map_27b67fd2).
-# Verified against the installed Globadier's own MA texture 45FFAEEF53695A86
-# (BC3/DXT5, dxgi=77): R=metallic, G=AO, B=255 unused, A=emissive mask; this is
-# Fatshark's "M/AO/x/EM" packing (SDK endurance_badges *_ma). Janfon's _s maps
-# already carry the same layout (skaven_body_s: R=0 skin non-metal, G high AO,
-# A a bimodal mask), so the s-suffix sources compose straight into it. The clear
-# is the neutral MA value metallic=0 / AO=255 / B=255 / emissive-alpha=0 so
-# unmapped atlas gutters never read as metallic or self-illuminated.
+# MA (metallic / AO / unused / mask) atlas fed to the spliced body child's third
+# slot (channel 909D00F3, build alias texture_map_27b67fd2). Verified against the
+# installed Globadier's own MA texture 45FFAEEF53695A86 (BC3/DXT5, dxgi=77):
+# R=metallic, G=AO, B=255 unused, A a clean localized mask; Fatshark's
+# "M/AO/x/EM" packing. Janfon's _s maps carry the same channel order
+# (skaven_body_s: R=0 skin non-metal, G high, A a bimodal mask), so the s-suffix
+# sources compose straight in. The clear is the neutral value metallic=0 /
+# AO=255 / B=255 / alpha=0 so unmapped gutters never read metallic or
+# self-illuminated. (Whether the game reads A as emissive is unresolved; the
+# emissive tint stays dark, so the alpha content is inert on normal builds.)
 Write-PusfumeAtlas "pusfume_atlas_ma" "s" ([Drawing.Color]::FromArgb(0, 0, 255, 255))
 Write-NativeTextureRecipe "pusfume_atlas_df" $true
 Write-NativeTextureRecipe "pusfume_atlas_nm" $false
 Write-NativeTextureRecipe "pusfume_atlas_s" $false
 Write-NativeTextureRecipe "pusfume_atlas_ma" $false
+
+if ($EmissionProbe) {
+    # Emission-channel A/B probe. Split the body atlas tile (left half, image
+    # region 0..2048 x 0..4096) into two disjoint halves and light each through a
+    # different donor channel: the normal atlas's BLUE gets the TOP half, the MA
+    # atlas's ALPHA gets the BOTTOM half, and the splice sets a red emissive
+    # tint. In game, whichever body half glows red identifies the channel the
+    # shader honors (top -> normal.blue; bottom -> MA.alpha; both -> both
+    # contribute; neither -> emission rides a third path). Only the two atlas
+    # PNGs are rewritten; the compiled-material splice, package list, texture
+    # recipes, and every other build path are byte-identical to a normal build.
+    Set-PusfumeEmissionProbe -AtlasPath (Join-Path $textureRoot "pusfume_atlas_nm.png") `
+        -Channel "blue" -BlobX 0 -BlobY 0 -BlobWidth 2048 -BlobHeight 2048
+    Set-PusfumeEmissionProbe -AtlasPath (Join-Path $textureRoot "pusfume_atlas_ma.png") `
+        -Channel "alpha" -BlobX 0 -BlobY 2048 -BlobWidth 2048 -BlobHeight 2048
+    Write-Host ("EMISSION PROBE ACTIVE: normal.blue mask = body-tile TOP half, " +
+        "MA.alpha mask = body-tile BOTTOM half, emissive tint = red [25,0,0]. " +
+        "This is a DIAGNOSTIC build, not a shippable candidate.")
+}
 
 # Shadow builds must keep the atlas out of the startup package. These fallback
 # materials therefore use their original per-slot maps; the runtime donor swap
@@ -1375,6 +1460,13 @@ if ($SplicedGameChild) {
     # emission mask (his normal.B is standard normal-Z, his _s.A is a TINT mask
     # per his V2 Ubershader graph). Lighting the red arm needs Janfon's emission
     # mask + an in-game A/B test of which channel the shader reads - see report.
+    # Emissive tint: dark on normal builds; a bright red HDR value under
+    # -EmissionProbe so the probed body region visibly self-illuminates.
+    $bodyEmissiveColor = if ($EmissionProbe) {
+        "emissive_color=25,0,0"
+    } else {
+        "emissive_color=0,0,0"
+    }
     $splicePayload = Join-Path $generatedRoot "spliced_child_payload.bin"
     $result = Invoke-HiddenPython @(
         (Join-Path $repoRoot "tools\make_spliced_child.py"),
@@ -1384,7 +1476,7 @@ if ($SplicedGameChild) {
         "--map", "DD74D8319F514D96=C263ECB79A8DCEC0",
         "--map", "E334A8CB6BCB5E6D=A4215592F6297E57",
         "--map", "45FFAEEF53695A86=818C87B860407405",
-        "--set-variable", "emissive_color=0,0,0",
+        "--set-variable", $bodyEmissiveColor,
         "--expect-texture", "texture_map_02af90f8=C263ECB79A8DCEC0",
         "--expect-texture", "texture_map_27b67fd2=818C87B860407405",
         "--expect-texture", "texture_map_8bf37d8e=A4215592F6297E57",
