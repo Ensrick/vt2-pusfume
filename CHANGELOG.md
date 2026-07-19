@@ -36,6 +36,11 @@ request rather than in release notes.
 - Expanded weapon and inventory regression coverage to 65 tests and updated
   source preflight for the native-action, target, damage, and career-filter
   contracts.
+- Compiled source commit `a7cc929`, deployed and hash-verified all eight native
+  Workshop files locally, and uploaded the friends-only v0.6.31 candidate as
+  Steam ManifestID `1065739404025473822` at 2026-07-18 21:22
+  America/Chicago. GitHub source-preflight CI passed; live gameplay
+  verification is pending.
 
 - Fixed crash `9970472a-2b65-409b-b45d-1421516dbc88` in
   `ActionSweep._play_hit_animations`. The real Packmaster hook was equipped,

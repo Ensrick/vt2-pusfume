@@ -62,6 +62,9 @@ locally hash-verified, and uploaded as Workshop ManifestID
 `3684913542981979356`. Its live result was crash-free with coherent hands and
 the armed hook unit, but neither weapon had usable Adventure actions and
 Bardin's weapon catalog remained visible. v0.6.31 addresses those boundaries.
+Source commit `a7cc929` was compiled, locally hash-verified, and uploaded as
+friends-only Workshop ManifestID `1065739404025473822`; live gameplay
+verification is pending.
 Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,

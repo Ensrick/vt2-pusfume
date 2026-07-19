@@ -87,6 +87,9 @@ and an armed hook unit, but both weapons were inert and Bardin's weapon catalog
 remained visible. v0.6.31 maps normal hero controls to native Warpfire behavior,
 adds Adventure targeting/damage, animates the claw during safe melee sweeps,
 and career-filters Pusfume's weapon inventory. Its live result is pending.
+Source commit `a7cc929` was compiled and hash-verified locally, then uploaded
+at 2026-07-18 21:22 America/Chicago as friends-only Workshop ManifestID
+`1065739404025473822`.
 
 ## Before opening Heroes
 

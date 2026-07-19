@@ -22,7 +22,9 @@ architecture and reproduction contract are in
   career-filters Pusfume's weapon grids. Blender 5.2 independently found zero
   escaped UV loops but one missing expected material, `p_eye_g`; that body
   issue remains isolated. All 65 tests and source preflight pass; live
-  verification is pending.
+  verification is pending. Source commit `a7cc929` was compiled and all eight
+  deployed Workshop files hash-matched staging before the friends-only upload,
+  ManifestID `1065739404025473822` at 2026-07-18 21:22 America/Chicago.
 - 2026-07-18 local: v0.6.29 LIVE RESULT / v0.6.30 SHIPPED - preserving the
   native Skaven controller fixed the gross hand deformation: Pusfume's hands
   were visible, coherent, and animated. The apparent Globadier gestures are
