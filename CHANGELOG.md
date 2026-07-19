@@ -10,6 +10,11 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Added a Pusfume-scoped compatibility bridge for UI Tweaks/HideBuffs. The full
+  Pactsworn Warpfire widget now supplies invisible legacy threshold styles and
+  restores its authored height after HideBuffs updates it, preventing the
+  `max_threshold` nil-index crash without changing UI Tweaks or other careers.
+
 - Made the Ratling Gun a finite 120-round Adventure weapon. It now consumes
   ammunition, becomes eligible for normal ammo-box refills, and no longer
   triggers the donor Bardin `activate_ability` bark on spin-up.

@@ -31,6 +31,11 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn("install_overcharge_hook", self.ui)
         self.assertIn("UIWidgets.create_dark_pact_overcharge_bar_widget", self.ui)
         self.assertIn('"charge_bar_dark_pact"', self.ui)
+        self.assertIn("definition.style.min_threshold", self.ui)
+        self.assertIn("definition.style.max_threshold", self.ui)
+        self.assertIn('mod:hook(OverchargeBarUI, "_update_overcharge"', self.ui)
+        self.assertIn("style.bar_1.size[2] = 70", self.ui)
+        self.assertIn("style.max_threshold.size[2] = 0", self.ui)
 
     def test_menu_preview_is_authored_idle_without_donor_weapons(self):
         self.assertIn('career.preview_animation = "idle"', self.registry)

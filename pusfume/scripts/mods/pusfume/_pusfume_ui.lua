@@ -642,6 +642,21 @@ local function install_overcharge_hook(registry)
             if pusfume then
                 definition = UIWidgets.create_dark_pact_overcharge_bar_widget(
                     "charge_bar_dark_pact", nil, nil, nil, nil, { 250, 70 })
+
+                -- UI Tweaks' legacy HideBuffs hook assumes every overcharge
+                -- widget exposes both threshold styles. Pactsworn's radial
+                -- widget intentionally omits them, so provide invisible shims
+                -- without adding threshold passes to the Versus presentation.
+                definition.style.min_threshold = {
+                    color = { 0, 0, 0, 0 },
+                    offset = { 0, 0, 0 },
+                    size = { 0, 0 },
+                }
+                definition.style.max_threshold = {
+                    color = { 0, 0, 0, 0 },
+                    offset = { 0, 0, 0 },
+                    size = { 0, 0 },
+                }
             else
                 definition = UIWidgets.create_overcharge_bar_widget(
                     "charge_bar", nil, nil, nil, nil, { 250, 16 })
@@ -657,6 +672,23 @@ local function install_overcharge_hook(registry)
         end
 
         return func(overcharge_ui, dt, t, player)
+    end)
+
+    mod:hook(OverchargeBarUI, "_update_overcharge", function(func,
+            overcharge_ui, player, ...)
+        local has_overcharge = func(overcharge_ui, player, ...)
+
+        if overcharge_ui._pusfume_dark_pact_widget then
+            local style = overcharge_ui.charge_bar.style
+
+            -- HideBuffs resets this height to 10 before returning. Restore the
+            -- authored Pactsworn dimensions after the complete hook chain.
+            style.bar_1.size[2] = 70
+            style.min_threshold.size[2] = 0
+            style.max_threshold.size[2] = 0
+        end
+
+        return has_overcharge
     end)
     state.overcharge_hook_installed = true
 end
