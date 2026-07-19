@@ -536,11 +536,14 @@ local function strike_with_packmaster_hook(owner_unit)
         or Unit.world_position(owner_unit, 0)
     local attack_direction = Vector3.normalize(target_position - owner_position)
 
+    -- damage_type must be a NetworkLookup.damage_types key; the billhook
+    -- pull damage-profile name is not one and CTDs on the rpc_add_damage
+    -- encode (crash 2026-07-19 16:42).
     DamageUtils.add_damage_network(target_unit, owner_unit, 15, "torso",
-        "light_slashing_smiter_pull", nil, attack_direction,
+        "light_slashing_smiter", nil, attack_direction,
         M.ITEM_KEYS.slot_melee, nil, nil, nil, nil, nil, nil, nil,
         nil, nil, nil, 1)
-    mod:info("[pusfume] Packmaster hook pull target=%s range=4.5 profile=light_slashing_smiter_pull",
+    mod:info("[pusfume] Packmaster hook pull target=%s range=4.5 damage_type=light_slashing_smiter",
         tostring(target_unit))
 
     return true

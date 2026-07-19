@@ -10,6 +10,16 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Compiled, deployed (8 files), and uploaded the friends-only v0.6.37-dev
+  candidate with the hook damage-type CTD fix. Steam confirmed ManifestID
+  `3176743220645990543` at 2026-07-19 12:37 America/Chicago. Live gameplay
+  verification is pending.
+- Fixed the Packmaster hook strike CTD on training dummies (2026-07-19 16:42
+  playtest): the strike helper passed the billhook damage-profile name
+  `light_slashing_smiter_pull` as the networked damage type, which is not a
+  `NetworkLookup.damage_types` key, so the host crashed encoding
+  `rpc_add_damage`. The strike now uses the vanilla `light_slashing_smiter`
+  damage type.
 - Fixed the ranged-to-hook switch crash by restoring Fatshark's playable
   Pactsworn wield contract: weapon templates use `idle`, while Pusfume's native
   rig enters its separate role pose. Removed the AI-only `to_packmaster_claw`
@@ -27,9 +37,9 @@ request rather than in release notes.
 - Made the Ratling Gun a finite 120-round Adventure weapon. It now consumes
   ammunition, becomes eligible for normal ammo-box refills, and no longer
   triggers the donor Bardin `activate_ability` bark on spin-up.
-- Replaced the Packmaster hook's damage-only helper with Fatshark's shipped
-  billhook pulling damage profile. Valid non-boss Adventure enemies now receive
-  a networked pulling stagger toward Pusfume while retaining the prototype hit.
+- Pointed the Packmaster hook's damage-only helper at Fatshark's shipped
+  billhook smiter damage family. The strike keeps the flat prototype hit; a
+  networked pulling stagger toward Pusfume is not yet implemented.
 - Added Pusfume-only Assassin Claws using the complete Gutter Runner claw units
   and a guarded dual-dagger action graph, plus a functional Bardin-crossbow
   duplicate reserved as the future Skaven-crossbow stand-in.

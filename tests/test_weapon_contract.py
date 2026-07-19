@@ -88,7 +88,8 @@ class WeaponContractTests(unittest.TestCase):
         self.assertIn("strike_with_packmaster_hook(owner_unit)", WEAPONS)
         self.assertIn("DamageUtils.add_damage_network(target_unit, owner_unit, 15", WEAPONS)
         self.assertIn('M.ITEM_KEYS.slot_melee', WEAPONS)
-        self.assertIn('"light_slashing_smiter_pull"', WEAPONS)
+        self.assertIn('"light_slashing_smiter"', WEAPONS)
+        self.assertNotIn('"light_slashing_smiter_pull"', WEAPONS)
         self.assertNotIn('"medium_slashing_smiter_2h", nil, attack_direction', WEAPONS)
 
     def test_ratling_and_globadier_have_adventure_adapters(self):
