@@ -21,7 +21,7 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current friends-only live-test candidate is **v0.6.27-dev**. It keeps the
+The current friends-only live-test candidate is **v0.6.28-dev**. It keeps the
 working v0.6.22 third-person materials, authored idle, and restored original
 walk. It replaces the Ranger first-person base with Fatshark's shared Skaven
 base and native Packmaster arms, establishing an unwarped Pactsworn weapon-rig
@@ -36,8 +36,11 @@ The v0.6.26 live test proved Adventure did not make the Skaven first-person
 inventory packages resident before vanilla spawned Pusfume. v0.6.27 loads and
 verifies those unit packages synchronously with a dedicated reference before
 skin registration and rechecks residency immediately before player spawn.
-The candidate is source commit `182f977`, Workshop ManifestID
+The v0.6.27 candidate is source commit `182f977`, Workshop ManifestID
 `4012083168238356315`; live gameplay validation remains pending.
+That test reached a successful native spawn, then v0.6.27's delayed diagnostic
+asserted on a Janfon/Ranger-only probe node. v0.6.28 guards every probe node;
+missing diagnostic pairs no longer affect gameplay.
 Live logs have confirmed mod startup, zero-failure
 preflight, selector-card creation, native hero preview, normal profile
 confirmation, player spawn, model/material/controller attachment, weapon setup,

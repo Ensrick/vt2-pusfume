@@ -1315,14 +1315,20 @@ local function log_first_person_attachment_probe(extension)
 
     local node_distances = {}
     for _, node_pair in ipairs(first_person_probe_nodes) do
-        local source_node = Unit.node(source, node_pair.source)
-        local target_node = Unit.node(target, node_pair.target)
-        local source_position = Unit.world_position(source, source_node)
-        local target_position = Unit.world_position(target, target_node)
+        if Unit.has_node(source, node_pair.source)
+                and Unit.has_node(target, node_pair.target) then
+            local source_node = Unit.node(source, node_pair.source)
+            local target_node = Unit.node(target, node_pair.target)
+            local source_position = Unit.world_position(source, source_node)
+            local target_position = Unit.world_position(target, target_node)
 
-        node_distances[#node_distances + 1] = string.format(
-            "%s->%s=%.4f", node_pair.source, node_pair.target,
-            Vector3.distance(source_position, target_position))
+            node_distances[#node_distances + 1] = string.format(
+                "%s->%s=%.4f", node_pair.source, node_pair.target,
+                Vector3.distance(source_position, target_position))
+        else
+            node_distances[#node_distances + 1] = string.format(
+                "%s->%s=unavailable", node_pair.source, node_pair.target)
+        end
     end
 
     extension._pusfume_first_person_probe_logged = true

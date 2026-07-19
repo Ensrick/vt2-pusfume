@@ -28,6 +28,17 @@ class NativeProbeGuardTests(unittest.TestCase):
             self.source,
         )
 
+    def test_first_person_probe_checks_both_nodes_before_lookup(self):
+        self.assertIn(
+            "if Unit.has_node(source, node_pair.source)\n"
+            "                and Unit.has_node(target, node_pair.target) then",
+            self.source,
+        )
+        self.assertIn(
+            '"%s->%s=unavailable", node_pair.source, node_pair.target',
+            self.source,
+        )
+
     def test_manual_probe_node_is_guarded(self):
         self.assertIn('if Unit.has_node(mesh, "j_spine1") then', self.source)
         self.assertIn("Manual skin deformation probe skipped", self.source)

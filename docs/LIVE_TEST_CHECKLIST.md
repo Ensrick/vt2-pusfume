@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.27-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.28-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -57,6 +57,10 @@ registering the skin and falls back safely if any package cannot load. Source
 commit `182f977` was compiled, locally hash-verified, and uploaded at
 2026-07-18 18:55 America/Chicago. Steam confirmed ManifestID
 `4012083168238356315`; the live result is pending.
+That candidate successfully reached native player spawn, then its delayed
+diagnostic asserted because Packmaster arms do not expose the old
+Janfon/Ranger `j_spine2` probe node. v0.6.28 guards all probe pairs and logs
+unavailable nodes without calling Stingray's assertion-prone lookup.
 
 ## Before opening Heroes
 

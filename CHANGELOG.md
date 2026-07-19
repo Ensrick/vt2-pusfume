@@ -10,6 +10,14 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Fixed the v0.6.27 delayed first-person attachment-probe crash. The native
+  Packmaster control spawned successfully, but its arm unit does not expose
+  the old Janfon/Ranger `j_spine2` probe node; an unguarded `Unit.node` call
+  asserted in Stingray two seconds after spawn.
+- Guarded both units in every first-person probe pair with `Unit.has_node`.
+  Unavailable diagnostic pairs are now reported as such without affecting
+  gameplay, and regression coverage locks the assertion-safe lookup order.
+
 - Fixed the v0.6.26 spawn crash at
   `player_unit_first_person.lua:60`. The live locals proved
   `World.spawn_unit` returned `nil` for the non-resident shared Skaven
