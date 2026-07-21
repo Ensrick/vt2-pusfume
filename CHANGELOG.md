@@ -10,6 +10,14 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Fixed both Janfon first-person attachments remaining at world origin when an
+  external `AttachmentUtils.link` guard rejected one optional fingertip node.
+  Pusfume now links every shared node directly and logs linked/skipped counts.
+- Added a deferred initial-wield reconciliation so spawning with a Versus
+  weapon immediately selects Janfon's 99-bone Skaven attachment instead of
+  waiting for the first manual weapon swap.
+- Built, SHA-256 verified, locally deployed, and uploaded the v0.6.48
+  friends-only correction as Steam ManifestID `3568802277422307144`.
 - Corrected the first-person dual-rig architecture after live testing exposed
   Packmaster hands animating independently from the frozen hero camera. The
   hero first-person base now remains the permanent camera/look authority;

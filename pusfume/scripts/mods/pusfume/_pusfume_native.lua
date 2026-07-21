@@ -1550,6 +1550,58 @@ local function set_unit_visible(unit, visible)
     end
 end
 
+local function link_shared_first_person_nodes(world, source, target,
+        node_linking, label)
+    if not source or not Unit.alive(source)
+            or not target or not Unit.alive(target) then
+        mod:error("[pusfume] First-person guarded link has dead unit label=%s",
+            tostring(label))
+        return false
+    end
+
+    -- AttachmentUtils.link can be wrapped by other mods with an all-or-nothing
+    -- missing-node guard. Janfon intentionally omits unused fingertip nodes,
+    -- so link each shared pair through Stingray's primitive instead.
+    World.unlink_unit(world, target)
+
+    local linked = 0
+    local skipped = 0
+    local skipped_names = {}
+
+    for _, link_data in ipairs(node_linking) do
+        local source_node = link_data.source
+        local target_node = link_data.target
+        local source_exists = type(source_node) ~= "string"
+            or Unit.has_node(source, source_node)
+        local target_exists = type(target_node) ~= "string"
+            or Unit.has_node(target, target_node)
+
+        if source_exists and target_exists then
+            local source_index = type(source_node) == "string"
+                and Unit.node(source, source_node)
+                or source_node
+            local target_index = type(target_node) == "string"
+                and Unit.node(target, target_node)
+                or target_node
+
+            World.link_unit(world, target, target_index, source, source_index)
+            linked = linked + 1
+        else
+            skipped = skipped + 1
+            if #skipped_names < 8 then
+                skipped_names[#skipped_names + 1] = string.format(
+                    "%s->%s", tostring(source_node), tostring(target_node))
+            end
+        end
+    end
+
+    mod:info(
+        "[pusfume] First-person guarded links label=%s linked=%d skipped=%d nodes=%s",
+        tostring(label), linked, skipped, table.concat(skipped_names, ","))
+
+    return linked > 0
+end
+
 local function spawn_dual_first_person_rig(extension, config)
     if not state.dual_first_person_rigs_ready
             or extension._pusfume_skaven_first_person_unit then
@@ -1565,11 +1617,17 @@ local function spawn_dual_first_person_rig(extension, config)
     local skaven_arms = unit_spawner:spawn_local_unit(
         config.versus_first_person_unit)
 
-    AttachmentUtils.link(
+    local linked = link_shared_first_person_nodes(
         extension.world,
         skaven_base,
         skaven_arms,
-        AttachmentNodeLinking.skaven_first_person_attachment)
+        AttachmentNodeLinking.skaven_first_person_attachment,
+        "Janfon-99-skaven")
+    if not linked then
+        Managers.state.unit_spawner:mark_for_deletion(skaven_arms)
+        Managers.state.unit_spawner:mark_for_deletion(skaven_base)
+        return false
+    end
     set_unit_visible(skaven_arms, false)
 
     -- PlayerUnitFirstPerson and the viewport must keep the hero base forever.
@@ -1864,7 +1922,14 @@ local function install_first_person_hook(registry, config)
             extension._pusfume_weapon_hide_pending = true
             apply_pusfume_voice_switch(extension.first_person_unit)
             apply_pusfume_voice_switch(extension.first_person_attachment_unit)
+            link_shared_first_person_nodes(
+                extension.world,
+                extension.first_person_unit,
+                extension.first_person_attachment_unit,
+                AttachmentNodeLinking.first_person_attachment,
+                "Janfon-160-human")
             spawn_dual_first_person_rig(extension, config)
+            extension._pusfume_initial_rig_pending = true
             restore_first_person_weapons(extension)
             apply_first_person_materials(extension, config)
             if config.first_person_direct_link then
@@ -1928,6 +1993,18 @@ local function install_first_person_hook(registry, config)
             -- Clear the old hand-diagnostic hide reason after hot reloads.
             restore_first_person_weapons(extension)
             apply_first_person_materials(extension, config)
+            if extension._pusfume_initial_rig_pending
+                    and extension.inventory_extension then
+                local wielded_slot = extension.inventory_extension:get_wielded_slot_name()
+                if wielded_slot then
+                    extension._pusfume_initial_rig_pending = nil
+                    prepare_first_person_rig_for_wield(
+                        extension.inventory_extension, wielded_slot)
+                    mod:info(
+                        "[pusfume] Initial first-person attachment selected slot=%s",
+                        tostring(wielded_slot))
+                end
+            end
             local active_attachment = extension._pusfume_active_first_person_rig
                     == "skaven"
                 and extension._pusfume_skaven_first_person_attachment

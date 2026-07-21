@@ -100,6 +100,24 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn("World.link_unit(", self.native)
         self.assertIn("camera_base=hero", self.native)
 
+    def test_janfon_attachments_bypass_all_or_nothing_link_wrappers(self):
+        self.assertIn("local function link_shared_first_person_nodes", self.native)
+        self.assertIn("World.link_unit(world, target, target_index, source, source_index)", self.native)
+        self.assertIn('"Janfon-160-human"', self.native)
+        self.assertIn('"Janfon-99-skaven"', self.native)
+        dual_spawn = self.native.split(
+            "local function spawn_dual_first_person_rig", 1
+        )[1].split("local function first_person_weapon_units", 1)[0]
+        self.assertNotIn("AttachmentUtils.link(", dual_spawn)
+
+    def test_initial_wield_selects_the_correct_janfon_attachment(self):
+        self.assertIn("extension._pusfume_initial_rig_pending = true", self.native)
+        self.assertIn("extension.inventory_extension:get_wielded_slot_name()", self.native)
+        self.assertIn(
+            "prepare_first_person_rig_for_wield(\n                        extension.inventory_extension, wielded_slot)",
+            self.native,
+        )
+
     def test_weapon_family_switches_between_janfon_versus_and_human_attachments(self):
         for role in (
             "packmaster",
