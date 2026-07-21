@@ -1348,12 +1348,11 @@ $donorTextureShadowPackageValue = if ($NoDonorTextureShadow) {
     '"resource_packages/pusfume/native_shadow"'
 }
 $firstPersonDirectLinkValue = if ($firstPersonEnabled) { "true" } else { "false" }
-# When a custom first-person arms blend is supplied it IS the live 1P unit (a
-# standard human hero rig), so the native Skaven Packmaster arms fallback must
-# be off; that also un-suppresses the donor human default state machine at
-# runtime (native.lua gates the suppression on native_skaven_skin_registered).
-# With no custom arms, keep the Skaven fallback as before.
+# A custom blend makes the human rig the default controller, so the old
+# all-Skaven fallback remains off. The separate dual-rig path keeps native
+# role-specific Skaven arms resident only for Versus weapon families.
 $nativeSkavenFirstPersonValue = if ($firstPersonEnabled) { "false" } else { "true" }
+$dualFirstPersonRigsValue = if ($firstPersonEnabled) { "true" } else { "false" }
 
 @"
 return {
@@ -1367,6 +1366,7 @@ return {
     first_person_materials = $firstPersonMaterialsValue,
     first_person_direct_link = $firstPersonDirectLinkValue,
     native_skaven_first_person = $nativeSkavenFirstPersonValue,
+    dual_first_person_rigs = $dualFirstPersonRigsValue,
     first_person_unit = $firstPersonUnitValue,
     hero_preview_enabled = $heroPreviewEnabled,
     hide_donor_weapons = false,

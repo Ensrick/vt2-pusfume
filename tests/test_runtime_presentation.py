@@ -106,6 +106,43 @@ class RuntimePresentationTests(unittest.TestCase):
             self.native,
         )
 
+    def test_weapon_family_switches_between_native_and_human_first_person_rigs(self):
+        for role in (
+            "packmaster",
+            "gutter_runner",
+            "globadier",
+            "warpfire_thrower",
+            "ratling_gunner",
+        ):
+            self.assertIn(f'{role} = ', self.native)
+
+        self.assertIn("spawn_dual_first_person_rig", self.native)
+        self.assertIn('mod:hook(SimpleInventoryExtension, "wield"', self.native)
+        self.assertIn(
+            "SKAVEN_ROLE_BY_POSE[item_template.pusfume_role_pose]",
+            self.native,
+        )
+        self.assertIn(
+            "inventory_extension._first_person_unit = first_person_unit",
+            self.native,
+        )
+        self.assertIn(
+            "extension._pusfume_hero_first_person_attachment",
+            self.native,
+        )
+        self.assertIn("relink_first_person_slot", self.native)
+        self.assertIn(
+            "weapon_extension.first_person_unit = first_person_unit",
+            self.native,
+        )
+        self.assertIn("relink_damage_unit", self.native)
+        self.assertIn(
+            "AttachmentNodeLinking.first_person_attachment",
+            self.native,
+        )
+        self.assertIn("dual_rigs_requested", self.native)
+        self.assertIn("dual_rigs_ready", self.native)
+
     def test_direct_weapon_animation_path_rejects_missing_events(self):
         self.assertIn(
             'mod:hook(WeaponUnitExtension, "_play_1p_anim"', self.native

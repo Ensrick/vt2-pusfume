@@ -228,16 +228,25 @@ Test-Condition ($nativeText -match 'PlayerUnitFirstPerson, "init"' -and `
     $nativeText -match 'first_person_attachment') `
     "first-person runtime" "Pusfume arms attach and receive the late skinned material"
 Test-Condition ($nativeText -match 'config\.first_person_direct_link' -and `
-    $nativeText -match 'pusfume_first_person_direct_attachment' -and `
+    $nativeText -match 'AttachmentNodeLinking\.first_person_attachment' -and `
     $nativeText -match 'First-person donor-rest direct links active' -and `
-    $nativeText -match 'if not config\.first_person_direct_link then\s*update_first_person_retarget') `
+    $nativeText -match '(?s)active_first_person_rig ~= "skaven".*?not config\.first_person_direct_link then\s*update_first_person_retarget') `
     "first-person donor-rest runtime" "exact-rest builds bypass all per-frame retarget and anchor corrections"
 Test-Condition ($nativeText -match 'First-person attachment probe meshes=%d' -and `
     $nativeText -match 'Unit\.num_meshes\(target\)' -and `
-    $nativeText -match 'source = "j_spine2", target = "j_spine1"' -and `
+    $nativeText -match 'source = "j_spine2", target = "j_spine2"' -and `
     $nativeText -notmatch 'Unit\.node\(target, node_name\)' -and `
     $nativeText -match 'Vector3\.distance\(source_position, target_position\)') `
     "first-person runtime probe" "live logs distinguish render visibility from node alignment"
+Test-Condition ($nativeText -match 'SKAVEN_FIRST_PERSON_ARMS' -and `
+    $nativeText -match 'spawn_dual_first_person_rig' -and `
+    $nativeText -match 'SimpleInventoryExtension, "wield"' -and `
+    $nativeText -match 'SKAVEN_ROLE_BY_POSE\[item_template\.pusfume_role_pose\]' -and `
+    $nativeText -match 'inventory_extension\._first_person_unit = first_person_unit' -and `
+    $nativeText -match 'relink_first_person_slot' -and `
+    $nativeText -match 'weapon_extension\.first_person_unit = first_person_unit' -and `
+    $nativeBuildText -match 'dual_first_person_rigs = \$dualFirstPersonRigsValue') `
+    "dual first-person rigs" "Versus weapons use native role arms while hero weapons use Janfon's human rig"
 Test-Condition ($nativeText -match 'spawn_local_unit\(source_rest_unit_name\)' -and `
     $nativeText -match 'Matrix4x4\.multiply\(source_pose, Matrix4x4\.inverse\(source_rest\)\)' -and `
     $nativeText -match 'Matrix4x4\.set_translation\(target_pose, Matrix4x4\.translation\(target_rest\)\)' -and `

@@ -246,6 +246,8 @@ function M.collect(registry, career_index, backend, compat, ui, native, weapons)
     if first_person_status.enabled then
         local first_person_ready = first_person_status.resource_available
             and first_person_status.hook_installed
+            and (not first_person_status.dual_rigs_requested
+                or first_person_status.dual_rigs_ready)
         local first_person_state = not first_person_ready and "FAIL"
             or first_person_status.materials_applied and "PASS"
             or "WARN"
@@ -253,6 +255,12 @@ function M.collect(registry, career_index, backend, compat, ui, native, weapons)
             and "compiled first-person arms unit is unavailable"
             or not first_person_status.hook_installed
                 and "PlayerUnitFirstPerson hook is unavailable"
+            or first_person_status.dual_rigs_requested
+                and not first_person_status.dual_rigs_ready
+                and "one or more native Versus first-person rig packages are unavailable"
+            or first_person_status.dual_rigs_ready
+                and first_person_status.materials_applied
+                and "weapon-aware Versus arms and Janfon's human hero hands are ready"
             or first_person_status.native_skaven_baseline
                 and "native Skaven base, Packmaster arms, and weapon attachment nodes are active"
             or first_person_status.materials_applied

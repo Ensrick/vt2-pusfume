@@ -10,6 +10,15 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Added weapon-aware dual first-person rigs. Native Packmaster, Gutter Runner,
+  Globadier, Warpfire Thrower, and Ratling Gunner weapons now select their own
+  Versus base and arm mesh; normal hero weapons select Janfon's human-rigged
+  Pusfume hands. Wielding updates both VT2 first-person caches and rebinds the
+  existing weapon, ammo, and damage units before vanilla handles the wield.
+- Fixed Janfon's human hands rendering off-camera. The donor-rest build now uses
+  VT2's complete native `first_person_attachment` contract instead of the
+  retarget table, whose `j_spine2 -> j_spine1` diagnostic mapping displaced the
+  live attachment by roughly 20 engine units.
 - Fixed the v0.6.44 startup crash in `StatisticsDatabase._init_backend_stat`.
   Pusfume's late-added per-career statistic leaves now include the `name`
   metadata normally supplied by the private boot-time `add_names()` pass, so
@@ -41,8 +50,9 @@ request rather than in release notes.
   weapon-component bones), rebound via the FBX path against the dwarf donor
   after proving all hero 1P donor skeletons are world-identical (max matrix
   delta 0.0). `native_skaven_first_person` now bakes false whenever a
-  first-person blend is supplied, retiring the Skaven Packmaster arms and
-  un-suppressing native hero weapon state machines.
+  first-person blend is supplied, retiring the always-on Packmaster fallback
+  and un-suppressing native hero weapon state machines. v0.6.46 retains those
+  native arms only in the separate weapon-aware Versus rig.
 - Opened every hero's weapons to Pusfume for testing
   (`open_all_hero_weapons = true`): the roster layer expands `can_wield`,
   the weapon grid surfaces all hero weapons alongside the rat prototypes,

@@ -1,10 +1,8 @@
 -- Dev gate for the cross-character weapon roster (issue #35).
 --
--- Pusfume ships a hard rat-weapon allowlist because his runtime first-person
--- hands are the native Skaven Packmaster arms, whose rig lacks the hero weapon
--- first-person state-machine events. Opening every hero's weapon is only safe
--- once Janfon's HUMAN-rigged first-person arms land and the first-person unit
--- becomes a standard hero rig (state machines then install and play natively).
+-- The native Versus and human hero controllers are incompatible, so the live
+-- build switches complete first-person rigs by weapon family. Rat prototypes
+-- use their role-specific Skaven arms; hero weapons use Janfon's human rig.
 --
 -- This dev build ships it ON to exercise the human hands against every hero
 -- weapon. Flip it back to false for any public promotion: the flag is the only

@@ -21,25 +21,17 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current friends-only live-test candidate is **v0.6.33-dev**. It keeps the
-working v0.6.22 third-person materials, authored idle, and restored original
-walk. It replaces the Ranger first-person base with Fatshark's shared Skaven
-base and native Packmaster arms, establishing an unwarped Pactsworn weapon-rig
-baseline before Janfon's cosmetic arms are rebound to that exact skeleton.
-Pusfume's Packmaster hook, Warpfire Thrower, Ratling Gun, and Poison Wind Globe
-are isolated clones of the official Versus base-item records. v0.6.31 maps normal hero fire/reload input
-onto Fatshark's native Warpfire heat, FX, and timing, supplies Adventure enemy
-targets, and replaces its player-breed-only burn callback with network-safe
-Adventure damage. v0.6.32 preserves the native Warpfire action aliases needed
-by its synchronized state machine and validates all chain destinations before
-registration. v0.6.33 adds a direct Adventure strike to the claw, exact
-Pusfume-only inventory filtering, normal-input Ratling and Globadier
-prototypes, playable-Globadier dialogue routing, and Pusfume Warpfire HUD data.
+The current friends-only live-test candidate is **v0.6.46-dev**, Workshop
+ManifestID `4157729935725131180`. It introduces a weapon-aware dual first-person
+system: the five prototype Versus weapon families use Fatshark's shared Skaven
+base and their role-specific native arms, while ordinary hero weapons use
+Janfon's donor-rest human hands and the normal hero animation controller.
+Wielding updates both first-person caches and rebinds existing weapon, ammo, and
+damage units before vanilla processes the swap. The human attachment now uses
+VT2's complete native same-name link contract; the previous diagnostic
+`j_spine2 -> j_spine1` link that displaced the hands off-camera is retired.
 Exact Packmaster dragging remains a larger career-state feature. The localized
-chest UV/material seam is tracked separately in issue #28 and is not claimed
-fixed by this weapon release. The v0.6.33 candidate is source commit `77341d4`
-and friends-only Workshop ManifestID `2481608271187325602`; live gameplay
-verification is pending.
+chest UV/material seam is tracked separately in issue #28.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person
 inventory packages resident before vanilla spawned Pusfume. v0.6.27 loads and
 verifies those unit packages synchronously with a dedicated reference before
