@@ -7,7 +7,9 @@ mechanisms that snapshot or constrain the vanilla career list.
 The v0.6.49 grip-alignment candidate (ManifestID `7786674794995638739`) did not
 change the outstretched ordinary-weapon arms. v0.6.50 replaces that failed
 offset with native hero deformation weights while preserving Janfon's mesh and
-the Versus attachment. Prioritize steps 4-5 under **Spawn smoke test**.
+the Versus attachment. The deployed v0.6.50 candidate is source commit
+`2bb4e19`, friends-only Workshop ManifestID `5613645880035377351`. Prioritize
+steps 4-5 under **Spawn smoke test**.
 
 The v0.6.44 candidate replaces the native Skaven first-person fallback with
 Janfon's human-rigged arms and opens all five heroes' melee and ranged weapons

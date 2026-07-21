@@ -21,9 +21,9 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current friends-only live-test candidate is **v0.6.50-dev**. It retains the
-weapon-aware dual first-person system built from both Janfon models: prototype
-Versus weapons use his 99-bone
+The current friends-only live-test candidate is **v0.6.50-dev**, Workshop
+ManifestID `5613645880035377351`. It retains the weapon-aware dual first-person
+system built from both Janfon models: prototype Versus weapons use his 99-bone
 untouched-Skaven attachment, while ordinary hero weapons use his 160-bone
 donor-rest human attachment. Fatshark's hero first-person unit remains the sole
 camera/controller base; weapon swaps change only the visible attachment and

@@ -10,6 +10,9 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, hash-verified, locally deployed, and uploaded the v0.6.50 native
+  deformation-weight candidate as friends-only Steam ManifestID
+  `5613645880035377351`.
 - Replaced the ineffective v0.6.49 rest-surface offset with a native
   deformation-weight transfer for ordinary hero weapons. Janfon's geometry,
   UVs, materials, rest position, and 160-bone hierarchy remain unchanged, but
