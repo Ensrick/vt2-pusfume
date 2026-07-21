@@ -10,6 +10,10 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Fixed the v0.6.44 startup crash in `StatisticsDatabase._init_backend_stat`.
+  Pusfume's late-added per-career statistic leaves now include the `name`
+  metadata normally supplied by the private boot-time `add_names()` pass, so
+  the database no longer recurses into numeric `value` fields.
 - Guarded the direct weapon first-person animation path after v0.6.42 sent a
   missing generic hook-swing event to Stingray and crashed. The check is scoped
   to Pusfume and preserves every event supported by Janfon's human hero rig.

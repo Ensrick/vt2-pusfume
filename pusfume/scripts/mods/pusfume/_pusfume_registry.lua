@@ -193,6 +193,7 @@ function M.register_statistics_definitions()
     if player_definitions.min_health_percentage
             and not player_definitions.min_health_percentage[career_name] then
         player_definitions.min_health_percentage[career_name] = {
+            name = career_name,
             value = 1,
         }
     end
@@ -200,6 +201,7 @@ function M.register_statistics_definitions()
     if player_definitions.min_health_completed
             and not player_definitions.min_health_completed[career_name] then
         player_definitions.min_health_completed[career_name] = {
+            name = career_name,
             source = "player_data",
             value = 0,
             database_name = "min_health_completed_" .. career_name,
@@ -217,6 +219,7 @@ function M.register_statistics_definitions()
 
                 for diff, _ in pairs(DifficultySettings) do
                     career_levels[level_key][diff] = {
+                        name = diff,
                         source = "player_data",
                         value = 0,
                         database_name = "completed_career_levels_" .. career_name

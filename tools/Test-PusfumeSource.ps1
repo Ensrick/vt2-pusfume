@@ -708,6 +708,10 @@ Test-Condition ($gameplayText -match 'event\s*=\s*"on_kill"' -and `
     "Aggressive Iteration" "special kills capture a mapped power and synchronize readiness"
 Test-Condition ($registryText -match 'career\.attributes\.max_hp\s*=\s*100') `
     "career health" "v2 specification fixes Pusfume at 100 maximum health"
+Test-Condition ($registryText -match 'min_health_percentage\[career_name\]\s*=\s*\{\s*name\s*=\s*career_name,\s*value\s*=\s*1' -and `
+    $registryText -match 'min_health_completed\[career_name\]\s*=\s*\{\s*name\s*=\s*career_name,' -and `
+    $registryText -match 'career_levels\[level_key\]\[diff\]\s*=\s*\{\s*name\s*=\s*diff,') `
+    "late statistics definitions" "all Pusfume leaves carry boot-time name metadata before player registration"
 Test-Condition ($nativeBuildText -match '\$cutAlphaEnabled = "false"' -and `
     $nativeBuildText -match 'enable_cut_alpha_threshold = \$cutAlphaEnabled' -and `
     $nativeBuildText -notmatch '\$Name -eq "pusfume_whiskers_df"') `

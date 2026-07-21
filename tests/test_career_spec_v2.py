@@ -17,6 +17,15 @@ class CareerSpecV2Tests(unittest.TestCase):
         self.assertIn('en = "Aggressive Iteration"', LOCALIZATION)
         self.assertIn('en = "Moulder Ingenuity"', LOCALIZATION)
 
+    def test_late_statistics_definitions_include_leaf_names(self):
+        # StatisticsDefinitions.add_names() runs before mod registration. Every
+        # leaf added later must therefore carry the metadata that stops the
+        # StatisticsDatabase recursive group walk.
+        self.assertIn("player_definitions.min_health_percentage[career_name]", REGISTRY)
+        self.assertIn("player_definitions.min_health_completed[career_name]", REGISTRY)
+        self.assertGreaterEqual(REGISTRY.count("name = career_name"), 2)
+        self.assertIn("name = diff", REGISTRY)
+
     def test_obsolete_v1_kit_is_not_registered(self):
         self.assertNotIn("The Great Scheme", LOCALIZATION)
         self.assertNotIn("Skaven Ingenuity", LOCALIZATION)
