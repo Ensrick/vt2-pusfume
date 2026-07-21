@@ -10,6 +10,23 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Replaced the ineffective v0.6.49 rest-surface offset with a native
+  deformation-weight transfer for ordinary hero weapons. Janfon's geometry,
+  UVs, materials, rest position, and 160-bone hierarchy remain unchanged, but
+  its generated skin now uses Fatshark's nearby arm-roll, palm, hand, and
+  finger influence distribution. The separate Versus rig remains untouched.
+- Added Blender audits that exposed the original weighting mismatch: Janfon's
+  handoff omitted both native upper-arm roll groups and eight native palm
+  pivots while uniquely weighting a right forearm-roll group absent from the
+  donor skin. An eight-bone synthetic wield pose improved native-motion error
+  from `8.24 mm RMS` to `4.84 mm RMS` (`1.70x`) after transfer.
+- Rearmed the live first-person attachment probe whenever weapon families
+  switch, ensuring the next log records the human rig after an ordinary weapon
+  is equipped instead of retaining the initial Packmaster/Skaven sample.
+- Live-tested v0.6.49: the arms still extended far beyond the weapon and
+  gripped empty space. This disproved rest-surface placement as the cause; the
+  v0.6.49 rigid offsets are retained only as diagnostic code and are no longer
+  enabled by the shipping pipeline.
 - Built, SHA-256 verified, locally deployed, and uploaded the v0.6.49
   friends-only grip-alignment candidate as Steam ManifestID
   `7786674794995638739`.

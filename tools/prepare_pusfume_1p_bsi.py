@@ -28,6 +28,9 @@ def arguments_after_separator():
 
 def main():
     arguments = arguments_after_separator()
+    native_weight_donor = preparation.pop_path_option(
+        arguments, "--native-weight-donor"
+    )
     align_native_hero_grips = "--align-native-hero-grips" in arguments
     arguments = [
         value for value in arguments if value != "--align-native-hero-grips"
@@ -35,7 +38,8 @@ def main():
     if len(arguments) != 3:
         raise SystemExit(
             "Usage: prepare_pusfume_1p_bsi.py -- INPUT.blend DONOR.unit "
-            "OUTPUT.bsi [--align-native-hero-grips]"
+            "OUTPUT.bsi [--align-native-hero-grips] "
+            "[--native-weight-donor DONOR.blend]"
         )
 
     input_path, donor_unit_path, output_path = (
@@ -58,6 +62,13 @@ def main():
     grip_alignment = (
         preparation.align_arm_surfaces_to_native_grips(mesh)
         if align_native_hero_grips
+        else None
+    )
+    weight_transfer = (
+        preparation.transfer_weights_from_native_surface(
+            mesh, armature, native_weight_donor
+        )
+        if native_weight_donor
         else None
     )
     donor_rebind = preparation.rebind_to_donor_rest(mesh, armature, donor_unit_path)
@@ -131,6 +142,7 @@ def main():
                 "triangles": triangle_count,
                 "vertices": len(mesh.data.vertices),
                 "weights": stats,
+                "weight_transfer": weight_transfer,
             },
             sort_keys=True,
         )

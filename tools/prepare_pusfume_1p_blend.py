@@ -14,6 +14,7 @@ import sys
 
 import bpy
 from mathutils import Matrix, Vector
+from mathutils.kdtree import KDTree
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from stingray_unit_scene import read_scene_graph, short_hash
@@ -37,12 +38,25 @@ NATIVE_HERO_GRIP_CORRECTIONS = {
 }
 SIDE_WEIGHT_EPSILON = 0.0001
 EDGE_LENGTH_TOLERANCE = 0.000001
+WEIGHT_TRANSFER_NEIGHBORS = 8
+MAXIMUM_WEIGHT_DONOR_DISTANCE = 0.12
 
 
 def arguments_after_separator():
     if "--" not in sys.argv:
         return []
     return sys.argv[sys.argv.index("--") + 1 :]
+
+
+def pop_path_option(arguments, option):
+    if option not in arguments:
+        return None
+    index = arguments.index(option)
+    if index + 1 >= len(arguments):
+        raise SystemExit("%s requires a path" % option)
+    value = os.path.abspath(arguments[index + 1])
+    del arguments[index : index + 2]
+    return value
 
 
 def skinned_armature(mesh_object):
@@ -252,6 +266,138 @@ def align_arm_surfaces_to_native_grips(mesh_object):
     local_corrections = {
         side: world_to_local @ correction
         for side, correction in NATIVE_HERO_GRIP_CORRECTIONS.items()
+    }
+
+
+def transfer_weights_from_native_surface(mesh_object, armature, donor_blend_path):
+    """Transfer native hero deformation weights without changing geometry."""
+    with bpy.data.libraries.load(donor_blend_path, link=False) as (
+        data_from,
+        data_to,
+    ):
+        data_to.objects = data_from.objects
+    donor_candidates = [
+        obj
+        for obj in data_to.objects
+        if obj is not None and obj.type == "MESH" and obj.vertex_groups
+    ]
+    if len(donor_candidates) != 1:
+        raise RuntimeError(
+            "Expected one weighted native donor mesh; found %d"
+            % len(donor_candidates)
+        )
+    donor = donor_candidates[0]
+    bpy.context.scene.collection.objects.link(donor)
+    bpy.context.view_layer.update()
+
+    donor_group_names = {
+        group.index: group.name for group in donor.vertex_groups
+    }
+    valid_bones = {bone.name for bone in armature.data.bones}
+    donor_tree = KDTree(len(donor.data.vertices))
+    for vertex in donor.data.vertices:
+        donor_tree.insert(donor.matrix_world @ vertex.co, vertex.index)
+    donor_tree.balance()
+
+    target_group_names = {
+        group.index: group.name for group in mesh_object.vertex_groups
+    }
+    target_sides = {}
+    for vertex in mesh_object.data.vertices:
+        sides = set()
+        for assignment in vertex.groups:
+            name = target_group_names.get(assignment.group, "")
+            if assignment.weight <= SIDE_WEIGHT_EPSILON:
+                continue
+            if name.startswith("j_left"):
+                sides.add("left")
+            elif name.startswith("j_right"):
+                sides.add("right")
+        if len(sides) != 1:
+            raise RuntimeError(
+                "Cannot determine one arm side for vertex %d: %s"
+                % (vertex.index, sorted(sides))
+            )
+        target_sides[vertex.index] = next(iter(sides))
+
+    transferred = []
+    nearest_distances = []
+    used_groups = set()
+    for vertex in mesh_object.data.vertices:
+        world_position = mesh_object.matrix_world @ vertex.co
+        neighbors = donor_tree.find_n(world_position, WEIGHT_TRANSFER_NEIGHBORS)
+        if not neighbors:
+            raise RuntimeError("Native weight donor has no vertices")
+        nearest_distances.append(neighbors[0][2])
+        accumulated = {}
+        proximity_total = 0.0
+        side_prefix = "j_%s" % target_sides[vertex.index]
+        for _position, donor_index, distance in neighbors:
+            proximity = 1.0 / max(distance, 0.0001) ** 2
+            proximity_total += proximity
+            for assignment in donor.data.vertices[donor_index].groups:
+                name = donor_group_names.get(assignment.group, "")
+                if name in valid_bones and name.startswith(side_prefix):
+                    accumulated[name] = accumulated.get(name, 0.0) + (
+                        proximity * assignment.weight
+                    )
+        weights = {
+            name: value / proximity_total
+            for name, value in accumulated.items()
+            if value > 0
+        }
+        strongest = sorted(weights.items(), key=lambda item: item[1], reverse=True)[
+            :MAXIMUM_INFLUENCES
+        ]
+        total = sum(weight for _name, weight in strongest)
+        if total <= 0:
+            raise RuntimeError(
+                "Native donor transferred no deform weight to vertex %d"
+                % vertex.index
+            )
+        normalized = [(name, weight / total) for name, weight in strongest]
+        transferred.append(normalized)
+        used_groups.update(name for name, _weight in normalized)
+
+    maximum_distance = max(nearest_distances, default=0.0)
+    if maximum_distance > MAXIMUM_WEIGHT_DONOR_DISTANCE:
+        raise RuntimeError(
+            "Native weight donor is too far from Janfon's surface: %.6f m"
+            % maximum_distance
+        )
+
+    mesh_object.vertex_groups.clear()
+    output_groups = {
+        name: mesh_object.vertex_groups.new(name=name)
+        for name in sorted(used_groups)
+    }
+    for vertex_index, weights in enumerate(transferred):
+        for name, weight in weights:
+            output_groups[name].add([vertex_index], weight, "REPLACE")
+
+    required_native_groups = {
+        "j_leftarmroll",
+        "j_rightarmroll",
+        "j_leftinhandindex",
+        "j_rightinhandindex",
+    }
+    missing = sorted(required_native_groups - used_groups)
+    if missing:
+        raise RuntimeError(
+            "Native weight transfer omitted required deformation groups: %s"
+            % missing
+        )
+
+    bpy.data.objects.remove(donor, do_unlink=True)
+    bpy.context.view_layer.update()
+    return {
+        "groups": sorted(used_groups),
+        "maximum_nearest_distance": maximum_distance,
+        "mean_nearest_distance": (
+            sum(nearest_distances) / len(nearest_distances)
+        ),
+        "neighbors": WEIGHT_TRANSFER_NEIGHBORS,
+        "vertices": len(transferred),
     }
     for vertex in mesh_object.data.vertices:
         vertex.co += local_corrections[vertex_sides[vertex.index]]
@@ -545,6 +691,7 @@ def apply_stingray_basis_counter_scale(mesh_object, armature, factor=100.0):
 
 def main():
     arguments = arguments_after_separator()
+    native_weight_donor = pop_path_option(arguments, "--native-weight-donor")
     align_native_hero_grips = "--align-native-hero-grips" in arguments
     arguments = [
         value for value in arguments if value != "--align-native-hero-grips"
@@ -552,7 +699,8 @@ def main():
     if len(arguments) != 3:
         raise SystemExit(
             "Usage: prepare_pusfume_1p_blend.py -- INPUT.blend DONOR.unit "
-            "OUTPUT.fbx [--align-native-hero-grips]"
+            "OUTPUT.fbx [--align-native-hero-grips] "
+            "[--native-weight-donor DONOR.blend]"
         )
 
     input_path, donor_unit_path, output_path = (
@@ -573,6 +721,11 @@ def main():
     grip_alignment = (
         align_arm_surfaces_to_native_grips(mesh)
         if align_native_hero_grips
+        else None
+    )
+    weight_transfer = (
+        transfer_weights_from_native_surface(mesh, armature, native_weight_donor)
+        if native_weight_donor
         else None
     )
     donor_rebind = rebind_to_donor_rest(mesh, armature, donor_unit_path)
@@ -648,6 +801,7 @@ def main():
                 "stingray_counter_scale": stingray_counter_scale,
                 "vertices": len(mesh.data.vertices),
                 "weights": stats,
+                "weight_transfer": weight_transfer,
             },
             sort_keys=True,
         )

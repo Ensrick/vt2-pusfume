@@ -167,6 +167,20 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn("local actual_event = event or event_1p", self.native)
         self.assertIn("skip_missing_first_person_event", self.native)
 
+    def test_first_person_probe_rearms_when_weapon_family_changes(self):
+        self.assertIn(
+            "extension._pusfume_active_first_person_rig ~= rig_name",
+            self.native,
+        )
+        self.assertIn(
+            "extension._pusfume_first_person_probe_logged = nil",
+            self.native,
+        )
+        self.assertIn(
+            "extension._pusfume_first_person_probe_frames = 0",
+            self.native,
+        )
+
     def test_selector_name_is_guarded_at_final_write(self):
         self.assertIn('mod:hook(class, "_set_hero_info"', self.ui)
         self.assertIn('hero_name = mod:localize("pusfume_character_name")', self.ui)

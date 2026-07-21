@@ -9,6 +9,8 @@ ALIGNMENT = ROOT / "tools" / "analyze_pusfume_1p_alignment.py"
 SCENE_READER = ROOT / "tools" / "stingray_unit_scene.py"
 PREPARE = ROOT / "tools" / "prepare_pusfume_1p_blend.py"
 BUILD = ROOT / "tools" / "Build-NativePusfume.ps1"
+WEIGHT_AUDIT = ROOT / "tools" / "audit_pusfume_1p_weights.py"
+WEIGHT_VALIDATION = ROOT / "tools" / "validate_pusfume_1p_weight_transfer.py"
 
 
 class FirstPersonSurfaceComparisonTests(unittest.TestCase):
@@ -29,19 +31,29 @@ class FirstPersonSurfaceComparisonTests(unittest.TestCase):
         self.assertIn("def matrix_array", source)
         self.assertIn('"inverse_bind_matrices"', source)
 
-    def test_native_grip_alignment_is_rigid_and_profile_gated(self):
+    def test_native_weight_transfer_is_human_only(self):
         source = PREPARE.read_text(encoding="utf-8")
-        self.assertIn("NATIVE_HERO_GRIP_CORRECTIONS", source)
-        self.assertIn("def align_arm_surfaces_to_native_grips", source)
-        self.assertIn("maximum_edge_length_delta", source)
-        self.assertNotIn("pose_bone.location", source)
+        self.assertIn("def transfer_weights_from_native_surface", source)
+        self.assertIn("j_leftarmroll", source)
+        self.assertIn("j_rightinhandindex", source)
 
         build = BUILD.read_text(encoding="utf-8")
         human_build, versus_build = build.split(
             "$versusFirstPersonAssetPath = $null", 1
         )
-        self.assertIn('"--align-native-hero-grips"', human_build)
-        self.assertNotIn('"--align-native-hero-grips"', versus_build)
+        self.assertIn('"--native-weight-donor"', human_build)
+        self.assertNotIn('"--native-weight-donor"', versus_build)
+        self.assertNotIn('"--align-native-hero-grips"', build)
+
+    def test_weight_audit_and_posed_validation_are_executable_contracts(self):
+        audit = WEIGHT_AUDIT.read_text(encoding="utf-8")
+        validation = WEIGHT_VALIDATION.read_text(encoding="utf-8")
+        ast.parse(audit)
+        ast.parse(validation)
+        self.assertIn("PUSFUME_1P_WEIGHT_AUDIT=", audit)
+        self.assertIn("transferred_error", validation)
+        self.assertIn("original_error", validation)
+        self.assertIn('PUSFUME_1P_WEIGHT_TRANSFER_VALIDATION=', validation)
 
 
 if __name__ == "__main__":

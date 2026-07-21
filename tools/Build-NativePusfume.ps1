@@ -6,6 +6,7 @@ param(
     [string]$BlenderExe = "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe",
     [string]$FirstPersonBlend = "",
     [string]$FirstPersonDonorUnit = "",
+    [string]$FirstPersonWeightDonorBlend = "",
     [string]$VersusFirstPersonBlend = "",
     [string]$VersusFirstPersonDonorUnit = "",
     [ValidateSet("bsi", "fbx")]
@@ -171,6 +172,7 @@ if ($versusFirstPersonEnabled -and -not $firstPersonEnabled) {
 }
 $firstPersonBlendPath = $null
 $firstPersonDonorUnitPath = $null
+$firstPersonWeightDonorBlendPath = $null
 if ($firstPersonEnabled) {
     if ([string]::IsNullOrWhiteSpace($FirstPersonDonorUnit)) {
         throw "FirstPersonBlend requires -FirstPersonDonorUnit for the exact VT2 rest-skeleton rebind"
@@ -190,6 +192,16 @@ if ($firstPersonEnabled) {
     }
     if ([IO.Path]::GetExtension($firstPersonDonorUnitPath) -ine ".unit") {
         throw "FirstPersonDonorUnit must be an extracted compiled VT2 unit: $firstPersonDonorUnitPath"
+    }
+    if (-not [string]::IsNullOrWhiteSpace($FirstPersonWeightDonorBlend)) {
+        $firstPersonWeightDonorBlendPath = if ([IO.Path]::IsPathRooted($FirstPersonWeightDonorBlend)) {
+            (Resolve-Path $FirstPersonWeightDonorBlend).Path
+        } else {
+            (Resolve-Path (Join-Path $repoRoot $FirstPersonWeightDonorBlend)).Path
+        }
+        if ([IO.Path]::GetExtension($firstPersonWeightDonorBlendPath) -ine ".blend") {
+            throw "FirstPersonWeightDonorBlend must be an imported native Blender mesh: $firstPersonWeightDonorBlendPath"
+        }
     }
 }
 if ($versusFirstPersonEnabled) {
@@ -292,16 +304,42 @@ if ($firstPersonEnabled) {
         Join-Path $repoRoot "tools\prepare_pusfume_1p_blend.py"
     }
     $sourceBlendHash = (Get-FileHash -LiteralPath $firstPersonBlendPath -Algorithm SHA256).Hash
+    $weightDonorHash = if ($firstPersonWeightDonorBlendPath) {
+        (Get-FileHash -LiteralPath $firstPersonWeightDonorBlendPath -Algorithm SHA256).Hash
+    } else {
+        $null
+    }
 
-    $result = Invoke-HiddenTool -FilePath $blenderExePath -ArgumentList @(
+    if ($firstPersonWeightDonorBlendPath) {
+        $weightValidationTool = Join-Path $repoRoot `
+            "tools\validate_pusfume_1p_weight_transfer.py"
+        $result = Invoke-HiddenTool -FilePath $blenderExePath -ArgumentList @(
+            "--background", "--factory-startup", "--disable-autoexec",
+            "--python", $weightValidationTool, "--",
+            $firstPersonBlendPath, $firstPersonDonorUnitPath,
+            $firstPersonWeightDonorBlendPath)
+        Assert-HiddenToolSuccess $result `
+            "First-person native deformation-weight validation"
+    }
+
+    $firstPersonArguments = @(
         "--background", "--factory-startup", "--disable-autoexec",
         "--python", $firstPersonTool, "--",
-        $firstPersonBlendPath, $firstPersonDonorUnitPath, $firstPersonAssetPath,
-        "--align-native-hero-grips")
+        $firstPersonBlendPath, $firstPersonDonorUnitPath, $firstPersonAssetPath)
+    if ($firstPersonWeightDonorBlendPath) {
+        $firstPersonArguments += @(
+            "--native-weight-donor", $firstPersonWeightDonorBlendPath)
+    }
+    $result = Invoke-HiddenTool -FilePath $blenderExePath `
+        -ArgumentList $firstPersonArguments
     Assert-HiddenToolSuccess $result `
         "First-person Pusfume $($FirstPersonFormat.ToUpperInvariant()) preparation"
     if ((Get-FileHash -LiteralPath $firstPersonBlendPath -Algorithm SHA256).Hash -ne $sourceBlendHash) {
         throw "First-person preparation modified its source blend: $firstPersonBlendPath"
+    }
+    if ($weightDonorHash -and
+            (Get-FileHash -LiteralPath $firstPersonWeightDonorBlendPath -Algorithm SHA256).Hash -ne $weightDonorHash) {
+        throw "First-person preparation modified its native weight donor: $firstPersonWeightDonorBlendPath"
     }
     if (-not (Test-Path -LiteralPath $firstPersonAssetPath -PathType Leaf) -or `
             (Get-Item -LiteralPath $firstPersonAssetPath).Length -lt 1024) {

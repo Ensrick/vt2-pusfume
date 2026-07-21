@@ -1802,6 +1802,11 @@ local function switch_first_person_rig(extension, inventory_extension, role)
     set_unit_visible(extension._pusfume_hero_first_person_attachment, false)
     set_unit_visible(extension._pusfume_skaven_first_person_attachment, false)
 
+    if extension._pusfume_active_first_person_rig ~= rig_name then
+        extension._pusfume_first_person_probe_logged = nil
+        extension._pusfume_first_person_probe_frames = 0
+    end
+
     -- Do not assign extension.first_person_unit here. The viewport, camera,
     -- look state and hero locomotion all cache the unit created by init.
     extension._pusfume_active_animation_unit = first_person_unit

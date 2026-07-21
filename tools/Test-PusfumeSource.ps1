@@ -70,6 +70,8 @@ $compiledFirstPersonRestPath = Join-Path $repoRoot "tools\validate_compiled_1p_r
 $untouchedBodyToolPath = Join-Path $repoRoot "tools\prepare_pusfume_untouched_3p.py"
 $firstPersonDiagnosticPath = Join-Path $repoRoot "tools\diagnose_pusfume_1p_blend.py"
 $firstPersonSurfacePath = Join-Path $repoRoot "tools\compare_pusfume_1p_surfaces.py"
+$firstPersonWeightAuditPath = Join-Path $repoRoot "tools\audit_pusfume_1p_weights.py"
+$firstPersonWeightValidationPath = Join-Path $repoRoot "tools\validate_pusfume_1p_weight_transfer.py"
 $firstPersonUnitScenePath = Join-Path $repoRoot "tools\stingray_unit_scene.py"
 $changelogPath = Join-Path $repoRoot "CHANGELOG.md"
 $contributingPath = Join-Path $repoRoot "CONTRIBUTING.md"
@@ -109,6 +111,8 @@ $compiledFirstPersonRestText = Get-Content -LiteralPath $compiledFirstPersonRest
 $untouchedBodyToolText = Get-Content -LiteralPath $untouchedBodyToolPath -Raw
 $firstPersonDiagnosticText = Get-Content -LiteralPath $firstPersonDiagnosticPath -Raw
 $firstPersonSurfaceText = Get-Content -LiteralPath $firstPersonSurfacePath -Raw
+$firstPersonWeightAuditText = Get-Content -LiteralPath $firstPersonWeightAuditPath -Raw
+$firstPersonWeightValidationText = Get-Content -LiteralPath $firstPersonWeightValidationPath -Raw
 $firstPersonUnitSceneText = Get-Content -LiteralPath $firstPersonUnitScenePath -Raw
 $portraitToolText = Get-Content -LiteralPath $portraitToolPath -Raw
 $changelogText = Get-Content -LiteralPath $changelogPath -Raw
@@ -189,12 +193,18 @@ Test-Condition ($firstPersonDiagnosticText -match 'def edge_stretch' -and `
     "first-person Blender diagnostics" "bind deformation remains independently measurable"
 Test-Condition ($firstPersonSurfaceText -match 'def weighted_group_centroids' -and `
     $firstPersonSurfaceText -match 'custom_to_donor' -and `
-    $firstPersonFbxToolText -match 'NATIVE_HERO_GRIP_CORRECTIONS' -and `
-    $firstPersonFbxToolText -match 'maximum_edge_length_delta' -and `
-    $firstPersonBsiToolText -match 'align_arm_surfaces_to_native_grips' -and `
-    $nativeBuildText -match '(?s)\$firstPersonAssetPath.*?--align-native-hero-grips.*?\$versusFirstPersonAssetPath' -and `
-    $nativeBuildText -notmatch '(?s)\$versusFirstPersonAssetPath.*?--align-native-hero-grips') `
-    "first-person native grip alignment" "measured rigid offsets apply only to Janfon's human-weapon arms"
+    $firstPersonWeightAuditText -match 'PUSFUME_1P_WEIGHT_AUDIT' -and `
+    $firstPersonWeightValidationText -match 'transferred_error' -and `
+    $firstPersonWeightValidationText -match 'original_error' -and `
+    $firstPersonFbxToolText -match 'def transfer_weights_from_native_surface' -and `
+    $firstPersonFbxToolText -match 'j_leftarmroll' -and `
+    $firstPersonBsiToolText -match 'native_weight_donor' -and `
+    $nativeBuildText -match '(?s)\$firstPersonAssetPath.*?--native-weight-donor.*?\$versusFirstPersonAssetPath' -and `
+    $nativeBuildText -notmatch '(?s)\$versusFirstPersonAssetPath.*?--native-weight-donor' -and `
+    $nativeBuildText -match 'validate_pusfume_1p_weight_transfer\.py' -and `
+    $nativeBuildText -match 'modified its native weight donor' -and `
+    $nativeBuildText -notmatch '--align-native-hero-grips') `
+    "first-person native weight transfer" "native roll and palm deformation applies only to Janfon's human-weapon arms"
 Test-Condition ($nativeBuildText -match '\[string\]\$FirstPersonBlend' -and `
     $nativeBuildText -match '\[string\]\$FirstPersonDonorUnit' -and `
     $nativeBuildText -match '\[string\]\$VersusFirstPersonBlend' -and `
