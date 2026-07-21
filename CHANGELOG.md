@@ -10,6 +10,9 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, SHA-256 verified, locally deployed, and uploaded the v0.6.49
+  friends-only grip-alignment candidate as Steam ManifestID
+  `7786674794995638739`.
 - Corrected Janfon's human-weapon hand placement against Fatshark's compiled
   first-person hero mesh. The build moves the two disconnected arm surfaces by
   their measured donor deltas (left `-2.2/-9.5/+19.5 mm`, right
