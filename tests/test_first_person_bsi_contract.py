@@ -5,6 +5,7 @@ import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PREPARE = ROOT / "tools" / "prepare_pusfume_1p_bsi.py"
+PREPARE_BLEND = ROOT / "tools" / "prepare_pusfume_1p_blend.py"
 BUILD = ROOT / "tools" / "Build-NativePusfume.ps1"
 
 
@@ -12,6 +13,7 @@ class FirstPersonBsiContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.source = PREPARE.read_text(encoding="utf-8")
+        cls.blend_source = PREPARE_BLEND.read_text(encoding="utf-8")
         cls.build = BUILD.read_text(encoding="utf-8")
 
     def test_tool_is_valid_python(self):
@@ -31,6 +33,13 @@ class FirstPersonBsiContractTests(unittest.TestCase):
 
     def test_integrated_fur_cannot_silently_fall_back(self):
         self.assertIn("model contains p_fur; rebuild with -IntegratedFur", self.build)
+
+    def test_already_conformed_human_rig_is_not_rejected(self):
+        self.assertIn("if maximum_vertex_delta > 0.75:", self.blend_source)
+        self.assertNotIn(
+            "maximum_vertex_delta <= 0.001 or maximum_vertex_delta > 0.75",
+            self.blend_source,
+        )
 
 
 if __name__ == "__main__":

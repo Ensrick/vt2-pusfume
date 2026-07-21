@@ -106,6 +106,13 @@ class RuntimePresentationTests(unittest.TestCase):
             self.native,
         )
 
+    def test_direct_weapon_animation_path_rejects_missing_events(self):
+        self.assertIn(
+            'mod:hook(WeaponUnitExtension, "_play_1p_anim"', self.native
+        )
+        self.assertIn("local actual_event = event or event_1p", self.native)
+        self.assertIn("skip_missing_first_person_event", self.native)
+
     def test_selector_name_is_guarded_at_final_write(self):
         self.assertIn('mod:hook(class, "_set_hero_info"', self.ui)
         self.assertIn('hero_name = mod:localize("pusfume_character_name")', self.ui)

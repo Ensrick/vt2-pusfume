@@ -75,6 +75,68 @@ function M.install(registry, career_index, ui)
             tostring(mechanism_name), tostring(ui_status.card_seen), tostring(ui_status.selection_seen)))
     end)
 
+    -- Issue #42 probe: the constant glow VFX is not spawned by any Pusfume Lua
+    -- (no particle creation, overcharge is heat-gated screen-space, the abilities
+    -- are gameplay buffs, cosmetics carry no effect fields), so it rides a
+    -- compiled dark_pact skaven unit's flow. Retail has no per-unit particle
+    -- enumeration, so this dumps the total world particle count plus the
+    -- attachment/weapon units to name the source by elimination.
+    mod:command("pusfume_glow_probe",
+        "Hunt the constant glow VFX: report world particle count + Pusfume attachment/weapon units.",
+        function()
+            local player = Managers.player and Managers.player:local_player()
+            local unit = player and player.player_unit
+
+            if not unit or not Unit.alive(unit) then
+                mod:echo("Pusfume glow probe: no local player unit; run it as Pusfume in the Keep or a mission.")
+                return
+            end
+
+            -- Total live world particles. Stand still in an EMPTY Keep (no allies,
+            -- not firing): a steady nonzero count is the glow's particle system.
+            -- Re-run on a vanilla Bardin career to prove the delta is Pusfume's.
+            local world = Managers.world and Managers.world:world("level_world")
+            local particles = world and World.num_particles(world)
+            mod:echo("Pusfume glow probe: world particles=%s", tostring(particles or "n/a"))
+
+            -- First-person unit = the dark_pact skaven base/arms; a Pactsworn
+            -- ambient warpstone glow would ride this compiled unit's flow.
+            local first_person = ScriptUnit.has_extension(unit, "first_person_system")
+            local first_person_unit = first_person
+                and type(first_person.get_first_person_unit) == "function"
+                and first_person:get_first_person_unit()
+            mod:echo("  first_person(skaven arms) alive=%s",
+                tostring((first_person_unit and Unit.alive(first_person_unit)) or false))
+
+            -- Equipment slot units change per weapon, so a glow riding one of
+            -- these is NOT the weapon-independent source; listed to rule slots out.
+            local inventory = ScriptUnit.has_extension(unit, "inventory_system")
+            local equipment = inventory and type(inventory.equipment) == "function"
+                and inventory:equipment()
+            local slots = equipment and equipment.slots
+
+            if slots then
+                for slot_name, slot_data in pairs(slots) do
+                    if type(slot_data) == "table" then
+                        local item = slot_data.item_data and slot_data.item_data.key
+                        local unit_1p = slot_data.right_unit_1p or slot_data.left_unit_1p
+                        local unit_3p = slot_data.right_unit_3p or slot_data.left_unit_3p
+
+                        if item or unit_1p or unit_3p then
+                            mod:echo("  slot=%s item=%s u1p=%s u3p=%s",
+                                tostring(slot_name), tostring(item or "-"),
+                                tostring((unit_1p and Unit.alive(unit_1p)) or false),
+                                tostring((unit_3p and Unit.alive(unit_3p)) or false))
+                        end
+                    end
+                end
+            end
+
+            mod:echo("Pusfume glow probe done. Nonzero idle particles in an empty Keep = "
+                .. "a compiled-unit VFX (top suspect: the skaven 1P arms flow). "
+                .. "Share the count and any weapon-slot units flagged alive.")
+        end)
+
     if ProfileRequester then
         mod:hook_safe(ProfileRequester, "rpc_request_profile_reply", function(requester, channel_id, local_player_id,
                 request_id, profile_index, response_career_index, force_respawn, result_id)

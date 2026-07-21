@@ -1,6 +1,6 @@
 local mod = get_mod("pusfume")
 
-local MOD_VERSION = "0.6.42-dev"
+local MOD_VERSION = "0.6.44-dev"
 
 mod:info("[pusfume] loading v%s", MOD_VERSION)
 
@@ -16,6 +16,7 @@ local access = mod:dofile("scripts/mods/pusfume/_pusfume_access")
 local compat = mod:dofile("scripts/mods/pusfume/_pusfume_compat")
 local preflight = mod:dofile("scripts/mods/pusfume/_pusfume_preflight")
 local ui = mod:dofile("scripts/mods/pusfume/_pusfume_ui")
+weapons.set_roster(roster)
 assets.install()
 gameplay.install()
 native.install(registry, native_config)

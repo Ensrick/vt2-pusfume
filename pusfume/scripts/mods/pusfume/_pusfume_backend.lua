@@ -150,18 +150,25 @@ local function install_weapon_grid_guard(registry, weapons)
         if career and career.name == registry.CAREER_NAME and is_weapon_filter then
             local slot_name = string.find(item_filter, "slot_type == melee", 1, true)
                 and "slot_melee" or "slot_ranged"
-            local item_keys = weapons.allowed_item_keys(slot_name)
-            local identity_filters = {}
 
+            -- Always give Pusfume his own career context so the grid resolves
+            -- against his can_wield rather than the donor hero's.
             item_filter = string.gsub(item_filter,
                 "can_wield_by_current_hero", "can_wield_by_current_career")
 
-            for _, item_key in ipairs(item_keys) do
-                identity_filters[#identity_filters + 1] = "item_key == " .. item_key
-            end
+            -- Closed roster: restrict to the hard rat allowlist. Open roster:
+            -- let can_wield_by_current_career surface every opened hero weapon.
+            if not weapons.open_all_hero_weapons() then
+                local item_keys = weapons.allowed_item_keys(slot_name)
+                local identity_filters = {}
 
-            item_filter = string.format("( %s ) and ( %s )",
-                item_filter, table.concat(identity_filters, " or "))
+                for _, item_key in ipairs(item_keys) do
+                    identity_filters[#identity_filters + 1] = "item_key == " .. item_key
+                end
+
+                item_filter = string.format("( %s ) and ( %s )",
+                    item_filter, table.concat(identity_filters, " or "))
+            end
         end
 
         return func(self, item_filter, ...)

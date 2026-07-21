@@ -11,9 +11,9 @@ local mod = get_mod("pusfume")
 --      that raising metatable before encoding the RPC, so an unknown event CTDs
 --      every decoding peer. Skip such an event sender-side (crash floor).
 --
--- The allowlist half is gated OFF by default (see _pusfume_roster_config). The
--- wire-safety half installs unconditionally: it is inert while the hard
--- allowlist stands (rat weapons only fire native Skaven events) and becomes the
+-- The allowlist half uses one build-time switch (see _pusfume_roster_config),
+-- enabled for this friends-only human-hands test. The wire-safety half installs
+-- unconditionally: it is inert while the hard allowlist stands and becomes the
 -- crash floor the moment the roster opens.
 
 local config = mod:dofile("scripts/mods/pusfume/_pusfume_roster_config")
@@ -37,6 +37,13 @@ local state = {
     hero_careers = nil,
     wire_safety_installed = false,
     skipped_3p_events = {},
+    -- Pusfume's own per-slot weapon selection when the roster is open. Holds any
+    -- backend id (a real hero weapon or an injected rat weapon); nil means the
+    -- rat default still stands.
+    selected = {
+        slot_melee = nil,
+        slot_ranged = nil,
+    },
 }
 
 local function contains(list, value)
@@ -155,6 +162,105 @@ function M.hero_weapon_item_keys(slot_name)
     table.sort(keys)
 
     return keys
+end
+
+-- Weapon selection store (only consulted while the roster is open). Real hero
+-- weapon items live in the account backend; the injected rat weapons are merged
+-- into the same store by _pusfume_backend, so get_item_from_id resolves both.
+local function item_interface()
+    local backend_manager = Managers and Managers.backend
+
+    if not backend_manager then
+        return nil
+    end
+
+    if backend_manager.get_interface then
+        local ok, interface = pcall(backend_manager.get_interface, backend_manager, "items")
+
+        if ok and interface then
+            return interface
+        end
+    end
+
+    return backend_manager._interfaces and backend_manager._interfaces.items
+end
+
+local function resolve_item(backend_id)
+    local interface = item_interface()
+
+    if interface and interface.get_item_from_id then
+        local ok, item = pcall(interface.get_item_from_id, interface, backend_id)
+
+        if ok then
+            return item
+        end
+    end
+
+    return nil
+end
+
+local function slot_type_for(slot_name)
+    return slot_name == "slot_melee" and "melee"
+        or slot_name == "slot_ranged" and "ranged"
+        or nil
+end
+
+local function valid_for_slot(item, slot_name)
+    local slot_type = slot_type_for(slot_name)
+    local item_data = item and item.data
+
+    return item_data ~= nil
+        and item_data.slot_type == slot_type
+        and type(item_data.can_wield) == "table"
+        and contains(item_data.can_wield, state.career_name)
+end
+
+function M.selected_weapon_id(slot_name)
+    return state.selected[slot_name]
+end
+
+function M.selected_weapon_item(slot_name)
+    local backend_id = state.selected[slot_name]
+
+    return backend_id and resolve_item(backend_id) or nil
+end
+
+function M.select_weapon(slot_name, backend_id)
+    if not slot_type_for(slot_name) then
+        return false
+    end
+
+    local item = resolve_item(backend_id)
+
+    if valid_for_slot(item, slot_name) then
+        state.selected[slot_name] = backend_id
+        mod:info("[pusfume] roster equipped slot=%s backend_id=%s key=%s",
+            slot_name, tostring(backend_id), tostring(item.key))
+
+        return true
+    end
+
+    return false
+end
+
+function M.select_weapon_by_key(slot_name, item_key)
+    if not slot_type_for(slot_name) then
+        return false
+    end
+
+    local interface = item_interface()
+    local items = interface and interface.get_all_backend_items
+        and interface:get_all_backend_items()
+
+    if type(items) == "table" then
+        for backend_id, item in pairs(items) do
+            if item and item.key == item_key and valid_for_slot(item, slot_name) then
+                return M.select_weapon(slot_name, backend_id)
+            end
+        end
+    end
+
+    return false
 end
 
 local function is_pusfume_owner(owner_unit)

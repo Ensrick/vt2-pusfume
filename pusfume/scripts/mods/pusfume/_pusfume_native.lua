@@ -1470,6 +1470,25 @@ local function log_first_person_attachment_probe(extension)
         table.concat(node_distances, ","))
 end
 
+local function skip_missing_first_person_event(extension, first_person_unit, event)
+    if not extension or not extension._pusfume_first_person
+            or type(event) ~= "string"
+            or not first_person_unit or not Unit.alive(first_person_unit)
+            or Unit.has_animation_event(first_person_unit, event) then
+        return false
+    end
+
+    extension._pusfume_skipped_anim_events =
+        extension._pusfume_skipped_anim_events or {}
+    if not extension._pusfume_skipped_anim_events[event] then
+        extension._pusfume_skipped_anim_events[event] = true
+        mod:info("[pusfume] Skipped 1P animation event missing on active rig: %s",
+            tostring(event))
+    end
+
+    return true
+end
+
 local function install_first_person_hook(registry, config)
     if not config.first_person_unit then
         return true
@@ -1559,23 +1578,29 @@ local function install_first_person_hook(registry, config)
         -- event resolves to a negative Stingray animation index and CTDs
         -- (2026-07-19 22:41 potion wield). Skip any event the rig does not
         -- carry; weapons keep their sanitized contracts.
-        if extension._pusfume_first_person then
-            local first_person_unit = extension.first_person_unit
-            if first_person_unit and Unit.alive(first_person_unit)
-                    and not Unit.has_animation_event(first_person_unit, event) then
-                extension._pusfume_skipped_anim_events =
-                    extension._pusfume_skipped_anim_events or {}
-                if not extension._pusfume_skipped_anim_events[event] then
-                    extension._pusfume_skipped_anim_events[event] = true
-                    mod:info("[pusfume] Skipped 1P animation event missing on native rig: %s",
-                        tostring(event))
-                end
-                return
-            end
+        if skip_missing_first_person_event(
+                extension, extension.first_person_unit, event) then
+            return
         end
 
         return func(extension, event)
     end)
+    if WeaponUnitExtension then
+        -- This path calls Unit.animation_event directly and bypasses the guard
+        -- above. Check Fatshark's effective event before the native call.
+        mod:hook(WeaponUnitExtension, "_play_1p_anim", function(func, weapon_extension,
+                event_1p, event, first_person_unit, ...)
+            local first_person_extension = weapon_extension.first_person_extension
+            local actual_event = event or event_1p
+
+            if skip_missing_first_person_event(
+                    first_person_extension, first_person_unit, actual_event) then
+                return
+            end
+
+            return func(weapon_extension, event_1p, event, first_person_unit, ...)
+        end)
+    end
     mod:hook_safe(PlayerUnitFirstPerson, "update", function(extension)
         if extension._pusfume_first_person then
             -- Clear the old hand-diagnostic hide reason after hot reloads.

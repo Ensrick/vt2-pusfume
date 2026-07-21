@@ -172,6 +172,66 @@ function M.set_native_skin(skin_name)
     M.NATIVE_SKIN_NAME = skin_name
 end
 
+-- StatisticsDefinitions builds its per-career stat families by iterating
+-- CareerSettings at BOOT, before this mod registers the career, so every
+-- career-keyed stat path (min_health_percentage.pusfume,
+-- completed_career_levels.pusfume.*) is absent and any stats consumer that
+-- records per-career data raises a fatal (career_tweaker armor/overcharge
+-- add_damage stat, crash 2026-07-19 23:30). Replicate the boot generation for
+-- this career. Idempotent for VMF reloads; definitions land before any
+-- player-unit StatisticsDatabase registration consumes them.
+function M.register_statistics_definitions()
+    local player_definitions = StatisticsDefinitions and StatisticsDefinitions.player
+
+    if not player_definitions then
+        mod:warning("[pusfume] StatisticsDefinitions unavailable; per-career stats not registered")
+        return false
+    end
+
+    local career_name = M.CAREER_NAME
+
+    if player_definitions.min_health_percentage
+            and not player_definitions.min_health_percentage[career_name] then
+        player_definitions.min_health_percentage[career_name] = {
+            value = 1,
+        }
+    end
+
+    if player_definitions.min_health_completed
+            and not player_definitions.min_health_completed[career_name] then
+        player_definitions.min_health_completed[career_name] = {
+            source = "player_data",
+            value = 0,
+            database_name = "min_health_completed_" .. career_name,
+        }
+    end
+
+    if player_definitions.completed_career_levels
+            and not player_definitions.completed_career_levels[career_name]
+            and LevelSettings and UnlockableLevels and DifficultySettings then
+        local career_levels = {}
+
+        for level_key, _ in pairs(LevelSettings) do
+            if table.contains(UnlockableLevels, level_key) then
+                career_levels[level_key] = {}
+
+                for diff, _ in pairs(DifficultySettings) do
+                    career_levels[level_key][diff] = {
+                        source = "player_data",
+                        value = 0,
+                        database_name = "completed_career_levels_" .. career_name
+                            .. "_" .. level_key .. "_" .. diff,
+                    }
+                end
+            end
+        end
+
+        player_definitions.completed_career_levels[career_name] = career_levels
+    end
+
+    return true
+end
+
 function M.register()
     fassert(CareerSettings and CareerSettings[M.DONOR_CAREER_NAME], "Pusfume donor career is unavailable.")
     fassert(CareerSettingsOriginal, "CareerSettingsOriginal is unavailable.")
@@ -246,6 +306,7 @@ function M.register()
     end
 
     PROFILES_BY_CAREER_NAMES[M.CAREER_NAME] = profile
+    M.register_statistics_definitions()
 
     local changed_items = M.refresh_item_permissions()
     local permission_status = M.item_permission_status()

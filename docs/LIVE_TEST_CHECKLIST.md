@@ -1,8 +1,15 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.33-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.44-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
+
+The v0.6.44 candidate replaces the native Skaven first-person fallback with
+Janfon's human-rigged arms and opens all five heroes' melee and ranged weapons
+for hand compatibility testing. Its compiled unit matches 52 donor bones with
+a maximum rest error of `0.00000352` against the `0.001` limit. Human hand
+visibility, proportions, and native weapon animation are this test's release
+priority; complete Packmaster pulling remains deferred.
 
 Known-good native body/animation baseline: commit `0ffdf5a`, Workshop ManifestID
 `2405082174877027150`. Current crash-safe first-person A/B candidate: commit
@@ -134,20 +141,20 @@ Steam confirmed friends-only ManifestID `2481608271187325602` at 2026-07-18
 ## Spawn smoke test
 
 1. Run `/pusfume_status` and confirm `active=pusfume`.
-2. Confirm the fixed melee slot resolves **Packmaster Hook (Prototype)** and the
-   ranged slot initially resolves **Warpfire Thrower (Prototype)**. Ranger
-   weapons should not appear as Pusfume equipment.
-3. Open both weapon inventory categories. Melee must contain only Packmaster
-   Hook. Ranged must contain only Warpfire Thrower, Ratling Gun, and Poison
-   Wind Globe; no Bardin melee or ranged item may be listed.
+2. Confirm the default melee slot resolves **Packmaster Hook (Prototype)** and
+   the ranged slot initially resolves **Warpfire Thrower (Prototype)**.
+3. Open both weapon inventory categories. Confirm the six rat prototypes remain
+   available and ordinary weapons from Kruber, Bardin, Kerillian, Saltzpyre,
+   and Sienna are visible. Equip at least one melee and one ranged hero weapon
+   from different heroes before testing the rat prototypes.
 4. Confirm the hook is visible in first person and is attached at the native
    Packmaster right-hand position. In the log, find `First-person weapon armed`
    and confirm `slot=slot_melee`, `claw_nodes=true/true`, and
    `remaining_hide_reasons=none`.
-5. Swing the hook into open air, scenery, armor, and a normal enemy. The claw
-   should receive an `attack_grab` presentation event and damage an enemy up to
-   4.5 meters inside the forward cone. It must animate and finish without a
-   target; no disable/drag behavior is expected yet and no hit path may crash.
+5. Swing the hook once into open air and once at a normal enemy. The current
+   prototype should damage a nearby enemy without crashing; full disable,
+   pulling, and dragging behavior is deferred and is not a release blocker for
+   this human-hands candidate.
 6. Swap to Warpfire and hold primary fire. Confirm the native flame stream,
    firing sound, heat gain, and repeated enemy damage all occur. Release fire,
    then use reload to vent heat and confirm the cooling state ends at zero.
@@ -180,18 +187,22 @@ Steam confirmed friends-only ManifestID `2481608271187325602` at 2026-07-18
 1. Enter a mission in the normal first-person camera and leave the default weapon equipped for at least ten seconds.
 2. Confirm both arms remain continuously visible while looking up, down, left, and right; blinking is a failure of the LOD-bounds fix.
 3. Before moving, confirm the fingers retain Janfon's modeled proportions and do not appear as long, thin sticks.
-4. Confirm the Packmaster hook and Warpfire Thrower are visible, attached to the
-   expected hands, and do not make either arm disappear.
-5. Equip melee and confirm the hands leave the Globadier globe-holding pose for
-   the Packmaster claw pose. Swap to ranged and confirm they return to the
-   Warpfire pose.
+4. Equip ordinary hero weapons from multiple heroes. Confirm each is visible,
+   attached to the expected hand, and does not make either arm disappear.
+5. Attack, block, push, charge, aim, fire, reload, and swap with those hero
+   weapons. Confirm Janfon's human hands follow their native hero poses without
+   Globadier globe-holding or Packmaster-specific pose residue.
 6. Confirm the arms use Pusfume's direct-UV body textures with no green donor glow, atlas scrambling, or opaque whisker-style cards.
 7. Attack, block, push, reload, swap weapons, interact, revive, crouch, jump, dodge, and move in every direction.
 8. Confirm the arms follow VT2's native first-person poses without remaining in rest pose, separating from the camera rig, changing bone lengths, or stretching fingers.
 9. Enable Tweaker: General's third-person camera and confirm the established third-person body still animates and shades correctly.
 10. Run `/pusfume_preflight` after spawning. `native first-person arms` must report PASS; preserve the log if it reports WARN or FAIL.
-11. Check the log for `First-person donor-rest direct links active`. `First-person rest retarget initialized` must not appear for v0.6.24.
-12. Check the delayed `First-person attachment probe`; it must report `direct=true`, `retarget=false`, and near-zero source/target node distances. Runtime anchor and limb corrections should remain zero because Blender already matched the compiled donor rest matrices.
+11. Check the log for `First-person donor-rest direct links active`.
+    `First-person rest retarget initialized` must not appear for v0.6.44.
+12. Check the delayed `First-person attachment probe`; it must report
+    `direct=true`, `retarget=false`, and near-zero source/target node distances.
+    Runtime anchor and limb corrections should remain zero because Blender
+    already matched the compiled donor rest matrices.
 13. Treat Janfon's `positioningtest` clip as an unwired diagnostic asset. His current first-person handoff has no walk cycle; do not expect or report a Janfon-authored first-person walk in this candidate.
 
 ## Career-kit smoke test

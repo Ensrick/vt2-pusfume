@@ -6,9 +6,10 @@
 -- once Janfon's HUMAN-rigged first-person arms land and the first-person unit
 -- becomes a standard hero rig (state machines then install and play natively).
 --
--- Until that rig ships, this stays false and the hard allowlist in
--- _pusfume_weapons.lua / _pusfume_registry.lua remains authoritative. Flip it
--- (or bake it from the human-rig build) to open the roster.
+-- This dev build ships it ON to exercise the human hands against every hero
+-- weapon. Flip it back to false for any public promotion: the flag is the only
+-- switch, and with it off the hard allowlist in _pusfume_weapons.lua /
+-- _pusfume_registry.lua is authoritative again.
 return {
-    open_all_hero_weapons = false,
+    open_all_hero_weapons = true,
 }

@@ -130,6 +130,11 @@ def reset_bind_pose(mesh_object, armature):
 
 
 def orphan_group_stats(mesh_object, bone_names):
+    """Record every vertex group with no matching bone, including weightless ones.
+
+    Janfon's human rig ships a stray j_lefthandpinky4 group whose bone stops at
+    pinky3; a weightless orphan is pruned, a weighted one is a hard error.
+    """
     stats = {}
     for group in mesh_object.vertex_groups:
         if group.name in bone_names:
@@ -140,11 +145,10 @@ def orphan_group_stats(mesh_object, bone_names):
                 if assignment.group == group.index and assignment.weight > 0.000001:
                     weights.append(assignment.weight)
                     break
-        if weights:
-            stats[group.name] = {
-                "vertices": len(weights),
-                "maximum_weight": max(weights),
-            }
+        stats[group.name] = {
+            "vertices": len(weights),
+            "maximum_weight": max(weights) if weights else 0.0,
+        }
     return stats
 
 
@@ -153,7 +157,8 @@ def remove_orphan_groups(mesh_object, orphan_stats):
     for name, stats in orphan_stats.items():
         if stats["maximum_weight"] > MAXIMUM_ORPHAN_WEIGHT:
             raise RuntimeError(
-                "Refusing to remove meaningful non-bone group %s (maximum weight %.6f)"
+                "Vertex group '%s' has no matching armature bone but carries deform "
+                "weight up to %.6f. Add the bone or remove the weight (asset fix)."
                 % (name, stats["maximum_weight"])
             )
         mesh_object.vertex_groups.remove(mesh_object.vertex_groups[name])
@@ -319,7 +324,11 @@ def conform_mesh_to_donor_rest(mesh_object, armature, donor_unit_path):
         ),
         default=0,
     )
-    if maximum_vertex_delta <= 0.001 or maximum_vertex_delta > 0.75:
+    # Janfon's human rig is already authored on the hero donor rest positions,
+    # so a near-zero correction is the ideal result. The earlier Skaven-rig
+    # pipeline required a visible correction and used a lower bound here, but
+    # the matrix and post-rebind gates below are the actual no-op safeguards.
+    if maximum_vertex_delta > 0.75:
         raise RuntimeError(
             "Donor position conformance produced an implausible mesh delta %.8f"
             % maximum_vertex_delta

@@ -103,6 +103,15 @@ local state = {
 }
 
 local installed_registry
+local roster_ref
+
+-- When the cross-character roster is open, Pusfume's weapon slots resolve
+-- through the roster's own selection (any hero weapon) instead of the hard rat
+-- allowlist. The two functions below are the single choke points every backend
+-- read flows through, so gating them here opens the whole loadout path.
+local function roster_open()
+    return roster_ref ~= nil and roster_ref.open_all_hero_weapons()
+end
 
 local function deep_clone(value, seen)
     if type(value) ~= "table" then
@@ -244,6 +253,138 @@ local function validate_action_graph(actions)
     return true
 end
 
+-- Hero Ratling ammo economy (issue 40). The Versus gun is a single inexhaustible
+-- 120-round hopper; the hero variant is a normal clip-plus-reserve weapon.
+local RATLING_CLIP_AMMO = 120
+local RATLING_RESERVE_AMMO = 120
+-- Wwise source-parameter ramp window for the shooting loop (time_at_max_rps in
+-- vs_ratling_gunner_gun.lua).
+local RATLING_TIME_AT_MAX_RPS = 3
+
+-- Resident hero flamethrower loop for the Warpfire (issue 41). drakegun.lua
+-- declares both events and the wwise/flamethrower bank, and
+-- ActionWarpfireThrower already defaults its stop to the drakegun stop event.
+local DRAKEGUN_FLAME_LOOP_START = "Play_player_combat_weapon_drakegun_flamethrower_shoot"
+local DRAKEGUN_FLAME_LOOP_STOP = "Stop_player_combat_weapon_drakegun_flamethrower_shoot"
+local DRAKEGUN_FLAME_WWISE_PACKAGE = "wwise/flamethrower"
+
+-- Sanitized ports of the Versus ratling synchronized-state audio
+-- (vs_ratling_gunner_gun.lua). The originals also drove VCE barks and a
+-- Pactsworn "fire" career-ability priming bar, neither of which exists in
+-- Adventure and both of which crash; only the Wwise weapon audio is kept, so
+-- the spin-up and firing loop are heard again. Event names are verbatim from
+-- that template. Whether these events resolve in Adventure depends on the
+-- ratling gunner soundbank being resident - flagged for in-game A/B.
+local function ratling_winding_enter(self, owner_unit, weapon_unit, state_data, is_local_player, world)
+    local wwise_world = Managers.world:wwise_world(world)
+
+    if is_local_player then
+        WwiseWorld.trigger_event(wwise_world, "Play_player_ratling_gunner_weapon_ready", weapon_unit)
+    end
+end
+
+local function ratling_winding_leave(self, owner_unit, weapon_unit, state_data, is_local_player, world)
+    local wwise_world = Managers.world:wwise_world(world)
+
+    if is_local_player then
+        WwiseWorld.trigger_event(wwise_world, "Stop_player_ratling_gunner_weapon_ready", weapon_unit)
+    end
+end
+
+local function ratling_firing_enter(self, owner_unit, weapon_unit, state_data, is_local_player, world)
+    state_data.shoot_time = 0
+
+    local wwise_world = Managers.world:wwise_world(world)
+    local wwise_source_id = WwiseWorld.make_auto_source(wwise_world, weapon_unit)
+    local use_occlusion = true
+
+    if is_local_player then
+        WwiseWorld.trigger_event(wwise_world, "Play_player_ratling_gunner_shooting_loop", use_occlusion, wwise_source_id)
+    else
+        WwiseWorld.trigger_event(wwise_world, "Play_ratling_gunner_shooting_loop", use_occlusion, wwise_source_id)
+    end
+
+    WwiseWorld.set_source_parameter(wwise_world, wwise_source_id, "ratling_gun_shooting_loop_parameter", 0)
+
+    state_data.shoot_sound_source_id = wwise_source_id
+end
+
+local function ratling_firing_update(self, owner_unit, weapon_unit, state_data, is_local_player, world, dt)
+    if not state_data.shoot_time or state_data.shoot_time > RATLING_TIME_AT_MAX_RPS then
+        return
+    end
+
+    state_data.shoot_time = state_data.shoot_time + dt
+
+    local wwise_source_id = state_data.shoot_sound_source_id
+
+    if not wwise_source_id then
+        return
+    end
+
+    local time_shooting_percent = state_data.shoot_time / RATLING_TIME_AT_MAX_RPS
+    local wwise_world = Managers.world:wwise_world(world)
+
+    WwiseWorld.set_source_parameter(wwise_world, wwise_source_id, "ratling_gun_shooting_loop_parameter", time_shooting_percent)
+end
+
+local function ratling_firing_leave(self, owner_unit, weapon_unit, state_data, is_local_player, world)
+    local wwise_world = Managers.world:wwise_world(world)
+
+    if is_local_player then
+        WwiseWorld.trigger_event(wwise_world, "Stop_player_ratling_gunner_shooting_loop", weapon_unit)
+    else
+        WwiseWorld.trigger_event(wwise_world, "Stop_ratling_gunner_shooting_loop", weapon_unit)
+    end
+
+    state_data.shoot_sound_source_id = nil
+    state_data.shoot_time = nil
+end
+
+-- Reload completion for the hero Ratling. Mirrors the Versus finish_function
+-- (vs_ratling_gunner_gun.lua) but swaps the infinite-hopper add_ammo() for a
+-- reserve-to-clip instant_reload, so the clip/reserve split loads the clip
+-- from the reserve instead of topping the reserve back up (issue 40).
+local function ratling_reload_finish(owner_unit, reason, weapon_unit_extension)
+    weapon_unit_extension:change_synced_state(nil)
+
+    local wwise_world = Managers.world:wwise_world(weapon_unit_extension.world)
+
+    WwiseWorld.trigger_event(wwise_world, "Stop_player_ratling_gunner_weapon_reload")
+
+    if reason == "action_complete" then
+        local ammo_extension = ScriptUnit.has_extension(weapon_unit_extension.unit, "ammo_system")
+
+        if ammo_extension then
+            ammo_extension:instant_reload(false)
+        end
+    end
+end
+
+-- Make the resident hero flamethrower soundbank load with the Warpfire so the
+-- substituted drakegun loop is audible. get_weapon_packages only reads the
+-- wwise_dep for a hand that actually carries a unit, so declaring on both is
+-- harmless and covers whichever hand the item exposes.
+local function ensure_flamethrower_wwise_dep(template)
+    for _, field in ipairs({ "wwise_dep_left_hand", "wwise_dep_right_hand" }) do
+        local deps = template[field] or {}
+        local present = false
+
+        for _, dep in ipairs(deps) do
+            if dep == DRAKEGUN_FLAME_WWISE_PACKAGE then
+                present = true
+                break
+            end
+        end
+
+        if not present then
+            deps[#deps + 1] = DRAKEGUN_FLAME_WWISE_PACKAGE
+        end
+
+        template[field] = deps
+    end
+end
+
 local function adapt_warpfire_template(template)
     local action_one = template.actions and template.actions.dark_pact_action_one
     local action_reload = template.actions and template.actions.dark_pact_reload
@@ -287,6 +428,12 @@ local function adapt_warpfire_template(template)
         template.synced_states.priming.enter = nil
     end
 
+    -- The Versus warpfire soundbank is not resident in Adventure (the item
+    -- declares no such wwise_dep), so its shooting/cooling synced-state events
+    -- are silent. Load the resident hero flamethrower bank instead; the audible
+    -- loop itself is driven from install_warpfire_action_adapter (issue 41).
+    ensure_flamethrower_wwise_dep(template)
+
     return true
 end
 
@@ -327,6 +474,7 @@ local function adapt_ratling_template(template)
     action_one.fire.chain_condition_func = hero_ratling_condition
     action_reload.default.condition_func = hero_ratling_reload_condition
     action_reload.default.chain_condition_func = hero_ratling_reload_condition
+    action_reload.default.finish_function = ratling_reload_finish
     action_one.fire.lightweight_projectile_info.collision_filter =
         "filter_player_ray_projectile"
 
@@ -357,22 +505,42 @@ local function adapt_ratling_template(template)
         "dark_pact_action_two")
 
     -- Versus state callbacks depend on VCE and a Pactsworn "fire" career
-    -- ability. The weapon actions retain their native spin, ammo and
-    -- projectile behavior; empty synchronized callbacks keep network state
-    -- transitions valid without invoking those unavailable managers.
+    -- ability. Strip every callback first so those unavailable managers are
+    -- never invoked, then restore only the sanitized Wwise weapon audio so the
+    -- spin-up and firing loop are heard again (issue 41). The weapon actions
+    -- keep their native spin, ammo and projectile behavior.
     for _, synced_state in pairs(template.synced_states or {}) do
         synced_state.enter = nil
         synced_state.update = nil
         synced_state.leave = nil
     end
 
+    if template.synced_states then
+        if template.synced_states.winding then
+            template.synced_states.winding.enter = ratling_winding_enter
+            template.synced_states.winding.leave = ratling_winding_leave
+        end
+
+        if template.synced_states.firing then
+            template.synced_states.firing.enter = ratling_firing_enter
+            template.synced_states.firing.update = ratling_firing_update
+            template.synced_states.firing.leave = ratling_firing_leave
+        end
+    end
+
     template.pusfume_role_pose = "to_ratling_gunner"
 
-    -- The Versus Ratling gun is intentionally inexhaustible. Adventure ammo
-    -- pickups only recognize finite ranged weapons, so keep one 120-round
-    -- hopper and let ordinary ammo boxes refill it directly.
+    -- Give the Ratling a normal hero ammo economy (issue 40): a 120-round clip
+    -- plus a 120-round reserve (240 total). Firing empties the clip, the reload
+    -- (ratling_reload_finish) pulls from the reserve, and ammo boxes refill the
+    -- reserve like any hero ranged weapon. ammo_immediately_available must be
+    -- false for the clip/reserve split; infinite_ammo stays false so pickups
+    -- treat the weapon as finite and eligible.
     template.ammo_data.infinite_ammo = false
-    template.ammo_data.starting_reserve_ammo = 0
+    template.ammo_data.ammo_immediately_available = false
+    template.ammo_data.ammo_per_clip = RATLING_CLIP_AMMO
+    template.ammo_data.max_ammo = RATLING_CLIP_AMMO + RATLING_RESERVE_AMMO
+    template.ammo_data.starting_reserve_ammo = RATLING_RESERVE_AMMO
 
     return true
 end
@@ -738,6 +906,59 @@ local function install_warpfire_action_adapter()
                 M.ITEM_KEYS.slot_ranged, nil, nil, nil, nil, nil, nil, nil,
                 nil, nil, nil, 1)
         end
+    end)
+
+    -- Substitute an audible flamethrower for the silent Versus warpfire loop
+    -- (issue 41). The fire action is one continuous action for the whole burst,
+    -- so start the resident drakegun flame loop when it begins and stop it when
+    -- it finishes or is destroyed. Stopping on both is idempotent and prevents a
+    -- stuck loop if the action is torn down without a normal finish.
+    local function stop_pusfume_flame_loop(self)
+        if not self._pusfume_flame_wwise_world or not self._pusfume_flame_source_id then
+            return
+        end
+
+        WwiseWorld.trigger_event(self._pusfume_flame_wwise_world,
+            DRAKEGUN_FLAME_LOOP_STOP, self._pusfume_flame_source_id)
+
+        self._pusfume_flame_wwise_world = nil
+        self._pusfume_flame_source_id = nil
+    end
+
+    mod:hook(ActionWarpfireThrower, "client_owner_start_action",
+        function(func, self, ...)
+            func(self, ...)
+
+            if not is_pusfume_unit(self.owner_unit) then
+                return
+            end
+
+            local weapon_unit = self.weapon_unit
+
+            if not weapon_unit or not Unit.alive(weapon_unit) then
+                return
+            end
+
+            local wwise_world = Managers.world:wwise_world(self.world)
+
+            self._pusfume_flame_wwise_world = wwise_world
+            self._pusfume_flame_source_id = WwiseWorld.make_auto_source(
+                wwise_world, weapon_unit)
+
+            WwiseWorld.trigger_event(wwise_world, DRAKEGUN_FLAME_LOOP_START,
+                self._pusfume_flame_source_id)
+        end)
+
+    mod:hook(ActionWarpfireThrower, "finish", function(func, self, ...)
+        stop_pusfume_flame_loop(self)
+
+        return func(self, ...)
+    end)
+
+    mod:hook(ActionWarpfireThrower, "destroy", function(func, self, ...)
+        stop_pusfume_flame_loop(self)
+
+        return func(self, ...)
     end)
 
     state.warpfire_action_adapter_installed = true
@@ -1164,11 +1385,33 @@ function M.inject_backend_items(items)
     return items
 end
 
+function M.set_roster(roster)
+    roster_ref = roster
+end
+
+function M.open_all_hero_weapons()
+    return roster_open()
+end
+
 function M.backend_id_for_slot(slot_name)
-    return state.selected_backend_ids[slot_name] or M.BACKEND_IDS[slot_name]
+    local base = state.selected_backend_ids[slot_name] or M.BACKEND_IDS[slot_name]
+
+    if roster_open() then
+        return roster_ref.selected_weapon_id(slot_name) or base
+    end
+
+    return base
 end
 
 function M.item_for_slot(slot_name)
+    if roster_open() then
+        local item = roster_ref.selected_weapon_item(slot_name)
+
+        if item then
+            return item
+        end
+    end
+
     return state.backend_items[M.backend_id_for_slot(slot_name)]
 end
 
@@ -1226,6 +1469,10 @@ end
 
 
 function M.select_backend_id(slot_name, backend_id)
+    if roster_open() and roster_ref.select_weapon(slot_name, backend_id) then
+        return true
+    end
+
     for _, allowed_id in ipairs(M.allowed_backend_ids(slot_name)) do
         if backend_id == allowed_id then
             state.selected_backend_ids[slot_name] = backend_id
@@ -1239,6 +1486,10 @@ function M.select_backend_id(slot_name, backend_id)
 end
 
 function M.select_item_key(slot_name, item_key)
+    if roster_open() and roster_ref.select_weapon_by_key(slot_name, item_key) then
+        return true
+    end
+
     for backend_id, item in pairs(state.backend_items) do
         if item and item.key == item_key then
             return M.select_backend_id(slot_name, backend_id)

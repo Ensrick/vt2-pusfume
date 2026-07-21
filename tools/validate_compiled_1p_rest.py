@@ -6,16 +6,36 @@ import json
 import os
 import sys
 
-from stingray_unit_scene import read_scene_graph, short_hash
+try:
+    from .stingray_unit_scene import read_scene_graph, short_hash
+except ImportError:
+    from stingray_unit_scene import read_scene_graph, short_hash
 
 
 TOLERANCE = 0.001
-MINIMUM_SHARED_NODES = 53
+LEGACY_MINIMUM_SHARED_NODES = 53
+HUMAN_MINIMUM_SHARED_NODES = 52
 NAME_OVERRIDES = {"j_spine1": "j_spine2"}
 
 
 def matrix_error(first, second):
     return max(abs(left - right) for left, right in zip(first, second))
+
+
+def select_rest_contract(custom_hashes, donor_hashes):
+    custom_spine1 = short_hash("j_spine1") in custom_hashes
+    custom_spine2 = short_hash("j_spine2") in custom_hashes
+    donor_spine2 = short_hash("j_spine2") in donor_hashes
+
+    if custom_spine1 and donor_spine2:
+        return "legacy-spine-override", LEGACY_MINIMUM_SHARED_NODES, NAME_OVERRIDES
+    if custom_spine2 and donor_spine2:
+        return "human-same-name", HUMAN_MINIMUM_SHARED_NODES, {}
+
+    raise RuntimeError(
+        "Compiled first-person unit matches neither the legacy spine override "
+        "nor the human same-name donor contract"
+    )
 
 
 def compare_compiled_rest(custom_path, donor_path):
@@ -24,6 +44,9 @@ def compare_compiled_rest(custom_path, donor_path):
     custom_by_hash = {node["name_hash"]: node for node in custom["nodes"]}
     donor_by_hash = {node["name_hash"]: node for node in donor["nodes"]}
     shared_hashes = sorted(set(custom_by_hash).intersection(donor_by_hash))
+    contract, minimum_shared_nodes, name_overrides = select_rest_contract(
+        custom_by_hash, donor_by_hash
+    )
 
     comparisons = [
         {
@@ -36,7 +59,7 @@ def compare_compiled_rest(custom_path, donor_path):
         }
         for name_hash in shared_hashes
     ]
-    for target_name, source_name in NAME_OVERRIDES.items():
+    for target_name, source_name in name_overrides.items():
         target_hash = short_hash(target_name)
         source_hash = short_hash(source_name)
         if target_hash not in custom_by_hash or source_hash not in donor_by_hash:
@@ -54,16 +77,17 @@ def compare_compiled_rest(custom_path, donor_path):
             }
         )
 
-    if len(shared_hashes) < MINIMUM_SHARED_NODES:
+    if len(shared_hashes) < minimum_shared_nodes:
         raise RuntimeError(
             f"Only {len(shared_hashes)} compiled nodes are shared with the donor; "
-            f"expected at least {MINIMUM_SHARED_NODES}"
+            f"expected at least {minimum_shared_nodes} for {contract}"
         )
 
     comparisons.sort(key=lambda item: item["error"], reverse=True)
     maximum_error = comparisons[0]["error"] if comparisons else float("inf")
     result = {
         "compared": len(comparisons),
+        "contract": contract,
         "custom_nodes": len(custom_by_hash),
         "donor_nodes": len(donor_by_hash),
         "maximum_error": maximum_error,

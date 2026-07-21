@@ -101,9 +101,72 @@ class WeaponContractTests(unittest.TestCase):
         self.assertIn("spawn_globadier_globe", WEAPONS)
         self.assertIn('template.pusfume_role_pose = "to_globadier"', WEAPONS)
         self.assertIn("template.ammo_data.infinite_ammo = false", WEAPONS)
-        self.assertIn("template.ammo_data.starting_reserve_ammo = 0", WEAPONS)
         self.assertIn("install_ratling_audio_adapter", WEAPONS)
         self.assertIn('mod:hook(ActionMinigun, "_play_vo"', WEAPONS)
+
+    def test_ratling_has_clip_and_reserve_ammo_economy(self):
+        # 120-round clip + 120-round reserve = 240 total (issue 40). The pool
+        # must be reserve-based (ammo_immediately_available false) so reload
+        # pulls from the reserve and ammo boxes refill the reserve.
+        self.assertIn("local RATLING_CLIP_AMMO = 120", WEAPONS)
+        self.assertIn("local RATLING_RESERVE_AMMO = 120", WEAPONS)
+        self.assertIn(
+            "template.ammo_data.ammo_immediately_available = false", WEAPONS
+        )
+        self.assertIn(
+            "template.ammo_data.ammo_per_clip = RATLING_CLIP_AMMO", WEAPONS
+        )
+        self.assertIn(
+            "template.ammo_data.max_ammo = RATLING_CLIP_AMMO + RATLING_RESERVE_AMMO",
+            WEAPONS,
+        )
+        self.assertIn(
+            "template.ammo_data.starting_reserve_ammo = RATLING_RESERVE_AMMO",
+            WEAPONS,
+        )
+        # Reload moves reserve into the clip instead of the Versus infinite
+        # hopper refill (add_ammo with no amount, which would top the reserve).
+        self.assertIn("ratling_reload_finish", WEAPONS)
+        self.assertIn("ammo_extension:instant_reload(false)", WEAPONS)
+        self.assertIn(
+            "action_reload.default.finish_function = ratling_reload_finish", WEAPONS
+        )
+
+    def test_ratling_restores_sanitized_wwise_fire_audio(self):
+        # The Versus synced-state callbacks are wiped (they crash on VCE and the
+        # Pactsworn "fire" ability), then the fire audio is restored (issue 41).
+        self.assertIn(
+            "template.synced_states.firing.enter = ratling_firing_enter", WEAPONS
+        )
+        self.assertIn(
+            "template.synced_states.firing.update = ratling_firing_update", WEAPONS
+        )
+        self.assertIn(
+            "template.synced_states.winding.enter = ratling_winding_enter", WEAPONS
+        )
+        self.assertIn('"Play_player_ratling_gunner_shooting_loop"', WEAPONS)
+        self.assertIn('"Stop_player_ratling_gunner_shooting_loop"', WEAPONS)
+        self.assertIn('"Play_player_ratling_gunner_weapon_ready"', WEAPONS)
+        self.assertIn('"ratling_gun_shooting_loop_parameter"', WEAPONS)
+
+    def test_warpfire_substitutes_resident_drakegun_flame_loop(self):
+        # The Versus warpfire soundbank is not resident in Adventure, so the
+        # resident hero drakegun flamethrower loop is played over the fire action
+        # and its wwise bank is declared as a dependency (issue 41).
+        self.assertIn(
+            'local DRAKEGUN_FLAME_LOOP_START = "Play_player_combat_weapon_drakegun_flamethrower_shoot"',
+            WEAPONS,
+        )
+        self.assertIn(
+            'local DRAKEGUN_FLAME_LOOP_STOP = "Stop_player_combat_weapon_drakegun_flamethrower_shoot"',
+            WEAPONS,
+        )
+        self.assertIn('local DRAKEGUN_FLAME_WWISE_PACKAGE = "wwise/flamethrower"', WEAPONS)
+        self.assertIn("ensure_flamethrower_wwise_dep(template)", WEAPONS)
+        self.assertIn(
+            'mod:hook(ActionWarpfireThrower, "client_owner_start_action"', WEAPONS
+        )
+        self.assertIn('mod:hook(ActionWarpfireThrower, "finish"', WEAPONS)
 
     def test_assassin_claws_use_complete_native_units_and_safe_actions(self):
         self.assertIn("M.MELEE_VARIANTS", WEAPONS)

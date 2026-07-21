@@ -10,6 +10,53 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Guarded the direct weapon first-person animation path after v0.6.42 sent a
+  missing generic hook-swing event to Stingray and crashed. The check is scoped
+  to Pusfume and preserves every event supported by Janfon's human hero rig.
+- Gave the Ratling Gun a real clip-plus-reserve ammo economy (issue
+  [#40](https://github.com/Ensrick/vt2-pusfume/issues/40)): 240 total rounds as
+  a 120-round loaded clip plus a 120-round reserve. The pool is now reserve-based
+  (`ammo_immediately_available` false), the reload pulls from the reserve into
+  the clip (`instant_reload`, replacing the Versus infinite-hopper `add_ammo`),
+  and ammo boxes refill the reserve like any hero ranged weapon. Verified against
+  `GenericAmmoUserExtension` and `SimpleInventoryExtension._add_ammo_to_slot`.
+- Restored the Ratling Gun and Warpfire Thrower firing audio (issue
+  [#41](https://github.com/Ensrick/vt2-pusfume/issues/41)). The ratling adapter
+  had nil'd every synchronized-state callback to strip the crashing VCE and
+  Pactsworn "fire" career-ability code, which also removed the Wwise fire loop
+  and spin-up triggers; those are now re-added as sanitized audio-only callbacks
+  (event names verbatim from `vs_ratling_gunner_gun.lua`). The Warpfire's Versus
+  soundbank is not resident in Adventure (the item declares no such wwise_dep),
+  so it now plays the resident hero drakegun flamethrower loop
+  (`Play/Stop_player_combat_weapon_drakegun_flamethrower_shoot`, bank
+  `wwise/flamethrower`, both from `drakegun.lua`) over the fire action.
+  Ratling-bank residency in Adventure needs in-game A/B confirmation.
+- Switched Pusfume's live first-person hands to Janfon's human-rigged arms
+  (issue [#35](https://github.com/Ensrick/vt2-pusfume/issues/35)): the rig is
+  the standard hero 1P skeleton verbatim (weapon-attach plus all 40
+  weapon-component bones), rebound via the FBX path against the dwarf donor
+  after proving all hero 1P donor skeletons are world-identical (max matrix
+  delta 0.0). `native_skaven_first_person` now bakes false whenever a
+  first-person blend is supplied, retiring the Skaven Packmaster arms and
+  un-suppressing native hero weapon state machines.
+- Opened every hero's weapons to Pusfume for testing
+  (`open_all_hero_weapons = true`): the roster layer expands `can_wield`,
+  the weapon grid surfaces all hero weapons alongside the rat prototypes,
+  and per-slot selection stores any hero backend item. The three-path 3P
+  animation wire-safety floor guards cross-body events unconditionally.
+  Flip the single flag off for any public promotion.
+- Pruned weightless orphan vertex groups in the 1P prep (handles Janfon's
+  stray `j_lefthandpinky4`) and located the beastmen first-person arrow-hit
+  mechanism (`first_person_hit_flow_events` `arrow_left/right/center`) for
+  the future psf_arrow flow-graph swap.
+- Fixed a fatal when any per-career statistic was recorded for Pusfume
+  (2026-07-19 23:30 crash via career_tweaker's armor/overcharge stat on
+  area damage): `StatisticsDefinitions` builds its career-keyed stat
+  families by iterating `CareerSettings` at boot, before the mod registers
+  the career. `register_statistics_definitions` now replicates the boot
+  generation for Pusfume (`min_health_percentage`, `min_health_completed`,
+  `completed_career_levels` across unlockable levels and difficulties),
+  idempotent across VMF reloads.
 - Fixed the hero-select name rendering as the missing-localization marker
   `< Pusfume >`: the identity widgets received the VMF-resolved string, which
   the vanilla localize=true text pass re-ran through global `Localize` where
