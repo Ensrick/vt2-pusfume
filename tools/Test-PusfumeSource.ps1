@@ -187,12 +187,15 @@ Test-Condition ($firstPersonDiagnosticText -match 'def edge_stretch' -and `
     "first-person Blender diagnostics" "bind deformation remains independently measurable"
 Test-Condition ($nativeBuildText -match '\[string\]\$FirstPersonBlend' -and `
     $nativeBuildText -match '\[string\]\$FirstPersonDonorUnit' -and `
+    $nativeBuildText -match '\[string\]\$VersusFirstPersonBlend' -and `
+    $nativeBuildText -match '\[string\]\$VersusFirstPersonDonorUnit' -and `
     $nativeBuildText -match '\[ValidateSet\("bsi", "fbx"\)\]' -and `
     $nativeBuildText -match '\[string\]\$FirstPersonFormat = "bsi"' -and `
     $nativeBuildText -match 'FirstPersonBlend requires -FirstPersonDonorUnit' -and `
     $nativeBuildText -match 'prepare_pusfume_1p_bsi\.py' -and `
     $nativeBuildText -match 'prepare_pusfume_1p_blend\.py' -and `
     $nativeBuildText -match 'pusfume_1p_arms\.unit' -and `
+    $nativeBuildText -match 'pusfume_1p_versus_arms\.unit' -and `
     $nativeBuildText -match 'native_1p_child\.package' -and `
     $nativeBuildText -match 'pusfume_1p_body_child' -and `
     $nativeBuildText -match 'E0C4E09D80AE735B' -and `
@@ -201,6 +204,7 @@ Test-Condition ($nativeBuildText -match '\[string\]\$FirstPersonBlend' -and `
 Test-Condition ($nativeBuildText -match 'processed_bundles\.csv' -and `
     $nativeBuildText -match 'medium_portrait_pusfume,texture' -and `
     $nativeBuildText -match 'units/pusfume/pusfume_1p_arms,unit' -and `
+    $nativeBuildText -match 'units/pusfume/pusfume_1p_versus_arms,unit' -and `
     $nativeBuildText -match 'validate_compiled_1p_rest\.py' -and `
     $compiledFirstPersonRestText -match 'MINIMUM_SHARED_NODES = 53' -and `
     $compiledFirstPersonRestText -match 'TOLERANCE = 0\.001') `
@@ -238,15 +242,16 @@ Test-Condition ($nativeText -match 'First-person attachment probe meshes=%d' -an
     $nativeText -notmatch 'Unit\.node\(target, node_name\)' -and `
     $nativeText -match 'Vector3\.distance\(source_position, target_position\)') `
     "first-person runtime probe" "live logs distinguish render visibility from node alignment"
-Test-Condition ($nativeText -match 'SKAVEN_FIRST_PERSON_ARMS' -and `
+Test-Condition ($nativeText -match 'config\.versus_first_person_unit' -and `
     $nativeText -match 'spawn_dual_first_person_rig' -and `
     $nativeText -match 'SimpleInventoryExtension, "wield"' -and `
     $nativeText -match 'SKAVEN_ROLE_BY_POSE\[item_template\.pusfume_role_pose\]' -and `
     $nativeText -match 'inventory_extension\._first_person_unit = first_person_unit' -and `
     $nativeText -match 'relink_first_person_slot' -and `
     $nativeText -match 'weapon_extension\.first_person_unit = first_person_unit' -and `
+    $nativeText -notmatch '(?s)local function switch_first_person_rig.*?extension\.first_person_unit = first_person_unit.*?local function prepare_first_person_rig_for_wield' -and `
     $nativeBuildText -match 'dual_first_person_rigs = \$dualFirstPersonRigsValue') `
-    "dual first-person rigs" "Versus weapons use native role arms while hero weapons use Janfon's human rig"
+    "dual first-person rigs" "Versus weapons use Janfon's Skaven rig without replacing the hero camera base"
 Test-Condition ($nativeText -match 'spawn_local_unit\(source_rest_unit_name\)' -and `
     $nativeText -match 'Matrix4x4\.multiply\(source_pose, Matrix4x4\.inverse\(source_rest\)\)' -and `
     $nativeText -match 'Matrix4x4\.set_translation\(target_pose, Matrix4x4\.translation\(target_rest\)\)' -and `

@@ -90,23 +90,17 @@ class RuntimePresentationTests(unittest.TestCase):
             self.native,
         )
 
-    def test_native_skaven_rig_never_receives_bardin_state_machine(self):
-        self.assertIn(
-            "local donor_default_state_machine = profile.default_state_machine",
-            self.native,
-        )
-        self.assertIn("profile.default_state_machine = nil", self.native)
-        self.assertIn("profile.default_state_machine = donor_default_state_machine", self.native)
-        self.assertIn(
-            'mod:hook(PlayerUnitFirstPerson, "set_state_machine"',
-            self.native,
-        )
-        self.assertIn(
-            "new_state_machine == extension._pusfume_donor_default_state_machine",
-            self.native,
-        )
+    def test_dual_rig_keeps_hero_camera_base_permanent(self):
+        switch = self.native.split(
+            "local function switch_first_person_rig", 1
+        )[1].split("local function prepare_first_person_rig_for_wield", 1)[0]
+        self.assertIn("extension._pusfume_active_animation_unit = first_person_unit", switch)
+        self.assertNotIn("extension.first_person_unit = first_person_unit", switch)
+        self.assertNotIn("extension.first_person_attachment_unit = attachment_unit", switch)
+        self.assertIn("World.link_unit(", self.native)
+        self.assertIn("camera_base=hero", self.native)
 
-    def test_weapon_family_switches_between_native_and_human_first_person_rigs(self):
+    def test_weapon_family_switches_between_janfon_versus_and_human_attachments(self):
         for role in (
             "packmaster",
             "gutter_runner",
@@ -130,6 +124,11 @@ class RuntimePresentationTests(unittest.TestCase):
             "extension._pusfume_hero_first_person_attachment",
             self.native,
         )
+        self.assertIn(
+            "extension._pusfume_skaven_first_person_attachment",
+            self.native,
+        )
+        self.assertIn("config.versus_first_person_unit", self.native)
         self.assertIn("relink_first_person_slot", self.native)
         self.assertIn(
             "weapon_extension.first_person_unit = first_person_unit",

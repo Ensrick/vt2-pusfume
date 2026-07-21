@@ -6,6 +6,8 @@ param(
     [string]$BlenderExe = "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe",
     [string]$FirstPersonBlend = "",
     [string]$FirstPersonDonorUnit = "",
+    [string]$VersusFirstPersonBlend = "",
+    [string]$VersusFirstPersonDonorUnit = "",
     [ValidateSet("bsi", "fbx")]
     [string]$FirstPersonFormat = "bsi",
     [string]$TextureSource = ".build\pusfume_handoff\textures conv",
@@ -158,8 +160,14 @@ if ($ParentChildMaterial -and -not $NoDonorTextureShadow) {
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $sourceMod = Join-Path $repoRoot "pusfume"
 $firstPersonEnabled = -not [string]::IsNullOrWhiteSpace($FirstPersonBlend)
+$versusFirstPersonEnabled = -not [string]::IsNullOrWhiteSpace($VersusFirstPersonBlend)
 if ($firstPersonEnabled -and -not $SplicedGameChild) {
     throw "FirstPersonBlend requires -SplicedGameChild for the proven skinned material binding"
+}
+$versusFirstPersonBlendPath = $null
+$versusFirstPersonDonorUnitPath = $null
+if ($versusFirstPersonEnabled -and -not $firstPersonEnabled) {
+    throw "VersusFirstPersonBlend requires the hero-compatible FirstPersonBlend"
 }
 $firstPersonBlendPath = $null
 $firstPersonDonorUnitPath = $null
@@ -182,6 +190,27 @@ if ($firstPersonEnabled) {
     }
     if ([IO.Path]::GetExtension($firstPersonDonorUnitPath) -ine ".unit") {
         throw "FirstPersonDonorUnit must be an extracted compiled VT2 unit: $firstPersonDonorUnitPath"
+    }
+}
+if ($versusFirstPersonEnabled) {
+    if ([string]::IsNullOrWhiteSpace($VersusFirstPersonDonorUnit)) {
+        throw "VersusFirstPersonBlend requires -VersusFirstPersonDonorUnit for the exact Skaven rest-skeleton rebind"
+    }
+    $versusFirstPersonBlendPath = if ([IO.Path]::IsPathRooted($VersusFirstPersonBlend)) {
+        (Resolve-Path $VersusFirstPersonBlend).Path
+    } else {
+        (Resolve-Path (Join-Path $repoRoot $VersusFirstPersonBlend)).Path
+    }
+    if ([IO.Path]::GetExtension($versusFirstPersonBlendPath) -ine ".blend") {
+        throw "VersusFirstPersonBlend must be a Blender source file: $versusFirstPersonBlendPath"
+    }
+    $versusFirstPersonDonorUnitPath = if ([IO.Path]::IsPathRooted($VersusFirstPersonDonorUnit)) {
+        (Resolve-Path $VersusFirstPersonDonorUnit).Path
+    } else {
+        (Resolve-Path (Join-Path $repoRoot $VersusFirstPersonDonorUnit)).Path
+    }
+    if ([IO.Path]::GetExtension($versusFirstPersonDonorUnitPath) -ine ".unit") {
+        throw "VersusFirstPersonDonorUnit must be an extracted compiled VT2 unit: $versusFirstPersonDonorUnitPath"
     }
 }
 $legacyFurPath = $null
@@ -276,6 +305,33 @@ if ($firstPersonEnabled) {
     if (-not (Test-Path -LiteralPath $firstPersonAssetPath -PathType Leaf) -or `
             (Get-Item -LiteralPath $firstPersonAssetPath).Length -lt 1024) {
         throw "First-person Pusfume $($FirstPersonFormat.ToUpperInvariant()) preparation produced no usable output"
+    }
+}
+
+$versusFirstPersonAssetPath = $null
+if ($versusFirstPersonEnabled) {
+    $versusFirstPersonExtension = if ($FirstPersonFormat -eq "bsi") { "bsi" } else { "fbx" }
+    $versusFirstPersonAssetPath = Join-Path $generatedRoot "pusfume_1p_versus_arms.$versusFirstPersonExtension"
+    $versusFirstPersonTool = if ($FirstPersonFormat -eq "bsi") {
+        Join-Path $repoRoot "tools\prepare_pusfume_1p_bsi.py"
+    } else {
+        Join-Path $repoRoot "tools\prepare_pusfume_1p_blend.py"
+    }
+    $sourceBlendHash = (Get-FileHash -LiteralPath $versusFirstPersonBlendPath -Algorithm SHA256).Hash
+
+    $result = Invoke-HiddenTool -FilePath $blenderExePath -ArgumentList @(
+        "--background", "--factory-startup", "--disable-autoexec",
+        "--python", $versusFirstPersonTool, "--",
+        $versusFirstPersonBlendPath, $versusFirstPersonDonorUnitPath,
+        $versusFirstPersonAssetPath)
+    Assert-HiddenToolSuccess $result `
+        "Versus first-person Pusfume $($FirstPersonFormat.ToUpperInvariant()) preparation"
+    if ((Get-FileHash -LiteralPath $versusFirstPersonBlendPath -Algorithm SHA256).Hash -ne $sourceBlendHash) {
+        throw "Versus first-person preparation modified its source blend: $versusFirstPersonBlendPath"
+    }
+    if (-not (Test-Path -LiteralPath $versusFirstPersonAssetPath -PathType Leaf) -or `
+            (Get-Item -LiteralPath $versusFirstPersonAssetPath).Length -lt 1024) {
+        throw "Versus first-person preparation produced no usable output"
     }
 }
 
@@ -425,6 +481,23 @@ _name = "units/pusfume/pusfume_1p_arms"
 asset = "units/pusfume/pusfume_1p_arms"
 extension = ".fbx"
 '@ | Set-Content -LiteralPath (Join-Path $unitRoot "pusfume_1p_arms.dcc_asset") -Encoding utf8
+    }
+}
+if ($versusFirstPersonEnabled) {
+    Copy-Item -LiteralPath $versusFirstPersonAssetPath `
+        -Destination (Join-Path $unitRoot "pusfume_1p_versus_arms.$FirstPersonFormat") -Force
+    if ($FirstPersonFormat -eq "bsi") {
+        $versusFirstPersonBonesPath = [IO.Path]::ChangeExtension($versusFirstPersonAssetPath, ".bones")
+        Copy-Item -LiteralPath $versusFirstPersonBonesPath `
+            -Destination (Join-Path $unitRoot "pusfume_1p_versus_arms.bones") -Force
+    } else {
+    @'
+_data_root_version = 1
+_id = "274e72fd-bfb1-486b-95c4-6e58bfc3d592"
+_name = "units/pusfume/pusfume_1p_versus_arms"
+asset = "units/pusfume/pusfume_1p_versus_arms"
+extension = ".fbx"
+'@ | Set-Content -LiteralPath (Join-Path $unitRoot "pusfume_1p_versus_arms.dcc_asset") -Encoding utf8
     }
 }
 Copy-Item -LiteralPath $inputBonesPath -Destination (Join-Path $unitRoot "pusfume_3p.bones") -Force
@@ -1288,6 +1361,24 @@ renderables = {
 }
 '@ | Set-Content -LiteralPath (Join-Path $unitRoot "pusfume_1p_arms.unit") -Encoding utf8
 }
+if ($versusFirstPersonEnabled) {
+    @'
+materials = {
+    p_main = "materials/pusfume/pusfume_body"
+}
+renderables = {
+    pusfume_1p_arms = {
+        always_keep = false
+        culling = "disabled"
+        generate_uv_unwrap = false
+        occluder = false
+        shadow_caster = false
+        surface_queries = false
+        viewport_visible = true
+    }
+}
+'@ | Set-Content -LiteralPath (Join-Path $unitRoot "pusfume_1p_versus_arms.unit") -Encoding utf8
+}
 
 $heroPreviewEnabled = if ($HeroPreview) { "true" } else { "false" }
 # The stub parent currently shadows the game's mtr_outfit inside the bundle
@@ -1316,6 +1407,11 @@ $furChildMaterialValue = if ($SplicedGameChild -and $furEnabled) {
 }
 $firstPersonUnitValue = if ($firstPersonEnabled) {
     '"units/pusfume/pusfume_1p_arms"'
+} else {
+    "false"
+}
+$versusFirstPersonUnitValue = if ($versusFirstPersonEnabled) {
+    '"units/pusfume/pusfume_1p_versus_arms"'
 } else {
     "false"
 }
@@ -1352,7 +1448,7 @@ $firstPersonDirectLinkValue = if ($firstPersonEnabled) { "true" } else { "false"
 # all-Skaven fallback remains off. The separate dual-rig path keeps native
 # role-specific Skaven arms resident only for Versus weapon families.
 $nativeSkavenFirstPersonValue = if ($firstPersonEnabled) { "false" } else { "true" }
-$dualFirstPersonRigsValue = if ($firstPersonEnabled) { "true" } else { "false" }
+$dualFirstPersonRigsValue = if ($firstPersonEnabled -and $versusFirstPersonEnabled) { "true" } else { "false" }
 
 @"
 return {
@@ -1368,6 +1464,7 @@ return {
     native_skaven_first_person = $nativeSkavenFirstPersonValue,
     dual_first_person_rigs = $dualFirstPersonRigsValue,
     first_person_unit = $firstPersonUnitValue,
+    versus_first_person_unit = $versusFirstPersonUnitValue,
     hero_preview_enabled = $heroPreviewEnabled,
     hide_donor_weapons = false,
     locomotion_events_enabled = true,
@@ -1392,12 +1489,18 @@ $firstPersonUnitPackageEntry = if ($firstPersonEnabled) {
 } else {
     ""
 }
+$versusFirstPersonUnitPackageEntry = if ($versusFirstPersonEnabled) {
+    '    "units/pusfume/pusfume_1p_versus_arms"'
+} else {
+    ""
+}
 
 @"
 
 unit = [
     "units/pusfume/pusfume_3p"
 $firstPersonUnitPackageEntry
+$versusFirstPersonUnitPackageEntry
 ]
 "@ | Add-Content -LiteralPath (Join-Path $stageMod `
     "resource_packages\pusfume\pusfume.package") -Encoding utf8
@@ -1464,6 +1567,9 @@ $requiredCompiledResources = @(
 if ($firstPersonEnabled) {
     $requiredCompiledResources += "units/pusfume/pusfume_1p_arms,unit,"
 }
+if ($versusFirstPersonEnabled) {
+    $requiredCompiledResources += "units/pusfume/pusfume_1p_versus_arms,unit,"
+}
 foreach ($resource in $requiredCompiledResources) {
     if (-not $processedBundlesText.Contains(",$resource")) {
         throw "Compiled resource manifest omitted $resource"
@@ -1489,6 +1595,23 @@ if ($firstPersonEnabled) {
         $compiledRestTool, $compiledFirstPersonUnit, $firstPersonDonorUnitPath)
     Assert-HiddenToolSuccess $result `
         "Compiled first-person rest-skeleton validation"
+}
+if ($versusFirstPersonEnabled) {
+    $versusFirstPersonCompiledMatch = [regex]::Match(
+        $debugIndexText,
+        '"(data/[^"\r\n]+)"\s*=\s*"units/pusfume/pusfume_1p_versus_arms\.unit"')
+    if (-not $versusFirstPersonCompiledMatch.Success) {
+        throw "Compiled debug index omitted the Versus first-person arms unit"
+    }
+
+    $compiledVersusFirstPersonUnit = Join-Path $stageRoot (
+        ".temp\pusfumeV2\compile\" +
+        $versusFirstPersonCompiledMatch.Groups[1].Value.Replace('/', '\'))
+    $result = Invoke-HiddenPython @(
+        $compiledRestTool, $compiledVersusFirstPersonUnit,
+        $versusFirstPersonDonorUnitPath)
+    Assert-HiddenToolSuccess $result `
+        "Compiled Versus first-person rest-skeleton validation"
 }
 
 if ($ParentChildMaterial) {
@@ -1894,3 +2017,4 @@ Write-Host "Native Pusfume materials passed: textures=$($textureNames.Count) mat
 Write-Host "Native Pusfume animation package passed: controller=pusfume_3p clips=pusfume_3p_idle,pusfume_3p_walk"
 Write-Host "Native Pusfume hero preview enabled: $($HeroPreview.IsPresent)"
 Write-Host "Native Pusfume first-person arms enabled: $firstPersonEnabled format=$FirstPersonFormat"
+Write-Host "Native Pusfume Versus first-person arms enabled: $versusFirstPersonEnabled format=$FirstPersonFormat"

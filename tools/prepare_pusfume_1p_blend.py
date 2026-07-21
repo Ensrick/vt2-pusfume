@@ -30,7 +30,7 @@ REQUIRED_DONOR_BONES = {
     "j_rightforearm",
     "j_righthand",
 }
-DONOR_NAME_OVERRIDES = {"j_spine1": "j_spine2"}
+DONOR_NAME_FALLBACKS = {"j_spine1": "j_spine2"}
 
 
 def arguments_after_separator():
@@ -235,8 +235,14 @@ def donor_rest_matrices(armature, donor_unit_path):
     expected = {}
     missing = []
     for bone in armature.data.bones:
-        donor_name = DONOR_NAME_OVERRIDES.get(bone.name, bone.name)
-        donor_node = donor_by_hash.get(short_hash(donor_name))
+        # Prefer the exact skeleton contract. Janfon's Versus rig and the
+        # Skaven donor both use j_spine1; only the legacy hero handoff needs
+        # the j_spine1 -> j_spine2 compatibility fallback.
+        donor_node = donor_by_hash.get(short_hash(bone.name))
+        if donor_node is None and bone.name in DONOR_NAME_FALLBACKS:
+            donor_node = donor_by_hash.get(
+                short_hash(DONOR_NAME_FALLBACKS[bone.name])
+            )
         if donor_node:
             expected[bone.name] = (
                 armature.matrix_world.inverted()

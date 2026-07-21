@@ -11,6 +11,7 @@ return {
     native_skaven_first_person = false,
     dual_first_person_rigs = false,
     first_person_unit = false,
+    versus_first_person_unit = false,
     hero_preview_enabled = false,
     fur_child_material = false,
     hide_donor_weapons = false,

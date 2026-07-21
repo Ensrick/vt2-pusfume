@@ -31,6 +31,14 @@ class CompiledFirstPersonRestTests(unittest.TestCase):
         self.assertEqual(52, minimum)
         self.assertEqual({}, overrides)
 
+    def test_skaven_rig_uses_same_name_spine_contract(self):
+        contract, minimum, overrides = select_rest_contract(
+            {short_hash("j_spine1")}, {short_hash("j_spine1")}
+        )
+        self.assertEqual("skaven-same-name", contract)
+        self.assertEqual(53, minimum)
+        self.assertEqual({}, overrides)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -15,6 +15,7 @@ except ImportError:
 TOLERANCE = 0.001
 LEGACY_MINIMUM_SHARED_NODES = 53
 HUMAN_MINIMUM_SHARED_NODES = 52
+SKAVEN_MINIMUM_SHARED_NODES = 53
 NAME_OVERRIDES = {"j_spine1": "j_spine2"}
 
 
@@ -25,16 +26,19 @@ def matrix_error(first, second):
 def select_rest_contract(custom_hashes, donor_hashes):
     custom_spine1 = short_hash("j_spine1") in custom_hashes
     custom_spine2 = short_hash("j_spine2") in custom_hashes
+    donor_spine1 = short_hash("j_spine1") in donor_hashes
     donor_spine2 = short_hash("j_spine2") in donor_hashes
 
+    if custom_spine1 and donor_spine1:
+        return "skaven-same-name", SKAVEN_MINIMUM_SHARED_NODES, {}
     if custom_spine1 and donor_spine2:
         return "legacy-spine-override", LEGACY_MINIMUM_SHARED_NODES, NAME_OVERRIDES
     if custom_spine2 and donor_spine2:
         return "human-same-name", HUMAN_MINIMUM_SHARED_NODES, {}
 
     raise RuntimeError(
-        "Compiled first-person unit matches neither the legacy spine override "
-        "nor the human same-name donor contract"
+        "Compiled first-person unit matches none of the Skaven same-name, "
+        "legacy spine override, or human same-name donor contracts"
     )
 
 

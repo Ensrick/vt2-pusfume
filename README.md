@@ -21,15 +21,15 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current friends-only live-test candidate is **v0.6.46-dev**, Workshop
-ManifestID `4157729935725131180`. It introduces a weapon-aware dual first-person
-system: the five prototype Versus weapon families use Fatshark's shared Skaven
-base and their role-specific native arms, while ordinary hero weapons use
-Janfon's donor-rest human hands and the normal hero animation controller.
-Wielding updates both first-person caches and rebinds existing weapon, ammo, and
-damage units before vanilla processes the swap. The human attachment now uses
-VT2's complete native same-name link contract; the previous diagnostic
-`j_spine2 -> j_spine1` link that displaced the hands off-camera is retired.
+The current friends-only live-test candidate is **v0.6.47-dev**, Workshop
+ManifestID `6297472431085863749`. It introduces a weapon-aware dual first-person
+system built from both Janfon models: prototype Versus weapons use his 99-bone
+untouched-Skaven attachment, while ordinary hero weapons use his 160-bone
+donor-rest human attachment. Fatshark's hero first-person unit remains the sole
+camera/controller base; weapon swaps change only the visible attachment and
+weapon animation target, preventing Skaven locomotion from moving the hands
+independently of the camera. Post-compile checks verify 52 human and 55 Skaven
+bones against their native donors before deployment.
 Exact Packmaster dragging remains a larger career-state feature. The localized
 chest UV/material seam is tracked separately in issue #28.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person
@@ -171,12 +171,14 @@ game tooling present, the known-good native build is:
 ```powershell
 py -m unittest discover -s tests -v
 .\tools\Test-PusfumeSource.ps1
-.\tools\Build-NativePusfume.ps1 -HeroPreview -IntegratedFur `
+.\tools\Build-NativePusfume.ps1 -HeroPreview -IntegratedFur -SplicedGameChild `
   -ModelFbx ".build\pusfume_handoff\pusfume_3p_authored_idle.fbx" `
   -AnimationFbx ".build\generated-native\pusfume_3p_retargeted_walk.fbx" `
   -IdleAnimationFbx ".build\generated-native\pusfume_3p_authored_idle_clip.fbx" `
-  -FirstPersonBlend ".build\janfon_1p_20260717\pusfume_1p_arms 2.blend" `
-  -FirstPersonDonorUnit ".build\donor_1p_extract\units\beings\player\dwarf_ranger\first_person_base\chr_first_person_mesh.unit" `
+  -FirstPersonBlend ".build\janfon_1p_human_20260719\pusfume_1p_human.blend" `
+  -FirstPersonDonorUnit ".build\donor_human_1p_extract\units\beings\player\empire_soldier\first_person_base\chr_first_person_mesh.unit" `
+  -VersusFirstPersonBlend ".build\janfon_1p_claws_20260719\pusfume_1p_arms claws base.blend" `
+  -VersusFirstPersonDonorUnit ".build\donor_skaven_1p_extract\B62B2EB36EEED507.unit" `
   -Upload
 ```
 

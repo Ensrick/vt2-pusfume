@@ -10,11 +10,18 @@ request rather than in release notes.
 
 ## [Unreleased]
 
-- Added weapon-aware dual first-person rigs. Native Packmaster, Gutter Runner,
-  Globadier, Warpfire Thrower, and Ratling Gunner weapons now select their own
-  Versus base and arm mesh; normal hero weapons select Janfon's human-rigged
-  Pusfume hands. Wielding updates both VT2 first-person caches and rebinds the
-  existing weapon, ammo, and damage units before vanilla handles the wield.
+- Corrected the first-person dual-rig architecture after live testing exposed
+  Packmaster hands animating independently from the frozen hero camera. The
+  hero first-person base now remains the permanent camera/look authority;
+  weapon swaps change only the visible attachment and animation target.
+- Integrated both July 19 Janfon handoffs: the 160-bone `j_spine2` mesh drives
+  ordinary hero weapons and the separate 99-bone `j_spine1` mesh drives all
+  Versus weapon families on VT2's shared Skaven first-person controller.
+- Added a guarded second first-person build input, independent compiled-unit
+  rest validation, shared material binding, and regression coverage that
+  rejects swapping `PlayerUnitFirstPerson.first_person_unit` during wield.
+- Built, SHA-256 verified, locally deployed, and uploaded the corrected
+  friends-only v0.6.47 candidate as Steam ManifestID `6297472431085863749`.
 - Fixed Janfon's human hands rendering off-camera. The donor-rest build now uses
   VT2's complete native `first_person_attachment` contract instead of the
   retarget table, whose `j_spine2 -> j_spine1` diagnostic mapping displaced the
