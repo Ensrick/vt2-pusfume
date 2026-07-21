@@ -296,7 +296,8 @@ if ($firstPersonEnabled) {
     $result = Invoke-HiddenTool -FilePath $blenderExePath -ArgumentList @(
         "--background", "--factory-startup", "--disable-autoexec",
         "--python", $firstPersonTool, "--",
-        $firstPersonBlendPath, $firstPersonDonorUnitPath, $firstPersonAssetPath)
+        $firstPersonBlendPath, $firstPersonDonorUnitPath, $firstPersonAssetPath,
+        "--align-native-hero-grips")
     Assert-HiddenToolSuccess $result `
         "First-person Pusfume $($FirstPersonFormat.ToUpperInvariant()) preparation"
     if ((Get-FileHash -LiteralPath $firstPersonBlendPath -Algorithm SHA256).Hash -ne $sourceBlendHash) {

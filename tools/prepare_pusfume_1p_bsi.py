@@ -28,9 +28,14 @@ def arguments_after_separator():
 
 def main():
     arguments = arguments_after_separator()
+    align_native_hero_grips = "--align-native-hero-grips" in arguments
+    arguments = [
+        value for value in arguments if value != "--align-native-hero-grips"
+    ]
     if len(arguments) != 3:
         raise SystemExit(
-            "Usage: prepare_pusfume_1p_bsi.py -- INPUT.blend DONOR.unit OUTPUT.bsi"
+            "Usage: prepare_pusfume_1p_bsi.py -- INPUT.blend DONOR.unit "
+            "OUTPUT.bsi [--align-native-hero-grips]"
         )
 
     input_path, donor_unit_path, output_path = (
@@ -49,6 +54,11 @@ def main():
     bind_reset = preparation.reset_bind_pose(mesh, armature)
     donor_conformance = preparation.conform_mesh_to_donor_rest(
         mesh, armature, donor_unit_path
+    )
+    grip_alignment = (
+        preparation.align_arm_surfaces_to_native_grips(mesh)
+        if align_native_hero_grips
+        else None
     )
     donor_rebind = preparation.rebind_to_donor_rest(mesh, armature, donor_unit_path)
 
@@ -110,6 +120,7 @@ def main():
                 "donor_conformance": donor_conformance,
                 "donor_rebind": donor_rebind,
                 "exported_vertices": exported_vertices,
+                "grip_alignment": grip_alignment,
                 "materials": material_names,
                 "mesh": mesh.name,
                 "orphan_groups": orphan_stats,

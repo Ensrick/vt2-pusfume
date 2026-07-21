@@ -3,7 +3,7 @@
 Run through Blender 5.2:
     blender --background --factory-startup --disable-autoexec \
         --python tools/prepare_pusfume_1p_blend.py -- \
-        INPUT.blend DONOR.unit OUTPUT.fbx
+        INPUT.blend DONOR.unit OUTPUT.fbx [--align-native-hero-grips]
 
 The source blend is opened read-only from this script's perspective and is never saved.
 """
@@ -31,6 +31,12 @@ REQUIRED_DONOR_BONES = {
     "j_righthand",
 }
 DONOR_NAME_FALLBACKS = {"j_spine1": "j_spine2"}
+NATIVE_HERO_GRIP_CORRECTIONS = {
+    "left": Vector((-0.002193, -0.009542, 0.019491)),
+    "right": Vector((0.001012, -0.013382, 0.011272)),
+}
+SIDE_WEIGHT_EPSILON = 0.0001
+EDGE_LENGTH_TOLERANCE = 0.000001
 
 
 def arguments_after_separator():
@@ -199,6 +205,84 @@ def weight_stats(mesh_object):
         "over_four_influences": sum(1 for count in counts if count > MAXIMUM_INFLUENCES),
         "unnormalized_vertices": sum(1 for total in totals if abs(total - 1.0) > 0.0001),
         "unweighted_vertices": sum(1 for count in counts if count == 0),
+    }
+
+
+def align_arm_surfaces_to_native_grips(mesh_object):
+    """Rigidly align Janfon's human arm surfaces with native hero grips."""
+    group_names = {group.index: group.name for group in mesh_object.vertex_groups}
+    vertex_sides = {}
+    side_counts = {"left": 0, "right": 0}
+    for vertex in mesh_object.data.vertices:
+        side_weights = {"left": 0.0, "right": 0.0}
+        for assignment in vertex.groups:
+            name = group_names.get(assignment.group, "")
+            if name.startswith("j_left"):
+                side_weights["left"] += assignment.weight
+            elif name.startswith("j_right"):
+                side_weights["right"] += assignment.weight
+
+        active_sides = [
+            side
+            for side, weight in side_weights.items()
+            if weight > SIDE_WEIGHT_EPSILON
+        ]
+        if len(active_sides) != 1:
+            raise RuntimeError(
+                "First-person vertex %d must belong to exactly one arm; weights=%s"
+                % (vertex.index, side_weights)
+            )
+        side = active_sides[0]
+        vertex_sides[vertex.index] = side
+        side_counts[side] += 1
+
+    before_lengths = {}
+    for edge in mesh_object.data.edges:
+        first, second = edge.vertices
+        if vertex_sides[first] != vertex_sides[second]:
+            raise RuntimeError(
+                "First-person edge %d crosses left/right arm islands" % edge.index
+            )
+        before_lengths[edge.index] = (
+            mesh_object.data.vertices[first].co
+            - mesh_object.data.vertices[second].co
+        ).length
+
+    world_to_local = mesh_object.matrix_world.inverted().to_3x3()
+    local_corrections = {
+        side: world_to_local @ correction
+        for side, correction in NATIVE_HERO_GRIP_CORRECTIONS.items()
+    }
+    for vertex in mesh_object.data.vertices:
+        vertex.co += local_corrections[vertex_sides[vertex.index]]
+    bpy.context.view_layer.update()
+
+    maximum_edge_length_delta = max(
+        (
+            abs(
+                (
+                    mesh_object.data.vertices[edge.vertices[0]].co
+                    - mesh_object.data.vertices[edge.vertices[1]].co
+                ).length
+                - before_lengths[edge.index]
+            )
+            for edge in mesh_object.data.edges
+        ),
+        default=0.0,
+    )
+    if maximum_edge_length_delta > EDGE_LENGTH_TOLERANCE:
+        raise RuntimeError(
+            "Native grip alignment deformed an arm edge by %.8f"
+            % maximum_edge_length_delta
+        )
+
+    return {
+        "maximum_edge_length_delta": maximum_edge_length_delta,
+        "vertex_counts": side_counts,
+        "world_corrections": {
+            side: [round(component, 6) for component in correction]
+            for side, correction in NATIVE_HERO_GRIP_CORRECTIONS.items()
+        },
     }
 
 
@@ -461,9 +545,14 @@ def apply_stingray_basis_counter_scale(mesh_object, armature, factor=100.0):
 
 def main():
     arguments = arguments_after_separator()
+    align_native_hero_grips = "--align-native-hero-grips" in arguments
+    arguments = [
+        value for value in arguments if value != "--align-native-hero-grips"
+    ]
     if len(arguments) != 3:
         raise SystemExit(
-            "Usage: prepare_pusfume_1p_blend.py -- INPUT.blend DONOR.unit OUTPUT.fbx"
+            "Usage: prepare_pusfume_1p_blend.py -- INPUT.blend DONOR.unit "
+            "OUTPUT.fbx [--align-native-hero-grips]"
         )
 
     input_path, donor_unit_path, output_path = (
@@ -478,6 +567,14 @@ def main():
     bpy.ops.wm.open_mainfile(filepath=input_path, load_ui=False)
     mesh, armature = find_arms_and_rig()
     bind_reset = reset_bind_pose(mesh, armature)
+    donor_conformance = conform_mesh_to_donor_rest(
+        mesh, armature, donor_unit_path
+    )
+    grip_alignment = (
+        align_arm_surfaces_to_native_grips(mesh)
+        if align_native_hero_grips
+        else None
+    )
     donor_rebind = rebind_to_donor_rest(mesh, armature, donor_unit_path)
     stingray_counter_scale = apply_stingray_basis_counter_scale(mesh, armature)
 
@@ -538,7 +635,9 @@ def main():
             {
                 "bind_reset": bind_reset,
                 "bones": len(armature.data.bones),
+                "donor_conformance": donor_conformance,
                 "donor_rebind": donor_rebind,
+                "grip_alignment": grip_alignment,
                 "materials": material_names,
                 "mesh": mesh.name,
                 "orphan_groups": orphan_stats,

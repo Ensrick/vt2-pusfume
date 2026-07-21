@@ -31,6 +31,21 @@ class UnitReader:
     def byte_array(self):
         return self.array(1)
 
+    def u32_array(self):
+        count = self.u32()
+        values = list(struct.unpack_from("<%dI" % count, self.data, self.offset))
+        self.skip(count * 4)
+        return values
+
+    def matrix_array(self):
+        count = self.u32()
+        matrices = [
+            struct.unpack_from("<16f", self.data, self.offset + index * 64)
+            for index in range(count)
+        ]
+        self.skip(count * 64)
+        return matrices
+
 
 def short_hash(name):
     return murmur64a(name.encode("utf-8")) >> 32
@@ -59,12 +74,21 @@ def read_scene_graph(path):
         reader.array(4)  # material hashes
 
     skin_count = reader.u32()
+    skins = []
     for _skin_index in range(skin_count):
-        reader.array(64)  # inverse bind matrices
-        reader.array(4)  # node indices
+        inverse_bind_matrices = reader.matrix_array()
+        node_indices = reader.u32_array()
         matrix_set_count = reader.u32()
+        matrix_sets = []
         for _matrix_set_index in range(matrix_set_count):
-            reader.array(4)
+            matrix_sets.append(reader.u32_array())
+        skins.append(
+            {
+                "inverse_bind_matrices": inverse_bind_matrices,
+                "matrix_sets": matrix_sets,
+                "node_indices": node_indices,
+            }
+        )
 
     reader.byte_array()  # simple animation
     animation_group_count = reader.u32()
@@ -98,6 +122,7 @@ def read_scene_graph(path):
     return {
         "geometry_count": geometry_count,
         "skin_count": skin_count,
+        "skins": skins,
         "nodes": [
             {
                 "index": index,

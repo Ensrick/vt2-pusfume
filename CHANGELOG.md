@@ -10,6 +10,21 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Corrected Janfon's human-weapon hand placement against Fatshark's compiled
+  first-person hero mesh. The build moves the two disconnected arm surfaces by
+  their measured donor deltas (left `-2.2/-9.5/+19.5 mm`, right
+  `+1.0/-13.4/+11.3 mm`) without moving bones, changing weights, or changing
+  any edge length. The correction is profile-gated and does not touch the
+  already-working 99-bone Versus attachment.
+- Added topology-independent weighted-surface comparison and compiled
+  inverse-bind inspection tools. Blender 5.2 verified all 1,004 human-arm
+  vertices as two clean 502-vertex islands; the maximum rigid-translation edge
+  error was `0.000000016 m`, and all eight arm/hand inverse binds matched the
+  native donor within `0.0000057`.
+- Live-tested v0.6.48 successfully: both Janfon first-person meshes are visible
+  and animated, their attachment probes report identity transforms and zero
+  arm/hand node distance, and the remaining ordinary-weapon issue is isolated
+  to grip-surface placement rather than skeleton linking or skin deformation.
 - Fixed both Janfon first-person attachments remaining at world origin when an
   external `AttachmentUtils.link` guard rejected one optional fingertip node.
   Pusfume now links every shared node directly and logs linked/skipped counts.

@@ -21,9 +21,9 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current friends-only live-test candidate is **v0.6.48-dev**, Workshop
-ManifestID `3568802277422307144`. It introduces a weapon-aware dual first-person
-system built from both Janfon models: prototype Versus weapons use his 99-bone
+The current friends-only live-test candidate is **v0.6.49-dev**. It retains the
+weapon-aware dual first-person system built from both Janfon models: prototype
+Versus weapons use his 99-bone
 untouched-Skaven attachment, while ordinary hero weapons use his 160-bone
 donor-rest human attachment. Fatshark's hero first-person unit remains the sole
 camera/controller base; weapon swaps change only the visible attachment and
@@ -33,6 +33,9 @@ bones against their native donors before deployment.
 The v0.6.48 correction bypasses external all-or-nothing attachment wrappers
 that left both Janfon meshes at world origin when one optional fingertip node
 was absent, and reconciles the initially wielded weapon after inventory init.
+The v0.6.49 build rigidly aligns Janfon's human-weapon arm surfaces to the
+native hero grip centers using measured per-side offsets while preserving the
+donor skeleton, weights, proportions, and Versus attachment unchanged.
 Exact Packmaster dragging remains a larger career-state feature. The localized
 chest UV/material seam is tracked separately in issue #28.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person

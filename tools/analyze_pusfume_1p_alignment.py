@@ -17,7 +17,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from prepare_pusfume_1p_blend import (  # noqa: E402
-    DONOR_NAME_OVERRIDES,
+    DONOR_NAME_FALLBACKS,
     blender_matrix_from_stingray,
     find_arms_and_rig,
     reset_bind_pose,
@@ -89,7 +89,7 @@ def main():
     target_points = []
     rows = []
     for bone_name in FIT_BONES:
-        donor_name = DONOR_NAME_OVERRIDES.get(bone_name, bone_name)
+        donor_name = DONOR_NAME_FALLBACKS.get(bone_name, bone_name)
         bone = armature.data.bones.get(bone_name)
         donor = donor_by_hash.get(short_hash(donor_name))
         if not bone or not donor:

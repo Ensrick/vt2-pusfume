@@ -38,6 +38,7 @@ class StingrayUnitSceneTests(unittest.TestCase):
         self.assertEqual(result["version"], 189)
         self.assertEqual(result["geometry_count"], 0)
         self.assertEqual(result["skin_count"], 0)
+        self.assertEqual(result["skins"], [])
         self.assertEqual(len(result["nodes"]), 1)
         self.assertEqual(result["nodes"][0]["name_hash"], short_hash("j_lefthand"))
         self.assertEqual(result["nodes"][0]["parent"], (1, 0))
