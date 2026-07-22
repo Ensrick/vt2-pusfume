@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.62-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.63-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -78,6 +78,14 @@ fur remains non-neon, and no unrelated world effect has changed.
 Test source commit `73eddfe`, friends-only Workshop ManifestID
 `4590557917691442433`; all eight installed files are hash-identical to staging
 at `175,304,594` bytes.
+
+The v0.6.62 live result disproved the skin/flesh shader substitution. v0.6.63
+keeps that native shader but preserves the body response RGB while zeroing only
+its emission alpha. Revisit the same shadow location, then equip the Assassin
+Blades and exercise each light attack, heavy attack, push-stab, block, and
+release. No action may leave a static twisted mesh over the camera. The log
+must enumerate Janfon's `claws_*` clips and return to `claws_idle` after each
+non-looping action.
 
 The v0.6.44 candidate replaces the native Skaven first-person fallback with
 Janfon's human-rigged arms and opens all five heroes' melee and ranged weapons

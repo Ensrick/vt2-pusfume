@@ -66,6 +66,14 @@ class PusfumeAtlasLayoutTests(unittest.TestCase):
         self.assertEqual(["df"], self.layout["force_opaque_suffixes"])
         self.assertNotIn("p_whiskers", self.layout["materials"])
 
+    def test_packed_response_edits_channels_without_alpha_compositing(self):
+        build = (TOOLS / "Build-NativePusfume.ps1").read_text(encoding="utf-8-sig")
+        self.assertIn("function Set-PackedChannel", build)
+        self.assertIn("LockBits", build)
+        self.assertIn("function Assert-PusfumeBodyResponse", build)
+        self.assertIn("rgb_mismatches", build)
+        self.assertNotIn("$zeroMatrix.Matrix33 = 0", build)
+
 
 if __name__ == "__main__":
     unittest.main()

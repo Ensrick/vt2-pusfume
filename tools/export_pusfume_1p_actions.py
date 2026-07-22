@@ -27,6 +27,7 @@ ACTION_NAMES = (
 )
 EXPECTED_BONES = 99
 FPS = 30
+TRANSFORM_PROPERTIES = ("location", "scale")
 
 
 def arguments_after_separator():
@@ -53,6 +54,64 @@ def assign_action(armature, action):
         animation_data.action_slot = action.slots[0]
 
 
+def action_fcurves(action):
+    if hasattr(action, "layers"):
+        return [
+            curve
+            for layer in action.layers
+            for strip in layer.strips
+            for channelbag in strip.channelbags
+            for curve in channelbag.fcurves
+        ]
+    return list(action.fcurves)
+
+
+def sanitize_pose_transforms(armature, action):
+    """Remove Blender-only pose translation/scale from Janfon's VT2 clips."""
+    removed = []
+    for layer in action.layers:
+        for strip in layer.strips:
+            for channelbag in strip.channelbags:
+                for curve in list(channelbag.fcurves):
+                    property_name = curve.data_path.rsplit(".", 1)[-1]
+                    if property_name not in TRANSFORM_PROPERTIES:
+                        continue
+                    neutral = 0.0 if property_name == "location" else 1.0
+                    maximum_delta = max(
+                        (abs(point.co[1] - neutral) for point in curve.keyframe_points),
+                        default=0.0,
+                    )
+                    removed.append(
+                        {
+                            "data_path": curve.data_path,
+                            "index": curve.array_index,
+                            "maximum_delta": maximum_delta,
+                        }
+                    )
+                    channelbag.fcurves.remove(curve)
+
+    for pose_bone in armature.pose.bones:
+        pose_bone.location = (0.0, 0.0, 0.0)
+        pose_bone.scale = (1.0, 1.0, 1.0)
+
+    remaining = [
+        curve.data_path
+        for curve in action_fcurves(action)
+        if curve.data_path.rsplit(".", 1)[-1] in TRANSFORM_PROPERTIES
+    ]
+    if remaining:
+        raise RuntimeError(
+            "Action %s retained unsafe transform channels: %s"
+            % (action.name, sorted(set(remaining)))
+        )
+    return {
+        "maximum_removed_delta": max(
+            (entry["maximum_delta"] for entry in removed), default=0.0
+        ),
+        "removed_channels": len(removed),
+    }
+
+
 def maximum_pose_delta(armature, frame_start, frame_end):
     bpy.context.scene.frame_set(frame_start)
     first = {bone.name: bone.matrix.copy() for bone in armature.pose.bones}
@@ -73,6 +132,7 @@ def maximum_pose_delta(armature, frame_start, frame_end):
 
 def export_action(armature, action, output_dir):
     assign_action(armature, action)
+    transform_audit = sanitize_pose_transforms(armature, action)
     keyed_start, keyed_end = (int(round(value)) for value in action.frame_range)
     # Janfon retained negative helper keys on the looping clips. Gameplay clips
     # begin at frame 1; trimming the lead-in avoids a negative Stingray timeline.
@@ -114,6 +174,7 @@ def export_action(armature, action, output_dir):
         "maximum_pose_delta": motion,
         "output": output_path,
         "output_bytes": os.path.getsize(output_path),
+        "transform_audit": transform_audit,
     }
 
 

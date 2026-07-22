@@ -1161,26 +1161,66 @@ function Set-PusfumeEmissionMask {
     )
 
     Add-Type -AssemblyName System.Drawing
-    $source = [Drawing.Image]::FromFile($AtlasPath)
+    $source = [Drawing.Bitmap]::FromFile($AtlasPath)
     $mask = $null
     try {
         $width = $source.Width
         $height = $source.Height
-        $output = New-Object Drawing.Bitmap($width, $height, `
-            [Drawing.Imaging.PixelFormat]::Format32bppArgb)
-        $graphics = [Drawing.Graphics]::FromImage($output)
-        $graphics.CompositingMode = [Drawing.Drawing2D.CompositingMode]::SourceCopy
-        $graphics.InterpolationMode = [Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
-        $graphics.PixelOffsetMode = [Drawing.Drawing2D.PixelOffsetMode]::HighQuality
-        # 1) Zero the emission channel across the whole atlas.
-        $zeroAttributes = New-Object Drawing.Imaging.ImageAttributes
-        $zeroMatrix = New-Object Drawing.Imaging.ColorMatrix
-        if ($Channel -eq "blue") { $zeroMatrix.Matrix22 = 0 } else { $zeroMatrix.Matrix33 = 0 }
-        $zeroAttributes.SetColorMatrix($zeroMatrix)
+        $full = New-Object Drawing.Rectangle(0, 0, $width, $height)
+        $output = $source.Clone($full, [Drawing.Imaging.PixelFormat]::Format32bppArgb)
+
+        function Set-PackedChannel {
+            param(
+                [Drawing.Bitmap]$Bitmap,
+                [int[]]$ByteOffsets,
+                [byte[]]$Values,
+                [Drawing.Rectangle]$Region
+            )
+
+            if ($ByteOffsets.Count -ne $Values.Count) {
+                throw "Packed channel offsets and values must have equal lengths"
+            }
+
+            $data = $Bitmap.LockBits(
+                $full,
+                [Drawing.Imaging.ImageLockMode]::ReadWrite,
+                [Drawing.Imaging.PixelFormat]::Format32bppArgb)
+            try {
+                $stride = [Math]::Abs($data.Stride)
+                $bytes = New-Object byte[] ($stride * $height)
+                [Runtime.InteropServices.Marshal]::Copy(
+                    $data.Scan0, $bytes, 0, $bytes.Length)
+                foreach ($row in $Region.Top..($Region.Bottom - 1)) {
+                    $rowOffset = $row * $stride
+                    foreach ($column in $Region.Left..($Region.Right - 1)) {
+                        $pixelOffset = $rowOffset + $column * 4
+                        foreach ($index in 0..($ByteOffsets.Count - 1)) {
+                            $bytes[$pixelOffset + $ByteOffsets[$index]] = $Values[$index]
+                        }
+                    }
+                }
+                [Runtime.InteropServices.Marshal]::Copy(
+                    $bytes, 0, $data.Scan0, $bytes.Length)
+            } finally {
+                $Bitmap.UnlockBits($data)
+            }
+        }
+
+        # ColorMatrix writes premultiply RGB when alpha becomes zero. These are
+        # packed data textures, not composited color images, so edit the BGRA
+        # bytes directly and retain metallic/AO/normal data verbatim.
+        $channelOffset = if ($Channel -eq "blue") { 0 } else { 3 }
+        Set-PackedChannel $output @($channelOffset) @([byte]0) $full
+
         # 2) Optional eye stamp: route the mask luminance (source red) into the
         #    emission channel while pinning the other channels to neutral.
         $eyeAttributes = $null
+        $graphics = $null
         if ($StampEye) {
+            $graphics = [Drawing.Graphics]::FromImage($output)
+            $graphics.CompositingMode = [Drawing.Drawing2D.CompositingMode]::SourceCopy
+            $graphics.InterpolationMode = [Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+            $graphics.PixelOffsetMode = [Drawing.Drawing2D.PixelOffsetMode]::HighQuality
             $eyeAttributes = New-Object Drawing.Imaging.ImageAttributes
             $eyeMatrix = New-Object Drawing.Imaging.ColorMatrix
             $eyeMatrix.Matrix00 = 0
@@ -1201,13 +1241,6 @@ function Set-PusfumeEmissionMask {
             $eyeAttributes.SetColorMatrix($eyeMatrix)
         }
         try {
-            $full = New-Object Drawing.Rectangle(0, 0, $width, $height)
-            $graphics.DrawImage($source, $full, 0, 0, $width, $height, `
-                [Drawing.GraphicsUnit]::Pixel, $zeroAttributes)
-            # GDI+ keeps the FromFile handle locked; release it before Save
-            # targets the same path or Save throws a generic GDI+ error.
-            $source.Dispose()
-            $source = $null
             if ($StampEye) {
                 $mask = [Drawing.Image]::FromFile($EyeMaskPath)
                 foreach ($row in 0..($EyeGrid - 1)) {
@@ -1220,17 +1253,97 @@ function Set-PusfumeEmissionMask {
                             [Drawing.GraphicsUnit]::Pixel, $eyeAttributes)
                     }
                 }
+                $graphics.Dispose()
+                $graphics = $null
+
+                # Preserve neutral response RGB independently of the stamped
+                # emission alpha; GDI+ otherwise premultiplies these channels.
+                $eyeRegion = New-Object Drawing.Rectangle(
+                    $EyeOriginX,
+                    ($AtlasSize - $EyeOriginY - ($EyeGrid * $EyeCell)),
+                    ($EyeGrid * $EyeCell),
+                    ($EyeGrid * $EyeCell))
+                Set-PackedChannel $output @(0, 1, 2) @([byte]255, [byte]255, [byte]0) $eyeRegion
             }
-            $output.Save($AtlasPath, [Drawing.Imaging.ImageFormat]::Png)
+
+            # Release the FromFile lock before replacing the atlas in place.
+            $source.Dispose()
+            $source = $null
+            $temporaryPath = "$AtlasPath.packed.png"
+            $output.Save($temporaryPath, [Drawing.Imaging.ImageFormat]::Png)
+            Move-Item -LiteralPath $temporaryPath -Destination $AtlasPath -Force
         } finally {
-            $zeroAttributes.Dispose()
             if ($null -ne $eyeAttributes) { $eyeAttributes.Dispose() }
-            $graphics.Dispose()
+            if ($null -ne $graphics) { $graphics.Dispose() }
             $output.Dispose()
         }
     } finally {
         if ($null -ne $mask) { $mask.Dispose() }
         if ($null -ne $source) { $source.Dispose() }
+    }
+}
+
+function Assert-PusfumeBodyResponse {
+    param(
+        [Parameter(Mandatory)][string]$ReferencePath,
+        [Parameter(Mandatory)][string]$PackedPath
+    )
+
+    Add-Type -AssemblyName System.Drawing
+    $reference = [Drawing.Bitmap]::FromFile($ReferencePath)
+    $packed = [Drawing.Bitmap]::FromFile($PackedPath)
+    try {
+        if ($reference.Size -ne $packed.Size) {
+            throw "Pusfume response atlases have different dimensions"
+        }
+        $rectangle = New-Object Drawing.Rectangle(0, 0, $reference.Width, $reference.Height)
+        $referenceData = $reference.LockBits($rectangle, [Drawing.Imaging.ImageLockMode]::ReadOnly, `
+            [Drawing.Imaging.PixelFormat]::Format32bppArgb)
+        $packedData = $packed.LockBits($rectangle, [Drawing.Imaging.ImageLockMode]::ReadOnly, `
+            [Drawing.Imaging.PixelFormat]::Format32bppArgb)
+        try {
+            $referenceStride = [Math]::Abs($referenceData.Stride)
+            $packedStride = [Math]::Abs($packedData.Stride)
+            $referenceBytes = New-Object byte[] ($referenceStride * $reference.Height)
+            $packedBytes = New-Object byte[] ($packedStride * $packed.Height)
+            [Runtime.InteropServices.Marshal]::Copy(
+                $referenceData.Scan0, $referenceBytes, 0, $referenceBytes.Length)
+            [Runtime.InteropServices.Marshal]::Copy(
+                $packedData.Scan0, $packedBytes, 0, $packedBytes.Length)
+
+            $samples = 0
+            $mismatches = 0
+            [long]$aoTotal = 0
+            # p_main occupies the left 2048x4096 body tile. Sampling every 16
+            # pixels is deterministic and catches channel-wide packing loss.
+            for ($row = 0; $row -lt 4096; $row += 16) {
+                for ($column = 0; $column -lt 2048; $column += 16) {
+                    $referenceOffset = $row * $referenceStride + $column * 4
+                    $packedOffset = $row * $packedStride + $column * 4
+                    foreach ($channel in 0..2) {
+                        if ($referenceBytes[$referenceOffset + $channel] -ne `
+                                $packedBytes[$packedOffset + $channel]) {
+                            $mismatches++
+                        }
+                    }
+                    $aoTotal += $packedBytes[$packedOffset + 1]
+                    $samples++
+                }
+            }
+            $meanAo = $aoTotal / $samples
+            if ($mismatches -ne 0 -or $meanAo -lt 16) {
+                throw ("Packed Pusfume body response failed: samples=$samples " +
+                    "rgb_mismatches=$mismatches mean_ao=$([Math]::Round($meanAo, 2))")
+            }
+            Write-Host ("Packed Pusfume body response preserved: samples=$samples " +
+                "rgb_mismatches=0 mean_ao=$([Math]::Round($meanAo, 2))")
+        } finally {
+            $reference.UnlockBits($referenceData)
+            $packed.UnlockBits($packedData)
+        }
+    } finally {
+        $reference.Dispose()
+        $packed.Dispose()
     }
 }
 
@@ -1292,6 +1405,12 @@ if ($EmissionProbe) {
     Set-PusfumeEmissionMask `
         -AtlasPath (Join-Path $textureRoot "pusfume_atlas_nm.png") -Channel "blue"
     Write-Host "Eye emission baked into MA.alpha (eye tile, 3x3); body/outfit MA alpha and normal blue zeroed."
+}
+
+if ($SplicedGameChild) {
+    Assert-PusfumeBodyResponse `
+        -ReferencePath (Join-Path $textureRoot "pusfume_atlas_s.png") `
+        -PackedPath (Join-Path $textureRoot "pusfume_atlas_ma.png")
 }
 
 # Shadow builds must keep the atlas out of the startup package. These fallback

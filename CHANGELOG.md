@@ -10,6 +10,16 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Prepared v0.6.63 from the rejected v0.6.62 lighting test. The body shader was
+  not the cause: clearing `MA.alpha` through GDI+ premultiplied and erased the
+  packed metallic/AO RGB response, leaving almost no ambient response in world
+  shadows. Packed channels are now edited byte-for-byte, with a deterministic
+  build gate proving the body response still matches its source atlas.
+- Sanitized all nine Janfon Assassin clips to their authored rotation motion
+  before FBX export. The handoff contained 588 location/scale curves per action
+  and up to `0.8624` units of non-rotational displacement, which Stingray could
+  apply against the donor rest basis as a full-screen twisted mesh. Export
+  manifests now record every removed transform and fail if one survives.
 - Prepared v0.6.62 as a focused third-person body-lighting candidate. The
   body now uses the installed Globadier skin/flesh child material instead of
   the outfit child that collapsed toward black under gameplay ambient light.

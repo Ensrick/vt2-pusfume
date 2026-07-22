@@ -21,7 +21,7 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The next friends-only live-test candidate is **v0.6.62-dev**. It retains the
+The next friends-only live-test candidate is **v0.6.63-dev**. It retains the
 weapon-aware dual first-person system using Janfon's assets: prototype Versus
 weapons use his 99-bone Skaven attachment, while ordinary hero weapons use his
 160-bone donor-rest human attachment.
@@ -104,6 +104,15 @@ geometry, UVs, weights, animations, and unrelated world effects are unchanged.
 The candidate is source commit `73eddfe`, friends-only Workshop ManifestID
 `4590557917691442433`; all eight installed files are hash-identical to staging
 at `175,304,594` bytes.
+The v0.6.62 live test rejected the shader-family substitution: the body still
+collapsed toward black only when direct world light disappeared. v0.6.63 fixes
+the packed-response path instead. The prior GDI+ alpha operation premultiplied
+the response atlas and erased its metallic/AO RGB values while clearing the
+emission mask. The build now edits packed channels as raw BGRA bytes and gates
+the result against the untouched response atlas. It also removes Blender pose
+translation and scale from Janfon's nine Assassin clips before FBX export;
+those actions remain rotation-animated, but cannot carry donor-incompatible
+offsets that twist the first-person mesh across the screen.
 Exact Packmaster dragging remains a larger career-state feature. The localized
 chest UV/material seam is tracked separately in issue #28.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person
