@@ -21,7 +21,7 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The next friends-only live-test candidate is **v0.6.61-dev**. It retains the
+The next friends-only live-test candidate is **v0.6.62-dev**. It retains the
 weapon-aware dual first-person system using Janfon's assets: prototype Versus
 weapons use his 99-bone Skaven attachment, while ordinary hero weapons use his
 160-bone donor-rest human attachment.
@@ -95,6 +95,12 @@ separate shader-response investigation.
 The deployed v0.6.61 candidate is source commit `829c026`, friends-only
 Workshop ManifestID `3816877228129224808`; all eight installed files are
 hash-identical to staging and GitHub source preflight passed.
+v0.6.62 is the focused third-person gameplay-lighting test. It replaces only
+the body child payload with the installed Globadier `mtr_skin`/flesh contract.
+DXBC disassembly verified the native base-colour, tangent-normal, and packed-
+response slots before the Pusfume atlas was mapped, and both native HSV tint
+paths are neutral so Janfon's baked colours remain authoritative. Hands, fur,
+geometry, UVs, weights, animations, and unrelated world effects are unchanged.
 Exact Packmaster dragging remains a larger career-state feature. The localized
 chest UV/material seam is tracked separately in issue #28.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person

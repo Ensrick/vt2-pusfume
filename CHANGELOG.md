@@ -10,6 +10,14 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Prepared v0.6.62 as a focused third-person body-lighting candidate. The
+  body now uses the installed Globadier skin/flesh child material instead of
+  the outfit child that collapsed toward black under gameplay ambient light.
+  Microsoft DXBC disassembly verified the donor's diffuse, tangent-normal,
+  and packed-response slots before remapping Pusfume's atlas, and the donor's
+  cosmetic HSV controls are neutralized so Janfon's baked colours pass through.
+  First-person hands, standalone fur, geometry, UVs, weights, animations, and
+  unrelated world effects are unchanged.
 - Prepared v0.6.61 from the first v0.6.60 live test. Both Janfon hand rigs now
   look correct; the native Skaven fur material fixes the neon fur in inventory
   and gameplay. The opaque third-person body remains too dark specifically in

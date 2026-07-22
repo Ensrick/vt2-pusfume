@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.61-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.62-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -68,6 +68,13 @@ passed. This candidate preserves the confirmed correct hero hands, Versus
 hands, inventory body, and non-neon fur. Record opaque body appearance in Keep
 sunlight and deep shadow separately; low-ambient gameplay darkness is not
 claimed fixed.
+
+v0.6.62 changes only the third-person body child from the Globadier outfit
+shader to the native Globadier skin/flesh shader. Compare the inventory body,
+Keep sunlight, and the same deep-shadow location used for v0.6.61. The body
+should retain visible brown skin and clothing detail in shadow instead of
+becoming a black silhouette. Confirm hero and Versus hands still look correct,
+fur remains non-neon, and no unrelated world effect has changed.
 
 The v0.6.44 candidate replaces the native Skaven first-person fallback with
 Janfon's human-rigged arms and opens all five heroes' melee and ranged weapons
