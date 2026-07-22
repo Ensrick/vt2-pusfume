@@ -6,6 +6,7 @@ param(
     [string]$BlenderExe = "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe",
     [string]$FirstPersonBlend = "",
     [string]$FirstPersonDonorUnit = "",
+    [string]$FirstPersonMaterialDonor = ".build\donor_human_1p_extract\046F5616B1180D05.material",
     [string]$VersusFirstPersonBlend = "",
     [string]$VersusFirstPersonDonorUnit = "",
     [ValidateSet("bsi", "fbx")]
@@ -172,6 +173,7 @@ if ($versusFirstPersonEnabled -and -not $firstPersonEnabled) {
 }
 $firstPersonBlendPath = $null
 $firstPersonDonorUnitPath = $null
+$firstPersonMaterialDonorPath = $null
 if ($firstPersonEnabled) {
     if ([string]::IsNullOrWhiteSpace($FirstPersonDonorUnit)) {
         throw "FirstPersonBlend requires -FirstPersonDonorUnit for the exact VT2 rest-skeleton rebind"
@@ -191,6 +193,17 @@ if ($firstPersonEnabled) {
     }
     if ([IO.Path]::GetExtension($firstPersonDonorUnitPath) -ine ".unit") {
         throw "FirstPersonDonorUnit must be an extracted compiled VT2 unit: $firstPersonDonorUnitPath"
+    }
+    if ([string]::IsNullOrWhiteSpace($FirstPersonMaterialDonor)) {
+        throw "FirstPersonBlend requires -FirstPersonMaterialDonor for the native human render contract"
+    }
+    $firstPersonMaterialDonorPath = if ([IO.Path]::IsPathRooted($FirstPersonMaterialDonor)) {
+        (Resolve-Path $FirstPersonMaterialDonor).Path
+    } else {
+        (Resolve-Path (Join-Path $repoRoot $FirstPersonMaterialDonor)).Path
+    }
+    if ([IO.Path]::GetExtension($firstPersonMaterialDonorPath) -ine ".material") {
+        throw "FirstPersonMaterialDonor must be an extracted compiled VT2 material: $firstPersonMaterialDonorPath"
     }
 }
 if ($versusFirstPersonEnabled) {
@@ -1795,21 +1808,21 @@ if ($SplicedGameChild) {
     Write-Host "Spliced game child payload (768 bytes, atlas texture ids) into $($splicedInto[0])"
 
     if ($firstPersonEnabled) {
-        # Keep the payload that rendered Janfon's direct-UV maps correctly in
-        # live tests. The native human 1P payload was isolated in v0.6.51 and
-        # produced black, mirror-like arms despite correct resource loading.
+        # The native human payload preserves the correct first-person skinning
+        # contract. v0.6.51 rendered black because its normal slot received the
+        # Globadier MA map and its response slot received Janfon's normal map.
         $firstPersonPayload = Join-Path $generatedRoot "spliced_1p_child_payload.bin"
         $result = Invoke-HiddenPython @(
             (Join-Path $repoRoot "tools\make_spliced_child.py"),
-            "--extracted", $gameChildPath,
-            "--resource", "hash:90BDF3BAC6F81BA8", "--expect-size", "768",
-            "--expect-parent", "3D25339231384C80",
-            "--map", "DD74D8319F514D96=E0C4E09D80AE735B",
-            "--map", "E334A8CB6BCB5E6D=3B3F6545AF6782F5",
-            "--set-variable", "emissive_color=0,0,0",
-            "--expect-texture", "texture_map_02af90f8=E0C4E09D80AE735B",
-            "--expect-texture", "texture_map_27b67fd2=45FFAEEF53695A86",
-            "--expect-texture", "texture_map_8bf37d8e=3B3F6545AF6782F5",
+            "--extracted", $firstPersonMaterialDonorPath,
+            "--resource", "hash:90BDF3BAC6F81BA8", "--expect-size", "96",
+            "--expect-parent", "D97596A091982F4B",
+            "--map", "86FFDEB90C40C597=E0C4E09D80AE735B",
+            "--map", "258E4E4AEA37B1B8=3B3F6545AF6782F5",
+            "--map", "E04C4FD132004376=DF5A1D6679E28376",
+            "--expect-texture", "CC30441D=E0C4E09D80AE735B",
+            "--expect-texture", "12BF624D=3B3F6545AF6782F5",
+            "--expect-texture", "FC0DCB23=DF5A1D6679E28376",
             "--out", $firstPersonPayload)
         Assert-HiddenToolSuccess $result `
             "Spliced first-person child payload generation"
@@ -1835,7 +1848,7 @@ if ($SplicedGameChild) {
             throw "Expected the first-person child in exactly 1 bundle, spliced $($firstPersonSplicedInto.Count)"
         }
 
-        Write-Host "Spliced proven skinned 1P payload (768 bytes, direct UV maps) into $($firstPersonSplicedInto[0])"
+        Write-Host "Spliced native human 1P payload (96 bytes, corrected direct UV maps) into $($firstPersonSplicedInto[0])"
     }
 
     # Laurel's compiled feather material is the proven skinned alpha-card

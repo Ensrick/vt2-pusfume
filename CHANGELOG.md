@@ -10,6 +10,15 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Corrected the v0.6.51 native-human material experiment's channel roles. Its
+  normal slot had received the Globadier mask/emissive map, while its response
+  slot had received Janfon's normal map. Janfon's handoff already contains the
+  required dimension-matched diffuse, normal, and response textures.
+- Stopped applying the human-hand material override to the separate Skaven
+  attachment. Versus weapons now preserve Janfon's authored Skaven material,
+  restoring a controlled comparison with the earlier natural-looking hands.
+- Kept third-person body darkness out of the first-person correction; it
+  remains a separate material investigation rather than an untracked variable.
 - Built, hash-verified across all eight deployed files, locally deployed, and
   uploaded the v0.6.52 single-variable material correction as friends-only
   Steam ManifestID `186023980705300246`.

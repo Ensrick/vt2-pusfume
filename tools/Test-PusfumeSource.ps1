@@ -250,8 +250,10 @@ Test-Condition ($assetsText -match 'M\.first_person_retarget_pairs' -and `
 Test-Condition ($nativeText -match 'PlayerUnitFirstPerson, "init"' -and `
     $nativeText -match 'PlayerUnitFirstPerson, "update"' -and `
     $nativeText -match 'apply_first_person_materials' -and `
+    $nativeText -match 'Unit\.set_material\(hero_unit, slot_name, material_name\)' -and `
+    $nativeText -notmatch 'for _, unit in ipairs\(\{ hero_unit, versus_unit \}\)' -and `
     $nativeText -match 'first_person_attachment') `
-    "first-person runtime" "Pusfume arms attach and receive the late skinned material"
+    "first-person runtime" "human arms receive the native-human material while Skaven arms preserve their authored material"
 Test-Condition ($nativeText -match 'config\.first_person_direct_link' -and `
     $nativeText -match 'AttachmentNodeLinking\.first_person_attachment' -and `
     $nativeText -match 'First-person donor-rest direct links active' -and `
@@ -524,9 +526,10 @@ Test-Condition ((Test-Path (Join-Path $repoRoot "tools\splice_bundle_resource.py
     $nativeBuildText -match '\$NoDonorTextureShadow = \$true' -and `
     $nativeBuildText -match 'make_spliced_child\.py' -and `
     $nativeBuildText -match '"--expect-size", "768"' -and `
+    $nativeBuildText -match '"--expect-size", "96"' -and `
     $nativeBuildText -match '"--expect-size", "128"' -and `
     $nativeBuildText -match '"--expect-parent", "3D25339231384C80"' -and `
-    $nativeBuildText -notmatch '"--expect-parent", "D97596A091982F4B"' -and `
+    $nativeBuildText -match '"--expect-parent", "D97596A091982F4B"' -and `
     $nativeBuildText -match '"--expect-parent", "F85B289742D5D69A"' -and `
     $nativeBuildText -match 'hash:F72D636600F7F598' -and `
     $nativeBuildText -match 'DD74D8319F514D96=C263ECB79A8DCEC0' -and `
@@ -535,8 +538,10 @@ Test-Condition ((Test-Path (Join-Path $repoRoot "tools\splice_bundle_resource.py
     $nativeBuildText -match 'texture_map_02af90f8=C263ECB79A8DCEC0' -and `
     $nativeBuildText -match 'texture_map_27b67fd2=818C87B860407405' -and `
     $nativeBuildText -match 'texture_map_8bf37d8e=A4215592F6297E57' -and `
-    $nativeBuildText -match 'DD74D8319F514D96=E0C4E09D80AE735B' -and `
-    $nativeBuildText -match 'E334A8CB6BCB5E6D=3B3F6545AF6782F5' -and `
+    $nativeBuildText -match '86FFDEB90C40C597=E0C4E09D80AE735B' -and `
+    $nativeBuildText -match '258E4E4AEA37B1B8=3B3F6545AF6782F5' -and `
+    $nativeBuildText -match 'E04C4FD132004376=DF5A1D6679E28376' -and `
+    $nativeBuildText -notmatch '258E4E4AEA37B1B8=45FFAEEF53695A86' -and `
     $nativeBuildText -match 'hash:C70B1AAD3B363E24' -and `
     $nativeBuildText -match 'C9CF19C214612D75=7F060B4938ADCF12' -and `
     $nativeBuildText -match 'CDA03B9B0226037A=950FC5950CCEBCD0' -and `

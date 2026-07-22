@@ -1185,43 +1185,34 @@ local function apply_first_person_materials(extension, config)
         return true
     end
 
-    if extension._pusfume_first_person_materials_applied
-            and (not extension._pusfume_skaven_first_person_attachment
-                or extension._pusfume_versus_first_person_materials_applied) then
+    if extension._pusfume_first_person_materials_applied then
         return true
     end
 
     local hero_unit = extension._pusfume_hero_first_person_attachment
         or extension.first_person_attachment_unit
-    local versus_unit = extension._pusfume_skaven_first_person_attachment
     local materials = config.first_person_materials
     if type(materials) ~= "table" or not hero_unit or not Unit.alive(hero_unit)
             or not ensure_first_person_material_package(config) then
         return false
     end
 
-    for _, unit in ipairs({ hero_unit, versus_unit }) do
-        if unit and Unit.alive(unit) then
-            for slot_name, material_name in pairs(materials) do
-                if not can_get("material", material_name) then
-                    if not state.first_person_material_error_logged then
-                        state.first_person_material_error_logged = true
-                        mod:error("[pusfume] First-person material is unavailable: %s", material_name)
-                    end
-
-                    return false
-                end
-
-                Unit.set_material(unit, slot_name, material_name)
+    for slot_name, material_name in pairs(materials) do
+        if not can_get("material", material_name) then
+            if not state.first_person_material_error_logged then
+                state.first_person_material_error_logged = true
+                mod:error("[pusfume] First-person material is unavailable: %s", material_name)
             end
+
+            return false
         end
+
+        Unit.set_material(hero_unit, slot_name, material_name)
     end
 
     extension._pusfume_first_person_materials_applied = true
-    extension._pusfume_versus_first_person_materials_applied =
-        versus_unit and Unit.alive(versus_unit) or false
     state.first_person_materials_applied = true
-    mod:info("[pusfume] Native first-person materials applied")
+    mod:info("[pusfume] Native human first-person material applied; Skaven material preserved")
 
     return true
 end
