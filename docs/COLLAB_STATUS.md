@@ -11,6 +11,18 @@ architecture and reproduction contract are in
 
 ## Latest shipment
 
+- 2026-07-22 local: v0.6.62 LIVE RESULT / v0.6.63 SHIPPED - the native
+  `mtr_skin` substitution did not stop the third-person body from becoming a
+  black silhouette in low world light. Atlas inspection found the actual
+  regression: clearing emission through GDI+ premultiplied almost all packed
+  metallic/AO RGB to zero. v0.6.63 edits packed BGRA directly and build-gates
+  32,768 body samples against the untouched source (`0` mismatches, mean AO
+  `119.03`). It also removes 588 location/scale curves from each Janfon
+  Assassin action before export; the largest removed displacement was
+  `0.8624`, while all nine rotation animations remain deforming. Source
+  `5fd1f9c`; Steam friends-only ManifestID `2559622198151416662`; eight live
+  files hash-match staging at `179,239,055` bytes; 132 tests and all native
+  compile/rest gates pass. Live visual verification remains pending.
 - 2026-07-19 local: v0.6.32 LIVE RESULT / v0.6.33 CANDIDATE `[unverified]` -
   coherent hands and native hold poses were confirmed, but the hook was inert,
   Ranger Veteran's weapon catalog remained visible, the Warpfire heat HUD was

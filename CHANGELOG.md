@@ -20,6 +20,10 @@ request rather than in release notes.
   and up to `0.8624` units of non-rotational displacement, which Stingray could
   apply against the donor rest basis as a full-screen twisted mesh. Export
   manifests now record every removed transform and fail if one survives.
+- Built, locally deployed, and uploaded v0.6.63 friends-only as Steam ManifestID
+  `2559622198151416662` from source commit `5fd1f9c`. All eight installed files
+  hash-match staging at `179,239,055` bytes; 132 regressions and the full source,
+  compiled-resource, 52-bone human, and 55-bone Skaven gates pass.
 - Prepared v0.6.62 as a focused third-person body-lighting candidate. The
   body now uses the installed Globadier skin/flesh child material instead of
   the outfit child that collapsed toward black under gameplay ambient light.

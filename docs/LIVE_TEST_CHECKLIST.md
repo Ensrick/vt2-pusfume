@@ -86,6 +86,9 @@ Blades and exercise each light attack, heavy attack, push-stab, block, and
 release. No action may leave a static twisted mesh over the camera. The log
 must enumerate Janfon's `claws_*` clips and return to `claws_idle` after each
 non-looping action.
+Test source commit `5fd1f9c`, friends-only Workshop ManifestID
+`2559622198151416662`; all eight installed files hash-match staging at
+`179,239,055` bytes.
 
 The v0.6.44 candidate replaces the native Skaven first-person fallback with
 Janfon's human-rigged arms and opens all five heroes' melee and ranged weapons

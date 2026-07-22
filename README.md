@@ -113,6 +113,10 @@ the result against the untouched response atlas. It also removes Blender pose
 translation and scale from Janfon's nine Assassin clips before FBX export;
 those actions remain rotation-animated, but cannot carry donor-incompatible
 offsets that twist the first-person mesh across the screen.
+The deployed candidate is source commit `5fd1f9c`, friends-only Workshop
+ManifestID `2559622198151416662`; all eight installed files are hash-identical
+to staging at `179,239,055` bytes. Its build sampled 32,768 body-response
+points with zero RGB mismatches and mean AO `119.03`.
 Exact Packmaster dragging remains a larger career-state feature. The localized
 chest UV/material seam is tracked separately in issue #28.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person
