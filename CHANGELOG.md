@@ -10,6 +10,11 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, byte-verified across all eight shipped files, locally deployed, and
+  uploaded v0.6.58 as friends-only Steam ManifestID `6145712826462103701`
+  from source commit `c57728d`. The generated fur remains sRGB with its
+  original mean `(147.393,146.359,148.283)`, and Janfon-99 reports no build-time
+  grip alignment.
 - Removed v0.6.55's whole-mesh Janfon-99 bounds correction after the v0.6.57
   live test made the Versus hands visible but showed them displaced at the
   weapon. A corrected multi-surface donor audit proves Janfon's unmodified

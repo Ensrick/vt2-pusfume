@@ -34,7 +34,9 @@ gamma-encodes diffuse for the third-person and Laurel sRGB donor contracts, and
 applies a dedicated Packmaster-skin child to Janfon-99. Test all three paths.
 v0.6.58 preserves those successful material paths, removes the disproven
 whole-mesh Versus offset, and removes the extra gamma transfer from dalokraff's
-fur. Compare grip placement and fur brightness directly against v0.6.57.
+fur. Test source commit `c57728d`, Workshop ManifestID
+`6145712826462103701`; compare grip placement and fur brightness directly
+against v0.6.57.
 
 The v0.6.44 candidate replaces the native Skaven first-person fallback with
 Janfon's human-rigged arms and opens all five heroes' melee and ranged weapons
