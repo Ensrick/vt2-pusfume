@@ -10,6 +10,9 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, hash-verified across all eight deployed files, locally deployed, and
+  uploaded the v0.6.52 single-variable material correction as friends-only
+  Steam ManifestID `186023980705300246`.
 - Preserved v0.6.51's corrected authored-weight hand placement while reverting
   only its failed native-human first-person material experiment. v0.6.52 uses
   the previously textured 768-byte character payload with Pusfume's direct UV
