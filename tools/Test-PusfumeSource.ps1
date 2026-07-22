@@ -266,6 +266,10 @@ Test-Condition ($nativeText -match 'First-person attachment probe meshes=%d' -an
     $nativeText -match 'Vector3\.distance\(source_position, target_position\)') `
     "first-person runtime probe" "live logs distinguish render visibility from node alignment"
 Test-Condition ($nativeText -match 'config\.versus_first_person_unit' -and `
+    $nativeText -match 'config\.native_versus_first_person' -and `
+    $nativeText -match 'SKAVEN_FIRST_PERSON_ARMS' -and `
+    $nativeText -match 'skaven_attachments\[role\] or skaven_attachments\.packmaster' -and `
+    $nativeText -match 'Fatshark-native-' -and `
     $nativeText -match 'spawn_dual_first_person_rig' -and `
     $nativeText -match 'SimpleInventoryExtension, "wield"' -and `
     $nativeText -match 'SKAVEN_ROLE_BY_POSE\[item_template\.pusfume_role_pose\]' -and `
@@ -274,7 +278,7 @@ Test-Condition ($nativeText -match 'config\.versus_first_person_unit' -and `
     $nativeText -match 'weapon_extension\.first_person_unit = first_person_unit' -and `
     $nativeText -notmatch '(?s)local function switch_first_person_rig.*?extension\.first_person_unit = first_person_unit.*?local function prepare_first_person_rig_for_wield' -and `
     $nativeBuildText -match 'dual_first_person_rigs = \$dualFirstPersonRigsValue') `
-    "dual first-person rigs" "Versus weapons use Janfon's Skaven rig without replacing the hero camera base"
+    "dual first-person rigs" "Versus weapons use role-matched Fatshark arms without replacing the hero camera base"
 Test-Condition ($nativeText -match 'spawn_local_unit\(source_rest_unit_name\)' -and `
     $nativeText -match 'Matrix4x4\.multiply\(source_pose, Matrix4x4\.inverse\(source_rest\)\)' -and `
     $nativeText -match 'Matrix4x4\.set_translation\(target_pose, Matrix4x4\.translation\(target_rest\)\)' -and `

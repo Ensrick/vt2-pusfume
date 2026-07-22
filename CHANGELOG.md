@@ -10,6 +10,16 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Restored Fatshark's role-matched native Versus arm meshes for every rat
+  weapon family. Live testing established that Janfon's 99-bone replacement
+  rendered over the weapon instead of gripping it, while the original native
+  arms had natural fur/bracers and correct weapon-relative placement.
+- Retained Janfon's 160-bone hero-compatible arms for ordinary hero weapons;
+  weapon swaps still preserve the hero camera base and now select the matching
+  Packmaster, Gutter Runner, Globadier, Warpfire, or Ratling visual attachment.
+- Kept the 99-bone handoff and build path available for offline research, but
+  removed it from the canonical shipping command until its bind placement is
+  corrected.
 - Built, hash-verified across all eight deployed files, locally deployed, and
   uploaded v0.6.53 as friends-only Steam ManifestID `4689341082553975347` from
   source commit `9cae562`.

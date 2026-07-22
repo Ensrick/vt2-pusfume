@@ -57,6 +57,19 @@ class FirstPersonBsiContractTests(unittest.TestCase):
         self.assertIn('"E04C4FD132004376=DF5A1D6679E28376"', self.build)
         self.assertNotIn('"258E4E4AEA37B1B8=45FFAEEF53695A86"', self.build)
 
+    def test_shipping_build_defaults_to_fatshark_versus_arms(self):
+        self.assertIn(
+            "$nativeVersusFirstPersonValue = if ($firstPersonEnabled -and -not $versusFirstPersonEnabled)",
+            self.build,
+        )
+        self.assertIn(
+            "$dualFirstPersonRigsValue = if ($firstPersonEnabled)", self.build
+        )
+        self.assertIn(
+            "native_versus_first_person = $nativeVersusFirstPersonValue",
+            self.build,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

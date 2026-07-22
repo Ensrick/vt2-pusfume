@@ -1104,8 +1104,9 @@ local function register_cosmetic(registry, config)
         and native_skaven_packages_ready
     state.dual_first_person_rigs_ready = config.dual_first_person_rigs == true
         and native_skaven_packages_ready
-        and type(config.versus_first_person_unit) == "string"
-        and Application.can_get("unit", config.versus_first_person_unit)
+        and (config.native_versus_first_person == true
+            or type(config.versus_first_person_unit) == "string"
+                and Application.can_get("unit", config.versus_first_person_unit))
     local first_person_unit = native_skaven_ready
             and PACKMASTER_FIRST_PERSON_ARMS
         or config.first_person_unit
@@ -1605,21 +1606,50 @@ local function spawn_dual_first_person_rig(extension, config)
     end
 
     local skaven_base = unit_spawner:spawn_local_unit(SKAVEN_FIRST_PERSON_BASE)
-    local skaven_arms = unit_spawner:spawn_local_unit(
-        config.versus_first_person_unit)
+    local skaven_attachments = {}
 
-    local linked = link_shared_first_person_nodes(
-        extension.world,
-        skaven_base,
-        skaven_arms,
-        AttachmentNodeLinking.skaven_first_person_attachment,
-        "Janfon-99-skaven")
-    if not linked then
-        Managers.state.unit_spawner:mark_for_deletion(skaven_arms)
-        Managers.state.unit_spawner:mark_for_deletion(skaven_base)
-        return false
+    if config.native_versus_first_person then
+        for role, unit_name in pairs(SKAVEN_FIRST_PERSON_ARMS) do
+            local arms = unit_spawner:spawn_local_unit(unit_name)
+            local linked = link_shared_first_person_nodes(
+                extension.world,
+                skaven_base,
+                arms,
+                AttachmentNodeLinking.skaven_first_person_attachment,
+                "Fatshark-native-" .. role)
+            if not linked then
+                for _, spawned_arms in pairs(skaven_attachments) do
+                    unit_spawner:mark_for_deletion(spawned_arms)
+                end
+                unit_spawner:mark_for_deletion(arms)
+                unit_spawner:mark_for_deletion(skaven_base)
+                return false
+            end
+
+            set_unit_visible(arms, false)
+            apply_pusfume_voice_switch(arms)
+            skaven_attachments[role] = arms
+        end
+    else
+        local arms = unit_spawner:spawn_local_unit(config.versus_first_person_unit)
+        local linked = link_shared_first_person_nodes(
+            extension.world,
+            skaven_base,
+            arms,
+            AttachmentNodeLinking.skaven_first_person_attachment,
+            "Janfon-99-skaven")
+        if not linked then
+            unit_spawner:mark_for_deletion(arms)
+            unit_spawner:mark_for_deletion(skaven_base)
+            return false
+        end
+
+        set_unit_visible(arms, false)
+        apply_pusfume_voice_switch(arms)
+        skaven_attachments.packmaster = arms
     end
-    set_unit_visible(skaven_arms, false)
+
+    local skaven_arms = skaven_attachments.packmaster
 
     -- PlayerUnitFirstPerson and the viewport must keep the hero base forever.
     -- The Skaven controller is a child animation target only; linking its root
@@ -1635,19 +1665,20 @@ local function spawn_dual_first_person_rig(extension, config)
     Unit.set_flow_variable(skaven_base, "lua_career_name", "pusfume")
     Unit.set_flow_variable(skaven_base, "lua_first_person_mesh_unit", skaven_arms)
     apply_pusfume_voice_switch(skaven_base)
-    apply_pusfume_voice_switch(skaven_arms)
 
     extension._pusfume_hero_first_person_unit = extension.first_person_unit
     extension._pusfume_hero_first_person_attachment =
         extension.first_person_attachment_unit
     extension._pusfume_skaven_first_person_unit = skaven_base
     extension._pusfume_skaven_first_person_attachment = skaven_arms
+    extension._pusfume_skaven_first_person_attachments = skaven_attachments
     extension._pusfume_active_animation_unit = extension.first_person_unit
     extension._pusfume_active_first_person_rig = "hero"
     extension._pusfume_active_skaven_role = nil
 
     mod:info(
-        "[pusfume] Dual first-person attachments created: hero=Janfon-160 skaven=Janfon-99 camera_base=hero")
+        "[pusfume] Dual first-person attachments created: hero=Janfon-160 skaven=%s camera_base=hero",
+        config.native_versus_first_person and "Fatshark-native-role-set" or "Janfon-99")
 
     return true
 end
@@ -1779,8 +1810,10 @@ local function switch_first_person_rig(extension, inventory_extension, role)
     local first_person_unit = use_skaven
         and extension._pusfume_skaven_first_person_unit
         or extension._pusfume_hero_first_person_unit
+    local skaven_attachments = extension._pusfume_skaven_first_person_attachments
     local attachment_unit = use_skaven
-        and extension._pusfume_skaven_first_person_attachment
+            and skaven_attachments
+            and (skaven_attachments[role] or skaven_attachments.packmaster)
         or extension._pusfume_hero_first_person_attachment
 
     if not first_person_unit or not Unit.alive(first_person_unit)
@@ -1791,9 +1824,14 @@ local function switch_first_person_rig(extension, inventory_extension, role)
     end
 
     set_unit_visible(extension._pusfume_hero_first_person_attachment, false)
-    set_unit_visible(extension._pusfume_skaven_first_person_attachment, false)
+    if skaven_attachments then
+        for _, skaven_attachment in pairs(skaven_attachments) do
+            set_unit_visible(skaven_attachment, false)
+        end
+    end
 
-    if extension._pusfume_active_first_person_rig ~= rig_name then
+    if extension._pusfume_active_first_person_rig ~= rig_name
+            or extension._pusfume_active_skaven_role ~= role then
         extension._pusfume_first_person_probe_logged = nil
         extension._pusfume_first_person_probe_frames = 0
     end
@@ -1803,6 +1841,10 @@ local function switch_first_person_rig(extension, inventory_extension, role)
     extension._pusfume_active_animation_unit = first_person_unit
     extension._pusfume_active_first_person_rig = rig_name
     extension._pusfume_active_skaven_role = role
+    if use_skaven then
+        extension._pusfume_skaven_first_person_attachment = attachment_unit
+        Unit.set_flow_variable(first_person_unit, "lua_first_person_mesh_unit", attachment_unit)
+    end
     extension._pusfume_weapon_pose_slot = nil
 
     inventory_extension._first_person_unit = first_person_unit
@@ -1844,11 +1886,15 @@ end
 
 local function destroy_dual_first_person_rig(extension)
     local skaven_base = extension._pusfume_skaven_first_person_unit
-    local skaven_arms = extension._pusfume_skaven_first_person_attachment
+    local skaven_attachments = extension._pusfume_skaven_first_person_attachments
 
-    if skaven_arms and Unit.alive(skaven_arms) then
-        AttachmentUtils.unlink(extension.world, skaven_arms)
-        Managers.state.unit_spawner:mark_for_deletion(skaven_arms)
+    if skaven_attachments then
+        for _, skaven_arms in pairs(skaven_attachments) do
+            if skaven_arms and Unit.alive(skaven_arms) then
+                AttachmentUtils.unlink(extension.world, skaven_arms)
+                Managers.state.unit_spawner:mark_for_deletion(skaven_arms)
+            end
+        end
     end
 
     if skaven_base and Unit.alive(skaven_base) then
@@ -1858,6 +1904,7 @@ local function destroy_dual_first_person_rig(extension)
 
     extension._pusfume_skaven_first_person_unit = nil
     extension._pusfume_skaven_first_person_attachment = nil
+    extension._pusfume_skaven_first_person_attachments = nil
     extension._pusfume_active_animation_unit = nil
 end
 
@@ -2005,14 +2052,18 @@ local function install_first_person_hook(registry, config)
                     == "skaven"
                 and extension._pusfume_skaven_first_person_attachment
                 or extension._pusfume_hero_first_person_attachment
-            local inactive_attachment = extension._pusfume_active_first_person_rig
-                    == "skaven"
-                and extension._pusfume_hero_first_person_attachment
-                or extension._pusfume_skaven_first_person_attachment
             local visible = extension.first_person_mode
                 and extension._show_first_person_units
                 and not extension.tutorial_first_person
-            set_unit_visible(inactive_attachment, false)
+            set_unit_visible(extension._pusfume_hero_first_person_attachment,
+                active_attachment == extension._pusfume_hero_first_person_attachment
+                    and visible == true)
+            local skaven_attachments =
+                extension._pusfume_skaven_first_person_attachments or {}
+            for _, skaven_attachment in pairs(skaven_attachments) do
+                set_unit_visible(skaven_attachment,
+                    skaven_attachment == active_attachment and visible == true)
+            end
             set_unit_visible(active_attachment, visible == true)
             if extension._pusfume_active_first_person_rig ~= "skaven"
                     and not config.first_person_direct_link then

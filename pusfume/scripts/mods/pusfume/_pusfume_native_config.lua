@@ -9,6 +9,7 @@ return {
     first_person_materials = false,
     first_person_direct_link = false,
     native_skaven_first_person = false,
+    native_versus_first_person = false,
     dual_first_person_rigs = false,
     first_person_unit = false,
     versus_first_person_unit = false,

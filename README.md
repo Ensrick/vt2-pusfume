@@ -21,16 +21,16 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current friends-only live-test candidate is **v0.6.53-dev**, source commit
-`9cae562`, Workshop ManifestID `4689341082553975347`. It retains the
-weapon-aware dual first-person
-system built from both Janfon models: prototype Versus weapons use his 99-bone
-untouched-Skaven attachment, while ordinary hero weapons use his 160-bone
-donor-rest human attachment. Fatshark's hero first-person unit remains the sole
+The next friends-only live-test candidate is **v0.6.54-dev**. It retains the
+weapon-aware dual first-person system: prototype Versus weapons use Fatshark's
+role-matched Packmaster, Gutter Runner, Globadier, Warpfire, or Ratling arms,
+while ordinary hero weapons use Janfon's 160-bone donor-rest human attachment.
+Fatshark's hero first-person unit remains the sole
 camera/controller base; weapon swaps change only the visible attachment and
 weapon animation target, preventing Skaven locomotion from moving the hands
-independently of the camera. Post-compile checks verify 52 human and 55 Skaven
-bones against their native donors before deployment.
+independently of the camera. Post-compile checks verify Janfon's 52 shared
+human bones; the shipping build uses Fatshark's already-compiled Skaven arms
+directly.
 The v0.6.48 correction bypasses external all-or-nothing attachment wrappers
 that left both Janfon meshes at world origin when one optional fingertip node
 was absent, and reconciles the initially wielded weapon after inventory init.
@@ -45,6 +45,9 @@ override contaminated both hand rigs. v0.6.53 restores the native-human
 skinning contract with correctly typed diffuse, normal, and response maps and
 leaves the Skaven attachment's authored material untouched. The third-person
 body's unnatural darkness remains a separate shading investigation.
+v0.6.54 removes Janfon's 99-bone mesh from the shipping path after live tests
+showed it rendering over rat weapons instead of gripping them; the handoff
+remains available as a research input.
 Exact Packmaster dragging remains a larger career-state feature. The localized
 chest UV/material seam is tracked separately in issue #28.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person
@@ -193,8 +196,6 @@ py -m unittest discover -s tests -v
   -FirstPersonBlend ".build\janfon_1p_human_20260719\pusfume_1p_human.blend" `
   -FirstPersonDonorUnit ".build\donor_human_1p_extract\units\beings\player\empire_soldier\first_person_base\chr_first_person_mesh.unit" `
   -FirstPersonMaterialDonor ".build\donor_human_1p_extract\046F5616B1180D05.material" `
-  -VersusFirstPersonBlend ".build\janfon_1p_claws_20260719\pusfume_1p_arms claws base.blend" `
-  -VersusFirstPersonDonorUnit ".build\donor_skaven_1p_extract\B62B2EB36EEED507.unit" `
   -Upload
 ```
 

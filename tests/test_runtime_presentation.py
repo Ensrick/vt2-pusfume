@@ -100,17 +100,18 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn("World.link_unit(", self.native)
         self.assertIn("camera_base=hero", self.native)
 
-    def test_janfon_attachments_bypass_all_or_nothing_link_wrappers(self):
+    def test_first_person_attachments_bypass_all_or_nothing_link_wrappers(self):
         self.assertIn("local function link_shared_first_person_nodes", self.native)
         self.assertIn("World.link_unit(world, target, target_index, source, source_index)", self.native)
         self.assertIn('"Janfon-160-human"', self.native)
         self.assertIn('"Janfon-99-skaven"', self.native)
+        self.assertIn('"Fatshark-native-" .. role', self.native)
         dual_spawn = self.native.split(
             "local function spawn_dual_first_person_rig", 1
         )[1].split("local function first_person_weapon_units", 1)[0]
         self.assertNotIn("AttachmentUtils.link(", dual_spawn)
 
-    def test_initial_wield_selects_the_correct_janfon_attachment(self):
+    def test_initial_wield_selects_the_correct_attachment(self):
         self.assertIn("extension._pusfume_initial_rig_pending = true", self.native)
         self.assertIn("extension.inventory_extension:get_wielded_slot_name()", self.native)
         self.assertIn(
@@ -118,7 +119,7 @@ class RuntimePresentationTests(unittest.TestCase):
             self.native,
         )
 
-    def test_weapon_family_switches_between_janfon_versus_and_human_attachments(self):
+    def test_weapon_family_switches_between_native_versus_and_janfon_human_arms(self):
         for role in (
             "packmaster",
             "gutter_runner",
@@ -147,6 +148,9 @@ class RuntimePresentationTests(unittest.TestCase):
             self.native,
         )
         self.assertIn("config.versus_first_person_unit", self.native)
+        self.assertIn("config.native_versus_first_person", self.native)
+        self.assertIn("skaven_attachments[role] or skaven_attachments.packmaster", self.native)
+        self.assertIn("extension._pusfume_skaven_first_person_attachments", self.native)
         self.assertIn("relink_first_person_slot", self.native)
         self.assertIn(
             "weapon_extension.first_person_unit = first_person_unit",

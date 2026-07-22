@@ -1458,6 +1458,11 @@ $versusFirstPersonUnitValue = if ($versusFirstPersonEnabled) {
 } else {
     "false"
 }
+$nativeVersusFirstPersonValue = if ($firstPersonEnabled -and -not $versusFirstPersonEnabled) {
+    "true"
+} else {
+    "false"
+}
 $firstPersonMaterialPackageValue = if ($firstPersonEnabled) {
     '"resource_packages/pusfume/native_1p_child"'
 } else {
@@ -1491,7 +1496,7 @@ $firstPersonDirectLinkValue = if ($firstPersonEnabled) { "true" } else { "false"
 # all-Skaven fallback remains off. The separate dual-rig path keeps native
 # role-specific Skaven arms resident only for Versus weapon families.
 $nativeSkavenFirstPersonValue = if ($firstPersonEnabled) { "false" } else { "true" }
-$dualFirstPersonRigsValue = if ($firstPersonEnabled -and $versusFirstPersonEnabled) { "true" } else { "false" }
+$dualFirstPersonRigsValue = if ($firstPersonEnabled) { "true" } else { "false" }
 
 @"
 return {
@@ -1505,6 +1510,7 @@ return {
     first_person_materials = $firstPersonMaterialsValue,
     first_person_direct_link = $firstPersonDirectLinkValue,
     native_skaven_first_person = $nativeSkavenFirstPersonValue,
+    native_versus_first_person = $nativeVersusFirstPersonValue,
     dual_first_person_rigs = $dualFirstPersonRigsValue,
     first_person_unit = $firstPersonUnitValue,
     versus_first_person_unit = $versusFirstPersonUnitValue,
@@ -2061,4 +2067,5 @@ Write-Host "Native Pusfume materials passed: textures=$($textureNames.Count) mat
 Write-Host "Native Pusfume animation package passed: controller=pusfume_3p clips=pusfume_3p_idle,pusfume_3p_walk"
 Write-Host "Native Pusfume hero preview enabled: $($HeroPreview.IsPresent)"
 Write-Host "Native Pusfume first-person arms enabled: $firstPersonEnabled format=$FirstPersonFormat"
-Write-Host "Native Pusfume Versus first-person arms enabled: $versusFirstPersonEnabled format=$FirstPersonFormat"
+Write-Host "Native Pusfume Fatshark role arms enabled: $($firstPersonEnabled -and -not $versusFirstPersonEnabled)"
+Write-Host "Native Pusfume experimental Janfon Versus arms enabled: $versusFirstPersonEnabled format=$FirstPersonFormat"
