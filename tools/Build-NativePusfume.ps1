@@ -138,7 +138,7 @@ if ($LegacyFur -and $IntegratedFur) {
     throw "LegacyFur and IntegratedFur are mutually exclusive"
 }
 $furEnabled = $LegacyFur.IsPresent -or $IntegratedFur.IsPresent
-if ($furEnabled) {
+if ($LegacyFur) {
     $SplicedGameChild = $true
 }
 # Track D: ship the -ParentChildMaterial staging, then replace the compiled
@@ -239,16 +239,23 @@ if ($furEnabled) {
     $legacyBodyPath = Join-Path $legacyFurRootPath "units\pusfume\pusfume_inn.fbx"
     $legacyFurTextureRoot = Join-Path $legacyFurRootPath "textures\pusfume\inn"
     $legacyLicense = Join-Path $legacyFurRootPath "LICENSE"
-    if ($LegacyFur -and -not (Test-Path -LiteralPath $legacyFurPath -PathType Leaf)) {
+    if (-not (Test-Path -LiteralPath $legacyFurPath -PathType Leaf)) {
         throw "Dalokraff legacy fur FBX is missing: $legacyFurPath"
     }
-    if ($LegacyFur -and -not (Test-Path -LiteralPath $legacyBodyPath -PathType Leaf)) {
+    if (-not (Test-Path -LiteralPath $legacyBodyPath -PathType Leaf)) {
         throw "Dalokraff legacy body FBX is missing: $legacyBodyPath"
     }
     if (-not (Test-Path -LiteralPath $legacyLicense -PathType Leaf) -or
             (Get-Content -LiteralPath $legacyLicense -Raw) -notmatch
                 'MIT License[\s\S]*Copyright \(c\) 2022 dalokraff') {
         throw "Dalokraff legacy fur license/provenance contract is missing"
+    }
+} elseif ($IntegratedFur) {
+    $thirdPartyNotices = Join-Path $repoRoot "THIRD_PARTY_NOTICES.md"
+    if (-not (Test-Path -LiteralPath $thirdPartyNotices -PathType Leaf) -or
+            (Get-Content -LiteralPath $thirdPartyNotices -Raw) -notmatch
+                'MIT License[\s\S]*Copyright \(c\) 2022 dalokraff') {
+        throw "Tracked Dalokraff integrated-fur attribution is missing"
     }
 }
 $useFbxDcc = -not $UseBsiSkinFallback.IsPresent

@@ -10,6 +10,13 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, hash-verified, locally deployed, and uploaded the v0.6.51 native-human
+  first-person material candidate as friends-only Steam ManifestID
+  `1488565901872057356`.
+- Added a tracked third-party notice containing dalokraff's MIT terms. The
+  integrated-fur build now validates this repository-owned attribution and no
+  longer requires an unrelated private legacy-source checkout merely to read
+  its license; the legacy-FBX mode still requires and validates its source.
 - Restored Janfon's authored first-person skin weights after the v0.6.50 live
   test retained the arm/weapon separation and introduced visible strings from
   finger vertices. The nearest-surface transfer remains available only as a

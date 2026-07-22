@@ -75,6 +75,7 @@ $firstPersonWeightValidationPath = Join-Path $repoRoot "tools\validate_pusfume_1
 $firstPersonUnitScenePath = Join-Path $repoRoot "tools\stingray_unit_scene.py"
 $changelogPath = Join-Path $repoRoot "CHANGELOG.md"
 $contributingPath = Join-Path $repoRoot "CONTRIBUTING.md"
+$thirdPartyNoticesPath = Join-Path $repoRoot "THIRD_PARTY_NOTICES.md"
 $nativeMilestonePath = Join-Path $repoRoot "docs\NATIVE_CHARACTER_MILESTONE.md"
 $workflowPath = Join-Path $repoRoot ".github\workflows\source-preflight.yml"
 $previewPath = Join-Path $repoRoot "pusfume\textures\pusfume\pusfume_model_preview.png"
@@ -131,7 +132,10 @@ Test-Condition ($configText -match 'visibility\s*=\s*"friends"') "Workshop visib
 Test-Condition ($configText -match 'published_id\s*=\s*3764954245L') "Workshop identity" "3764954245"
 Test-Condition ($changelogText -match '## \[Unreleased\]' -and `
     $changelogText -match '### Known Limitations' -and `
-    $contributingText -match 'Update `CHANGELOG\.md`') `
+    $contributingText -match 'Update `CHANGELOG\.md`' -and `
+    (Test-Path -LiteralPath $thirdPartyNoticesPath) -and `
+    (Get-Content -LiteralPath $thirdPartyNoticesPath -Raw) -match
+        'Copyright \(c\) 2022 dalokraff') `
     "release discipline" "changelog and contribution policy are present"
 Test-Condition ((Test-Path -LiteralPath $nativeMilestonePath) -and `
     $nativeMilestoneText -match '2405082174877027150' -and `
