@@ -216,7 +216,7 @@ if ($versusFirstPersonEnabled) {
 $legacyFurPath = $null
 $legacyBodyPath = $null
 $legacyFurTextureRoot = $null
-if ($furEnabled) {
+if ($LegacyFur) {
     $legacyFurRootPath = if ([IO.Path]::IsPathRooted($LegacyFurRoot)) {
         (Resolve-Path $LegacyFurRoot).Path
     } else {

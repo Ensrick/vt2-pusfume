@@ -420,6 +420,8 @@ Test-Condition ($nativeText -match 'Material\.set_texture\(material, channel, te
     $animatedFbxToolText -match 'shift_u = int\(anchor\.x // 1\)') `
     "per-mesh donor atlas" "atlas channels are set on every material by index so swapped donor instances are reached"
 Test-Condition ($nativeBuildText -match '\[switch\]\$LegacyFur' -and `
+    $nativeBuildText -match 'if \(\$LegacyFur\) \{[\s\S]*\} elseif \(\$IntegratedFur\)' -and `
+    $nativeBuildText -match 'Tracked Dalokraff integrated-fur attribution is missing' -and `
     $nativeBuildText -match 'dalokraff legacy fur license/provenance contract is missing' -and `
     $animatedFbxToolText -match 'def add_legacy_fur\(' -and `
     $animatedFbxToolText -match 'def retarget_fur_surface\(' -and `
