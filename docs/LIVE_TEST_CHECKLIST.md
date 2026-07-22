@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.58-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.59-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -37,6 +37,9 @@ whole-mesh Versus offset, and removes the extra gamma transfer from dalokraff's
 fur. Test source commit `c57728d`, Workshop ManifestID
 `6145712826462103701`; compare grip placement and fur brightness directly
 against v0.6.57.
+v0.6.59 is the same visual candidate with a crash guard for hook right-click:
+press and release block once and confirm unsupported `parry_pose` and
+`parry_finished` events are skipped without ending the session.
 
 The v0.6.44 candidate replaces the native Skaven first-person fallback with
 Janfon's human-rigged arms and opens all five heroes' melee and ranged weapons

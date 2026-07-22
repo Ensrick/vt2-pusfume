@@ -171,6 +171,14 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn("local actual_event = event or event_1p", self.native)
         self.assertIn("skip_missing_first_person_event", self.native)
 
+    def test_animation_guard_checks_the_active_rig_not_only_the_camera_base(self):
+        guard = self.native.split(
+            "local function skip_missing_first_person_event", 1
+        )[1].split("local function set_unit_visible", 1)[0]
+        self.assertIn("extension._pusfume_active_animation_unit", guard)
+        self.assertIn("first_person_has_event and active_has_event", guard)
+        self.assertIn("Unit.has_animation_event(active_animation_unit, event)", guard)
+
     def test_first_person_probe_rearms_when_weapon_family_changes(self):
         self.assertIn(
             "extension._pusfume_active_first_person_rig ~= rig_name",

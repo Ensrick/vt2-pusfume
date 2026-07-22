@@ -1541,8 +1541,18 @@ end
 local function skip_missing_first_person_event(extension, first_person_unit, event)
     if not extension or not extension._pusfume_first_person
             or type(event) ~= "string"
-            or not first_person_unit or not Unit.alive(first_person_unit)
-            or Unit.has_animation_event(first_person_unit, event) then
+            or not first_person_unit or not Unit.alive(first_person_unit) then
+        return false
+    end
+
+    local active_animation_unit = extension._pusfume_active_animation_unit
+    local first_person_has_event = Unit.has_animation_event(first_person_unit, event)
+    local active_has_event = not active_animation_unit
+        or not Unit.alive(active_animation_unit)
+        or active_animation_unit == first_person_unit
+        or Unit.has_animation_event(active_animation_unit, event)
+
+    if first_person_has_event and active_has_event then
         return false
     end
 
@@ -1550,8 +1560,9 @@ local function skip_missing_first_person_event(extension, first_person_unit, eve
         extension._pusfume_skipped_anim_events or {}
     if not extension._pusfume_skipped_anim_events[event] then
         extension._pusfume_skipped_anim_events[event] = true
-        mod:info("[pusfume] Skipped 1P animation event missing on active rig: %s",
-            tostring(event))
+        mod:info(
+            "[pusfume] Skipped 1P animation event missing on active rig: %s base=%s active=%s",
+            tostring(event), tostring(first_person_has_event), tostring(active_has_event))
     end
 
     return true

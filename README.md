@@ -21,7 +21,7 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The next friends-only live-test candidate is **v0.6.58-dev**. It retains the
+The next friends-only live-test candidate is **v0.6.59-dev**. It retains the
 weapon-aware dual first-person system using Janfon's assets: prototype Versus
 weapons use his 99-bone Skaven attachment, while ordinary hero weapons use his
 160-bone donor-rest human attachment.
@@ -71,6 +71,9 @@ contracts, removes the old whole-mesh correction that moved already-matching
 hand centroids about `0.087 m` away from Packmaster's, and treats dalokraff's
 fur diffuse as its original sRGB-authored data. Hero-hand darkness and the
 darker gameplay-world body remain separate lighting/response investigations.
+v0.6.59 additionally makes hook right-click release crash-safe by validating
+animation events against the active Skaven rig as well as the permanent hero
+camera base; it makes no visual-asset changes relative to v0.6.58.
 Exact Packmaster dragging remains a larger career-state feature. The localized
 chest UV/material seam is tracked separately in issue #28.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person

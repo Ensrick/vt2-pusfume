@@ -10,6 +10,11 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Fixed the v0.6.58 hook right-click release crash. `parry_finished` exists on
+  the permanent hero camera base but not on the active Janfon-99 Skaven rig;
+  the animation guard now requires both units to support an event before the
+  original first-person hook chain runs. Unsupported block events are skipped
+  harmlessly and logged with base/active capability state.
 - Built, byte-verified across all eight shipped files, locally deployed, and
   uploaded v0.6.58 as friends-only Steam ManifestID `6145712826462103701`
   from source commit `c57728d`. The generated fur remains sRGB with its

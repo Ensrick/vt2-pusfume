@@ -1,6 +1,6 @@
 local mod = get_mod("pusfume")
 
-local MOD_VERSION = "0.6.58-dev"
+local MOD_VERSION = "0.6.59-dev"
 
 mod:info("[pusfume] loading v%s", MOD_VERSION)
 
