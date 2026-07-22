@@ -193,6 +193,10 @@ py -m unittest discover -s tests -v
   -Upload
 ```
 
+`-IntegratedFur` uses the reviewed handoff fur maps under `-TextureSource` by
+default. `-IntegratedFurTextureRoot` may select the licensed legacy map set for
+a controlled visual-baseline build without changing the integrated mesh.
+
 This is the only native ship entry point. It runs Blender, VMBLauncher, the VT2
 SDK, deploy, and upload as redirected `CreateNoWindow` children, preserving the
 desktop while retaining captured diagnostics. Do not invoke `vmb.js`,

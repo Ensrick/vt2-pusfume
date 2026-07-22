@@ -420,6 +420,7 @@ Test-Condition ($nativeText -match 'Material\.set_texture\(material, channel, te
     $animatedFbxToolText -match 'shift_u = int\(anchor\.x // 1\)') `
     "per-mesh donor atlas" "atlas channels are set on every material by index so swapped donor instances are reached"
 Test-Condition ($nativeBuildText -match '\[switch\]\$LegacyFur' -and `
+    $nativeBuildText -match '\[string\]\$IntegratedFurTextureRoot' -and `
     $nativeBuildText -match 'if \(\$LegacyFur\) \{[\s\S]*\} elseif \(\$IntegratedFur\)' -and `
     $nativeBuildText -match 'Tracked Dalokraff integrated-fur attribution is missing' -and `
     $nativeBuildText -match 'dalokraff legacy fur license/provenance contract is missing' -and `
@@ -439,9 +440,11 @@ Test-Condition ($nativeBuildText -match '\[switch\]\$LegacyFur' -and `
     $nativeBuildText -match '20A7120B25F414F7' -and `
     $nativeConfigText -match 'fur_child_material\s*=\s*false' -and `
     $nativeText -match 'Unit\.set_material\(unit, FUR_MATERIAL_SLOT, config\.fur_child_material\)' -and `
-    $nativeBuildText.IndexOf('function Write-LegacyFurTexture') -gt `
+    $nativeBuildText -match '\$furTextureRoot = if \(\$LegacyFur\)' -and `
+    $nativeBuildText -match 'pusfume_fur_df\.png' -and `
+    $nativeBuildText.IndexOf('function Write-FurTexture') -gt `
         $nativeBuildText.IndexOf('function Write-NativeTextureRecipe') -and `
-    $nativeBuildText.IndexOf('function Write-LegacyFurTexture') -gt `
+    $nativeBuildText.IndexOf('function Write-FurTexture') -gt `
         $nativeBuildText.IndexOf('"@ | Set-Content -LiteralPath (Join-Path $textureRoot "$Name.texture")')) `
     "dalokraff fur integration" "licensed fur is weight-transferred, deformation-checked, and packaged by a callable texture helper"
 Test-Condition ($nativeText -match 'function M\.native_skin_name' -and `

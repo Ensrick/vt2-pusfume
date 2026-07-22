@@ -18,6 +18,7 @@ param(
     [switch]$LegacyFur,
     [switch]$IntegratedFur,
     [string]$LegacyFurRoot = ".build\reference_legacy_pusfume",
+    [string]$IntegratedFurTextureRoot = "",
     [double]$BodyDiffuseGain = 1.2,
     [double]$FurDiffuseGain = 0.55,
     [switch]$HeroPreview,
@@ -216,6 +217,7 @@ if ($versusFirstPersonEnabled) {
 $legacyFurPath = $null
 $legacyBodyPath = $null
 $legacyFurTextureRoot = $null
+$integratedFurTextureRootPath = $null
 if ($LegacyFur) {
     $legacyFurRootPath = if ([IO.Path]::IsPathRooted($LegacyFurRoot)) {
         (Resolve-Path $LegacyFurRoot).Path
@@ -244,6 +246,13 @@ if ($LegacyFur) {
                 'MIT License[\s\S]*Copyright \(c\) 2022 dalokraff') {
         throw "Tracked Dalokraff integrated-fur attribution is missing"
     }
+    if (-not [string]::IsNullOrWhiteSpace($IntegratedFurTextureRoot)) {
+        $integratedFurTextureRootPath = if ([IO.Path]::IsPathRooted($IntegratedFurTextureRoot)) {
+            (Resolve-Path $IntegratedFurTextureRoot).Path
+        } else {
+            (Resolve-Path (Join-Path $repoRoot $IntegratedFurTextureRoot)).Path
+        }
+    }
 }
 $useFbxDcc = -not $UseBsiSkinFallback.IsPresent
 $inputPath = if ([IO.Path]::IsPathRooted($InputBsi)) {
@@ -256,6 +265,15 @@ $textureSourcePath = if ([IO.Path]::IsPathRooted($TextureSource)) {
 } else {
     (Resolve-Path (Join-Path $repoRoot $TextureSource)).Path
 }
+$furTextureRoot = if ($LegacyFur) {
+    $legacyFurTextureRoot
+} elseif ($IntegratedFur) {
+    if ($integratedFurTextureRootPath) { $integratedFurTextureRootPath } else { $textureSourcePath }
+} else {
+    $null
+}
+$useLegacyFurTextureNames = $LegacyFur -or ($IntegratedFur -and
+    (Test-Path -LiteralPath (Join-Path $furTextureRoot "psf_fur_d_rein.png") -PathType Leaf))
 $inputBonesPath = [IO.Path]::ChangeExtension($inputPath, ".bones")
 if (-not (Test-Path -LiteralPath $inputBonesPath -PathType Leaf)) {
     throw "The native BSI is missing its same-name animation skeleton: $inputBonesPath"
@@ -697,7 +715,7 @@ common = {
 "@ | Set-Content -LiteralPath (Join-Path $textureRoot "$Name.texture") -Encoding utf8
 }
 
-function Write-LegacyFurTexture {
+function Write-FurTexture {
     param(
         [string]$Name,
         [string]$SourceName,
@@ -705,7 +723,7 @@ function Write-LegacyFurTexture {
         [double]$Gain = 1.0
     )
 
-    $source = Join-Path $legacyFurTextureRoot $SourceName
+    $source = Join-Path $furTextureRoot $SourceName
     if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
         throw "Required dalokraff fur texture is missing: $source"
     }
@@ -931,9 +949,12 @@ foreach ($textureName in $textureNames) {
     Write-NativeTexture $textureName
 }
 if ($furEnabled) {
-    Write-LegacyFurTexture "pusfume_fur_df" "psf_fur_d_rein.png" $true $FurDiffuseGain
-    Write-LegacyFurTexture "pusfume_fur_nm" "psf_fur_n.tga" $false
-    Write-LegacyFurTexture "pusfume_fur_s" "psf_fur_s.tga" $false
+    $furDiffuseSource = if ($useLegacyFurTextureNames) { "psf_fur_d_rein.png" } else { "pusfume_fur_df.png" }
+    $furNormalSource = if ($useLegacyFurTextureNames) { "psf_fur_n.tga" } else { "pusfume_fur_n.png" }
+    $furResponseSource = if ($useLegacyFurTextureNames) { "psf_fur_s.tga" } else { "pusfume_fur_s.png" }
+    Write-FurTexture "pusfume_fur_df" $furDiffuseSource $true $FurDiffuseGain
+    Write-FurTexture "pusfume_fur_nm" $furNormalSource $false
+    Write-FurTexture "pusfume_fur_s" $furResponseSource $false
     $textureNames += @("pusfume_fur_df", "pusfume_fur_nm", "pusfume_fur_s")
 }
 
