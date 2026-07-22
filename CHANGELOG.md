@@ -17,6 +17,10 @@ request rather than in release notes.
 - Compiled all Janfon character diffuse maps with `srgb = false` and returned
   the body/fur pixel gains to neutral `1.0`. Normals, packed response maps,
   emission masks, geometry, UVs, weights, and animations are unchanged.
+- Built, hash-verified across all eight deployed files, locally deployed, and
+  uploaded v0.6.56 as friends-only Steam ManifestID `8120410193085696537` from
+  source commit `41b6b28`. Generated recipes confirm linear sampling for every
+  Janfon diffuse surface included in this candidate.
 - Superseded v0.6.54's incorrect native-arm substitution and restored Janfon's
   99-bone Skaven handoff as the canonical rat-weapon asset.
 - Proved Janfon's Skaven armature matches the compiled donor within

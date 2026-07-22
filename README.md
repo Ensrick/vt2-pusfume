@@ -56,7 +56,8 @@ all diffuse images into the V2 Ubershader as linear `Non-Color` data, while the
 native build had incorrectly compiled them as sRGB. The new candidate preserves
 that authored linear sampling and removes the old body/fur gain compensation;
 normal, packed response, emission, geometry, UV, weight, and animation data are
-unchanged.
+unchanged. The candidate is source commit `41b6b28`, Workshop ManifestID
+`8120410193085696537`.
 Exact Packmaster dragging remains a larger career-state feature. The localized
 chest UV/material seam is tracked separately in issue #28.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person

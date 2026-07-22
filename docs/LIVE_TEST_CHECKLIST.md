@@ -22,7 +22,9 @@ v0.6.56 is the shared Janfon diffuse-color-space test. Compare the selector,
 third-person body, human-compatible hands, rat-weapon hands, fur, and whiskers
 against Janfon's Blender/video reference. Diffuse maps now preserve his linear
 `Non-Color` sampling instead of being sRGB-decoded by Stingray; normal, packed
-response, emission, UV, skinning, and animation data are unchanged.
+response, emission, UV, skinning, and animation data are unchanged. Test source
+commit `41b6b28`, Workshop ManifestID `8120410193085696537`; all eight live
+files are hash-identical to staging.
 
 The v0.6.44 candidate replaces the native Skaven first-person fallback with
 Janfon's human-rigged arms and opens all five heroes' melee and ranged weapons
