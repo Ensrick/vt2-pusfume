@@ -10,6 +10,10 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, byte-verified across all eight shipped files, locally deployed, and
+  uploaded v0.6.60 as friends-only Steam ManifestID `3946661979316079793`
+  from source commit `1e6993a`. The VT2 SDK manifest contains all nine custom
+  Assassin clips; both compiled first-person skeleton audits passed.
 - Prepared v0.6.60 as the first complete Janfon Assassin-animation pipeline.
   Blender 5.2 exports nine authored actions from the untouched 99-bone handoff
   as independent armature-only FBXs; the VT2 SDK compiles and manifest-checks

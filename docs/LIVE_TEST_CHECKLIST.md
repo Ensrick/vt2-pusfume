@@ -50,7 +50,9 @@ corresponding `claws_*` clips. Compare ordinary hero-weapon hands against the
 Versus hands: both now use the proven Packmaster child material. Compare fur in
 the inventory, sunlight, and shadow; it now uses native Skaven fur response
 with unchanged texture pixels. The third-person body's darker gameplay lighting
-is not claimed fixed in this candidate.
+is not claimed fixed in this candidate. Test source commit `1e6993a`, Workshop
+ManifestID `3946661979316079793`; all eight live files are hash-identical to
+staging.
 
 The v0.6.44 candidate replaces the native Skaven first-person fallback with
 Janfon's human-rigged arms and opens all five heroes' melee and ranged weapons

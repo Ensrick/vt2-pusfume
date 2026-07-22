@@ -81,6 +81,9 @@ Blade equip, idle, block, light, heavy, and push-stab actions. Hero-compatible
 and Versus hands now share the proven Packmaster material contract. Standalone
 fur now uses the native Skaven 1-bit climate material instead of the Laurel
 plume material; no diffuse gain or third-person body pixel change is included.
+The deployed candidate is source commit `1e6993a`, friends-only Workshop
+ManifestID `3946661979316079793`; all eight live files are hash-identical to
+staging.
 Exact Packmaster dragging remains a larger career-state feature. The localized
 chest UV/material seam is tracked separately in issue #28.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person
