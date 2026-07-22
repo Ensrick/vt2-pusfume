@@ -21,6 +21,10 @@ request rather than in release notes.
 - Added reproducible headless compiled-unit import, armature alignment, and
   multi-surface bounds tools for Blender 5.2 investigations.
 - Built, hash-verified across all eight deployed files, locally deployed, and
+  uploaded v0.6.55 as friends-only Steam ManifestID `5620515288318076233` from
+  source commit `b5ff287`. The build explicitly disables Fatshark role-arm
+  rendering and enables Janfon's 99-bone Versus attachment.
+- Built, hash-verified across all eight deployed files, locally deployed, and
   uploaded v0.6.54 as friends-only Steam ManifestID `8276097269856730781` from
   source commit `3364e8d`.
 - In the superseded v0.6.54 candidate, restored Fatshark's role-matched native Versus arm meshes for every rat

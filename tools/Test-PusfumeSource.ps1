@@ -279,7 +279,7 @@ Test-Condition ($nativeText -match 'config\.versus_first_person_unit' -and `
     $nativeText -match 'weapon_extension\.first_person_unit = first_person_unit' -and `
     $nativeText -notmatch '(?s)local function switch_first_person_rig.*?extension\.first_person_unit = first_person_unit.*?local function prepare_first_person_rig_for_wield' -and `
     $nativeBuildText -match 'dual_first_person_rigs = \$dualFirstPersonRigsValue') `
-    "dual first-person rigs" "Versus weapons use role-matched Fatshark arms without replacing the hero camera base"
+    "dual first-person rigs" "Janfon attachments and guarded native references can be selected without replacing the hero camera base"
 Test-Condition ($nativeText -match 'spawn_local_unit\(source_rest_unit_name\)' -and `
     $nativeText -match 'Matrix4x4\.multiply\(source_pose, Matrix4x4\.inverse\(source_rest\)\)' -and `
     $nativeText -match 'Matrix4x4\.set_translation\(target_pose, Matrix4x4\.translation\(target_rest\)\)' -and `

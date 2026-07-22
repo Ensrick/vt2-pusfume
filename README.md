@@ -30,7 +30,7 @@ camera/controller base; weapon swaps change only the visible attachment and
 weapon animation target, preventing Skaven locomotion from moving the hands
 independently of the camera. Post-compile checks verify Janfon's 52 shared
 human bones; the shipping build uses Fatshark's already-compiled Skaven arms
-directly.
+only as an alignment reference and renders Janfon's 99-bone Skaven mesh.
 The v0.6.48 correction bypasses external all-or-nothing attachment wrappers
 that left both Janfon meshes at world origin when one optional fingertip node
 was absent, and reconciles the initially wielded weapon after inventory init.
@@ -48,7 +48,8 @@ body's unnatural darkness remains a separate shading investigation.
 v0.6.54 briefly substituted Fatshark's arms and is superseded. v0.6.55 restores
 Janfon's 99-bone mesh and applies a measured mesh-only correction against the
 compiled Packmaster skin. Its bones already matched within `0.00000025 m`; no
-bone, weight, UV, material, or edge-length data is changed.
+bone, weight, UV, material, or edge-length data is changed. This candidate is
+source commit `b5ff287`, Workshop ManifestID `5620515288318076233`.
 Exact Packmaster dragging remains a larger career-state feature. The localized
 chest UV/material seam is tracked separately in issue #28.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person

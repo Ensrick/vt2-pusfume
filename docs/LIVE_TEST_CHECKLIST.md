@@ -14,7 +14,9 @@ and response bindings only on the hero-compatible hands. v0.6.54's native-arm
 substitution is superseded. v0.6.55 restores Janfon-99 and changes only its
 mesh-to-bone surface offset by the measured Packmaster comparison. Prioritize
 steps 4-5 under **Spawn smoke test** and compare the rat-weapon grip against
-v0.6.53. The dark third-person body is not expected to change in this candidate.
+v0.6.53. The candidate is source commit `b5ff287`, Workshop ManifestID
+`5620515288318076233`, and its eight live files are hash-identical to staging.
+The dark third-person body is not expected to change in this candidate.
 
 The v0.6.44 candidate replaces the native Skaven first-person fallback with
 Janfon's human-rigged arms and opens all five heroes' melee and ranged weapons
