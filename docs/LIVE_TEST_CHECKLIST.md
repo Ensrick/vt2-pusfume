@@ -201,23 +201,25 @@ Steam confirmed friends-only ManifestID `2481608271187325602` at 2026-07-18
 1. Enter a mission in the normal first-person camera and leave the default weapon equipped for at least ten seconds.
 2. Confirm both arms remain continuously visible while looking up, down, left, and right; blinking is a failure of the LOD-bounds fix.
 3. Before moving, confirm the fingers retain Janfon's modeled proportions and do not appear as long, thin sticks.
-4. Equip ordinary hero weapons from multiple heroes. Confirm each is visible,
+4. Confirm the hands and weapon occupy the same first-person depth/projection:
+   the weapon must not float near the camera while the arms extend beyond it.
+5. Equip ordinary hero weapons from multiple heroes. Confirm each is visible,
    attached to the expected hand, and does not make either arm disappear.
-5. Attack, block, push, charge, aim, fire, reload, and swap with those hero
+6. Attack, block, push, charge, aim, fire, reload, and swap with those hero
    weapons. Confirm Janfon's human hands follow their native hero poses without
    Globadier globe-holding or Packmaster-specific pose residue.
-6. Confirm the arms use Pusfume's direct-UV body textures with no green donor glow, atlas scrambling, or opaque whisker-style cards.
-7. Attack, block, push, reload, swap weapons, interact, revive, crouch, jump, dodge, and move in every direction.
-8. Confirm the arms follow VT2's native first-person poses without remaining in rest pose, separating from the camera rig, changing bone lengths, or stretching fingers.
-9. Enable Tweaker: General's third-person camera and confirm the established third-person body still animates and shades correctly.
-10. Run `/pusfume_preflight` after spawning. `native first-person arms` must report PASS; preserve the log if it reports WARN or FAIL.
-11. Check the log for `First-person donor-rest direct links active`.
+7. Confirm the arms use Pusfume's direct-UV body textures with no green donor glow, atlas scrambling, or opaque whisker-style cards.
+8. Attack, block, push, reload, swap weapons, interact, revive, crouch, jump, dodge, and move in every direction.
+9. Confirm the arms follow VT2's native first-person poses without remaining in rest pose, separating from the camera rig, changing bone lengths, or stretching fingers.
+10. Enable Tweaker: General's third-person camera and confirm the established third-person body still animates and shades correctly.
+11. Run `/pusfume_preflight` after spawning. `native first-person arms` must report PASS; preserve the log if it reports WARN or FAIL.
+12. Check the log for `First-person donor-rest direct links active`.
     `First-person rest retarget initialized` must not appear for v0.6.44.
-12. Check the delayed `First-person attachment probe`; it must report
+13. Check the delayed `First-person attachment probe`; it must report
     `direct=true`, `retarget=false`, and near-zero source/target node distances.
     Runtime anchor and limb corrections should remain zero because Blender
     already matched the compiled donor rest matrices.
-13. Treat Janfon's `positioningtest` clip as an unwired diagnostic asset. His current first-person handoff has no walk cycle; do not expect or report a Janfon-authored first-person walk in this candidate.
+14. Treat Janfon's `positioningtest` clip as an unwired diagnostic asset. His current first-person handoff has no walk cycle; do not expect or report a Janfon-authored first-person walk in this candidate.
 
 ## Career-kit smoke test
 

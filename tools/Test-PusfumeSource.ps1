@@ -199,12 +199,9 @@ Test-Condition ($firstPersonSurfaceText -match 'def weighted_group_centroids' -a
     $firstPersonFbxToolText -match 'def transfer_weights_from_native_surface' -and `
     $firstPersonFbxToolText -match 'j_leftarmroll' -and `
     $firstPersonBsiToolText -match 'native_weight_donor' -and `
-    $nativeBuildText -match '(?s)\$firstPersonAssetPath.*?--native-weight-donor.*?\$versusFirstPersonAssetPath' -and `
-    $nativeBuildText -notmatch '(?s)\$versusFirstPersonAssetPath.*?--native-weight-donor' -and `
-    $nativeBuildText -match 'validate_pusfume_1p_weight_transfer\.py' -and `
-    $nativeBuildText -match 'modified its native weight donor' -and `
-    $nativeBuildText -notmatch '--align-native-hero-grips') `
-    "first-person native weight transfer" "native roll and palm deformation applies only to Janfon's human-weapon arms"
+    $nativeBuildText -notmatch '--native-weight-donor' -and `
+    $nativeBuildText -match '--align-native-hero-grips') `
+    "first-person authored-weight guard" "the rejected surface transfer remains research-only and shipping preserves Janfon's skin weights"
 Test-Condition ($nativeBuildText -match '\[string\]\$FirstPersonBlend' -and `
     $nativeBuildText -match '\[string\]\$FirstPersonDonorUnit' -and `
     $nativeBuildText -match '\[string\]\$VersusFirstPersonBlend' -and `
@@ -518,17 +515,21 @@ Test-Condition ((Test-Path (Join-Path $repoRoot "tools\splice_bundle_resource.py
     $nativeBuildText -match '\$NoDonorTextureShadow = \$true' -and `
     $nativeBuildText -match 'make_spliced_child\.py' -and `
     $nativeBuildText -match '"--expect-size", "768"' -and `
+    $nativeBuildText -match '"--expect-size", "96"' -and `
     $nativeBuildText -match '"--expect-size", "128"' -and `
     $nativeBuildText -match '"--expect-parent", "3D25339231384C80"' -and `
+    $nativeBuildText -match '"--expect-parent", "D97596A091982F4B"' -and `
     $nativeBuildText -match '"--expect-parent", "F85B289742D5D69A"' -and `
     $nativeBuildText -match 'hash:F72D636600F7F598' -and `
     $nativeBuildText -match 'DD74D8319F514D96=C263ECB79A8DCEC0' -and `
     $nativeBuildText -match 'E334A8CB6BCB5E6D=A4215592F6297E57' -and `
     $nativeBuildText -match '45FFAEEF53695A86=818C87B860407405' -and `
-    $nativeBuildText -match '"--set-variable", "emissive_color=0,0,0"' -and `
     $nativeBuildText -match 'texture_map_02af90f8=C263ECB79A8DCEC0' -and `
     $nativeBuildText -match 'texture_map_27b67fd2=818C87B860407405' -and `
     $nativeBuildText -match 'texture_map_8bf37d8e=A4215592F6297E57' -and `
+    $nativeBuildText -match '86FFDEB90C40C597=E0C4E09D80AE735B' -and `
+    $nativeBuildText -match '258E4E4AEA37B1B8=45FFAEEF53695A86' -and `
+    $nativeBuildText -match 'E04C4FD132004376=3B3F6545AF6782F5' -and `
     $nativeBuildText -match 'hash:C70B1AAD3B363E24' -and `
     $nativeBuildText -match 'C9CF19C214612D75=7F060B4938ADCF12' -and `
     $nativeBuildText -match 'CDA03B9B0226037A=950FC5950CCEBCD0' -and `

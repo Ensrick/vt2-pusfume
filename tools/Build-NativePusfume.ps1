@@ -6,7 +6,7 @@ param(
     [string]$BlenderExe = "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe",
     [string]$FirstPersonBlend = "",
     [string]$FirstPersonDonorUnit = "",
-    [string]$FirstPersonWeightDonorBlend = "",
+    [string]$FirstPersonMaterialDonor = ".build\donor_human_1p_extract\046F5616B1180D05.material",
     [string]$VersusFirstPersonBlend = "",
     [string]$VersusFirstPersonDonorUnit = "",
     [ValidateSet("bsi", "fbx")]
@@ -172,7 +172,7 @@ if ($versusFirstPersonEnabled -and -not $firstPersonEnabled) {
 }
 $firstPersonBlendPath = $null
 $firstPersonDonorUnitPath = $null
-$firstPersonWeightDonorBlendPath = $null
+$firstPersonMaterialDonorPath = $null
 if ($firstPersonEnabled) {
     if ([string]::IsNullOrWhiteSpace($FirstPersonDonorUnit)) {
         throw "FirstPersonBlend requires -FirstPersonDonorUnit for the exact VT2 rest-skeleton rebind"
@@ -193,15 +193,16 @@ if ($firstPersonEnabled) {
     if ([IO.Path]::GetExtension($firstPersonDonorUnitPath) -ine ".unit") {
         throw "FirstPersonDonorUnit must be an extracted compiled VT2 unit: $firstPersonDonorUnitPath"
     }
-    if (-not [string]::IsNullOrWhiteSpace($FirstPersonWeightDonorBlend)) {
-        $firstPersonWeightDonorBlendPath = if ([IO.Path]::IsPathRooted($FirstPersonWeightDonorBlend)) {
-            (Resolve-Path $FirstPersonWeightDonorBlend).Path
+    if ([string]::IsNullOrWhiteSpace($FirstPersonMaterialDonor)) {
+        throw "FirstPersonBlend requires -FirstPersonMaterialDonor for the native 1P shader contract"
+    }
+    $firstPersonMaterialDonorPath = if ([IO.Path]::IsPathRooted($FirstPersonMaterialDonor)) {
+            (Resolve-Path $FirstPersonMaterialDonor).Path
         } else {
-            (Resolve-Path (Join-Path $repoRoot $FirstPersonWeightDonorBlend)).Path
+            (Resolve-Path (Join-Path $repoRoot $FirstPersonMaterialDonor)).Path
         }
-        if ([IO.Path]::GetExtension($firstPersonWeightDonorBlendPath) -ine ".blend") {
-            throw "FirstPersonWeightDonorBlend must be an imported native Blender mesh: $firstPersonWeightDonorBlendPath"
-        }
+    if ([IO.Path]::GetExtension($firstPersonMaterialDonorPath) -ine ".material") {
+        throw "FirstPersonMaterialDonor must be an extracted native material: $firstPersonMaterialDonorPath"
     }
 }
 if ($versusFirstPersonEnabled) {
@@ -304,42 +305,17 @@ if ($firstPersonEnabled) {
         Join-Path $repoRoot "tools\prepare_pusfume_1p_blend.py"
     }
     $sourceBlendHash = (Get-FileHash -LiteralPath $firstPersonBlendPath -Algorithm SHA256).Hash
-    $weightDonorHash = if ($firstPersonWeightDonorBlendPath) {
-        (Get-FileHash -LiteralPath $firstPersonWeightDonorBlendPath -Algorithm SHA256).Hash
-    } else {
-        $null
-    }
-
-    if ($firstPersonWeightDonorBlendPath) {
-        $weightValidationTool = Join-Path $repoRoot `
-            "tools\validate_pusfume_1p_weight_transfer.py"
-        $result = Invoke-HiddenTool -FilePath $blenderExePath -ArgumentList @(
-            "--background", "--factory-startup", "--disable-autoexec",
-            "--python", $weightValidationTool, "--",
-            $firstPersonBlendPath, $firstPersonDonorUnitPath,
-            $firstPersonWeightDonorBlendPath)
-        Assert-HiddenToolSuccess $result `
-            "First-person native deformation-weight validation"
-    }
-
     $firstPersonArguments = @(
         "--background", "--factory-startup", "--disable-autoexec",
         "--python", $firstPersonTool, "--",
-        $firstPersonBlendPath, $firstPersonDonorUnitPath, $firstPersonAssetPath)
-    if ($firstPersonWeightDonorBlendPath) {
-        $firstPersonArguments += @(
-            "--native-weight-donor", $firstPersonWeightDonorBlendPath)
-    }
+        $firstPersonBlendPath, $firstPersonDonorUnitPath, $firstPersonAssetPath,
+        "--align-native-hero-grips")
     $result = Invoke-HiddenTool -FilePath $blenderExePath `
         -ArgumentList $firstPersonArguments
     Assert-HiddenToolSuccess $result `
         "First-person Pusfume $($FirstPersonFormat.ToUpperInvariant()) preparation"
     if ((Get-FileHash -LiteralPath $firstPersonBlendPath -Algorithm SHA256).Hash -ne $sourceBlendHash) {
         throw "First-person preparation modified its source blend: $firstPersonBlendPath"
-    }
-    if ($weightDonorHash -and
-            (Get-FileHash -LiteralPath $firstPersonWeightDonorBlendPath -Algorithm SHA256).Hash -ne $weightDonorHash) {
-        throw "First-person preparation modified its native weight donor: $firstPersonWeightDonorBlendPath"
     }
     if (-not (Test-Path -LiteralPath $firstPersonAssetPath -PathType Leaf) -or `
             (Get-Item -LiteralPath $firstPersonAssetPath).Length -lt 1024) {
@@ -1804,20 +1780,21 @@ if ($SplicedGameChild) {
     Write-Host "Spliced game child payload (768 bytes, atlas texture ids) into $($splicedInto[0])"
 
     if ($firstPersonEnabled) {
-        # The 1P mesh keeps Janfon's original UVs, so splice the same proven
-        # character-skin binding with direct body maps rather than the 3P atlas.
+        # First-person arms use a distinct native shader parent. Reusing the
+        # Globadier 3P payload can put the hands and weapons under different
+        # render contracts even when their linked bones match.
         $firstPersonPayload = Join-Path $generatedRoot "spliced_1p_child_payload.bin"
         $result = Invoke-HiddenPython @(
             (Join-Path $repoRoot "tools\make_spliced_child.py"),
-            "--extracted", $gameChildPath,
-            "--resource", "hash:90BDF3BAC6F81BA8", "--expect-size", "768",
-            "--expect-parent", "3D25339231384C80",
-            "--map", "DD74D8319F514D96=E0C4E09D80AE735B",
-            "--map", "E334A8CB6BCB5E6D=3B3F6545AF6782F5",
-            "--set-variable", "emissive_color=0,0,0",
-            "--expect-texture", "texture_map_02af90f8=E0C4E09D80AE735B",
-            "--expect-texture", "texture_map_27b67fd2=45FFAEEF53695A86",
-            "--expect-texture", "texture_map_8bf37d8e=3B3F6545AF6782F5",
+            "--extracted", $firstPersonMaterialDonorPath,
+            "--resource", "hash:90BDF3BAC6F81BA8", "--expect-size", "96",
+            "--expect-parent", "D97596A091982F4B",
+            "--map", "86FFDEB90C40C597=E0C4E09D80AE735B",
+            "--map", "258E4E4AEA37B1B8=45FFAEEF53695A86",
+            "--map", "E04C4FD132004376=3B3F6545AF6782F5",
+            "--expect-texture", "CC30441D=E0C4E09D80AE735B",
+            "--expect-texture", "12BF624D=45FFAEEF53695A86",
+            "--expect-texture", "FC0DCB23=3B3F6545AF6782F5",
             "--out", $firstPersonPayload)
         Assert-HiddenToolSuccess $result `
             "Spliced first-person child payload generation"
@@ -1843,7 +1820,7 @@ if ($SplicedGameChild) {
             throw "Expected the first-person child in exactly 1 bundle, spliced $($firstPersonSplicedInto.Count)"
         }
 
-        Write-Host "Spliced native 1P body payload (768 bytes, direct UV maps) into $($firstPersonSplicedInto[0])"
+        Write-Host "Spliced native human 1P payload (96 bytes, direct UV maps) into $($firstPersonSplicedInto[0])"
     }
 
     # Laurel's compiled feather material is the proven skinned alpha-card

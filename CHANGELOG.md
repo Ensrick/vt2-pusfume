@@ -10,6 +10,22 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Restored Janfon's authored first-person skin weights after the v0.6.50 live
+  test retained the arm/weapon separation and introduced visible strings from
+  finger vertices. The nearest-surface transfer remains available only as a
+  rejected offline experiment and can no longer enter the shipping build.
+- Replaced the first-person arms' playable-Globadier third-person material
+  payload (parent `3D25339231384C80`) with the extracted native human
+  first-person payload (parent `D97596A091982F4B`). The build validates its
+  96-byte layout and all three diffuse/normal/specular texture bindings before
+  splicing it. This candidate tests the native 1P render contract without
+  changing Janfon's geometry, hierarchy, or weights.
+- Fixed the dormant authored-weight alignment helper after the experimental
+  transfer had accidentally displaced half of its implementation below an
+  unconditional return.
+- Live-tested v0.6.50: all sampled hero-rig nodes linked at `0.0000` error with
+  unit scale and no script crash, ruling out camera offset and runtime node
+  linking while empirically rejecting the transferred skin weights.
 - Built, hash-verified, locally deployed, and uploaded the v0.6.50 native
   deformation-weight candidate as friends-only Steam ManifestID
   `5613645880035377351`.

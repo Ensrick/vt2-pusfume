@@ -267,6 +267,37 @@ def align_arm_surfaces_to_native_grips(mesh_object):
         side: world_to_local @ correction
         for side, correction in NATIVE_HERO_GRIP_CORRECTIONS.items()
     }
+    for vertex in mesh_object.data.vertices:
+        vertex.co += local_corrections[vertex_sides[vertex.index]]
+    bpy.context.view_layer.update()
+
+    maximum_edge_length_delta = max(
+        (
+            abs(
+                (
+                    mesh_object.data.vertices[edge.vertices[0]].co
+                    - mesh_object.data.vertices[edge.vertices[1]].co
+                ).length
+                - before_lengths[edge.index]
+            )
+            for edge in mesh_object.data.edges
+        ),
+        default=0.0,
+    )
+    if maximum_edge_length_delta > EDGE_LENGTH_TOLERANCE:
+        raise RuntimeError(
+            "Native grip alignment deformed an arm edge by %.8f"
+            % maximum_edge_length_delta
+        )
+
+    return {
+        "maximum_edge_length_delta": maximum_edge_length_delta,
+        "vertex_counts": side_counts,
+        "world_corrections": {
+            side: [round(component, 6) for component in correction]
+            for side, correction in NATIVE_HERO_GRIP_CORRECTIONS.items()
+        },
+    }
 
 
 def transfer_weights_from_native_surface(mesh_object, armature, donor_blend_path):
@@ -398,37 +429,6 @@ def transfer_weights_from_native_surface(mesh_object, armature, donor_blend_path
         ),
         "neighbors": WEIGHT_TRANSFER_NEIGHBORS,
         "vertices": len(transferred),
-    }
-    for vertex in mesh_object.data.vertices:
-        vertex.co += local_corrections[vertex_sides[vertex.index]]
-    bpy.context.view_layer.update()
-
-    maximum_edge_length_delta = max(
-        (
-            abs(
-                (
-                    mesh_object.data.vertices[edge.vertices[0]].co
-                    - mesh_object.data.vertices[edge.vertices[1]].co
-                ).length
-                - before_lengths[edge.index]
-            )
-            for edge in mesh_object.data.edges
-        ),
-        default=0.0,
-    )
-    if maximum_edge_length_delta > EDGE_LENGTH_TOLERANCE:
-        raise RuntimeError(
-            "Native grip alignment deformed an arm edge by %.8f"
-            % maximum_edge_length_delta
-        )
-
-    return {
-        "maximum_edge_length_delta": maximum_edge_length_delta,
-        "vertex_counts": side_counts,
-        "world_corrections": {
-            side: [round(component, 6) for component in correction]
-            for side, correction in NATIVE_HERO_GRIP_CORRECTIONS.items()
-        },
     }
 
 

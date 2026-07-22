@@ -31,19 +31,15 @@ class FirstPersonSurfaceComparisonTests(unittest.TestCase):
         self.assertIn("def matrix_array", source)
         self.assertIn('"inverse_bind_matrices"', source)
 
-    def test_native_weight_transfer_is_human_only(self):
+    def test_native_weight_transfer_is_research_only(self):
         source = PREPARE.read_text(encoding="utf-8")
         self.assertIn("def transfer_weights_from_native_surface", source)
         self.assertIn("j_leftarmroll", source)
         self.assertIn("j_rightinhandindex", source)
 
         build = BUILD.read_text(encoding="utf-8")
-        human_build, versus_build = build.split(
-            "$versusFirstPersonAssetPath = $null", 1
-        )
-        self.assertIn('"--native-weight-donor"', human_build)
-        self.assertNotIn('"--native-weight-donor"', versus_build)
-        self.assertNotIn('"--align-native-hero-grips"', build)
+        self.assertNotIn('"--native-weight-donor"', build)
+        self.assertIn('"--align-native-hero-grips"', build)
 
     def test_weight_audit_and_posed_validation_are_executable_contracts(self):
         audit = WEIGHT_AUDIT.read_text(encoding="utf-8")
