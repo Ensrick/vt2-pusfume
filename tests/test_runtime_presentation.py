@@ -168,7 +168,8 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn(
             'mod:hook(WeaponUnitExtension, "_play_1p_anim"', self.native
         )
-        self.assertIn("local actual_event = event or event_1p", self.native)
+        self.assertIn("local custom_event = event_1p or event", self.native)
+        self.assertIn("local native_event = event or event_1p", self.native)
         self.assertIn("skip_missing_first_person_event", self.native)
 
     def test_assassin_clips_crossfade_on_the_active_skaven_rig(self):
@@ -178,9 +179,11 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn("Unit.crossfade_animation(", self.native)
         self.assertIn("play_custom_first_person_clip(extension, event)", self.native)
         self.assertIn(
-            "play_custom_first_person_clip(\n                        first_person_extension, actual_event)",
+            "play_custom_first_person_clip(\n                        first_person_extension, custom_event)",
             self.native,
         )
+        self.assertIn("local custom_event = event_1p or event", self.native)
+        self.assertIn('mod:hook(WeaponUnitExtension, "_play_end_event_1p"', self.native)
 
     def test_animation_guard_checks_the_active_rig_not_only_the_camera_base(self):
         guard = self.native.split(

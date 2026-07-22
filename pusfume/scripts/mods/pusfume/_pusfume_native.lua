@@ -2085,21 +2085,45 @@ local function install_first_person_hook(registry, config)
         mod:hook(WeaponUnitExtension, "_play_1p_anim", function(func, weapon_extension,
                 event_1p, event, first_person_unit, ...)
             local first_person_extension = weapon_extension.first_person_extension
-            local actual_event = event or event_1p
+            -- Fatshark passes the hero/network event second but normally plays
+            -- that value directly. Prefer our explicit 1P override so Janfon's
+            -- compiled clips are not discarded in favor of Elf event names.
+            local custom_event = event_1p or event
+            local native_event = event or event_1p
 
             if first_person_extension
                     and play_custom_first_person_clip(
-                        first_person_extension, actual_event) then
+                        first_person_extension, custom_event) then
                 return
             end
 
             if skip_missing_first_person_event(
-                    first_person_extension, first_person_unit, actual_event) then
+                    first_person_extension, first_person_unit, native_event) then
                 return
             end
 
             return func(weapon_extension, event_1p, event, first_person_unit, ...)
         end)
+        mod:hook(WeaponUnitExtension, "_play_end_event_1p",
+            function(func, weapon_extension, event)
+                local first_person_extension =
+                    weapon_extension.first_person_extension
+
+                if first_person_extension
+                        and play_custom_first_person_clip(
+                            first_person_extension, event) then
+                    return
+                end
+
+                if skip_missing_first_person_event(
+                        first_person_extension,
+                        weapon_extension.first_person_unit,
+                        event) then
+                    return
+                end
+
+                return func(weapon_extension, event)
+            end)
     end
     mod:hook_safe(PlayerUnitFirstPerson, "update", function(extension)
         if extension._pusfume_first_person then

@@ -21,7 +21,7 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The next friends-only live-test candidate is **v0.6.60-dev**. It retains the
+The next friends-only live-test candidate is **v0.6.61-dev**. It retains the
 weapon-aware dual first-person system using Janfon's assets: prototype Versus
 weapons use his 99-bone Skaven attachment, while ordinary hero weapons use his
 160-bone donor-rest human attachment.
@@ -84,6 +84,14 @@ plume material; no diffuse gain or third-person body pixel change is included.
 The deployed candidate is source commit `1e6993a`, friends-only Workshop
 ManifestID `3946661979316079793`; all eight live files are hash-identical to
 staging.
+The first v0.6.60 live test confirmed both hand materials and the native fur
+material, but block release crashed when VT2 played generic `parry_finished`
+before the custom 1P override. v0.6.61 gives Janfon's explicit clips precedence,
+guards the direct end-event path, and strips the unsafe generic Assassin end
+events. The weapon is now labeled `Assassin Blades (Janfon Prototype)` to make
+its recovered blade visuals, Janfon-authored hand clips, and hero dual-dagger
+gameplay graph explicit. The low-ambient third-person body darkness remains a
+separate shader-response investigation.
 Exact Packmaster dragging remains a larger career-state feature. The localized
 chest UV/material seam is tracked separately in issue #28.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person

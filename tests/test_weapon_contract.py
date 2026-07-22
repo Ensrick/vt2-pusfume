@@ -180,6 +180,7 @@ class WeaponContractTests(unittest.TestCase):
         self.assertIn('light_attack_quick_left = "claws_light_attack_stab_left"', WEAPONS)
         self.assertIn('light_attack_last = "claws_light_attack_last"', WEAPONS)
         self.assertIn('push_stab = "claws_light_attack_stab_left_hit"', WEAPONS)
+        self.assertIn("action.anim_end_event = nil", WEAPONS)
         self.assertIn('template.wield_anim = "claws_equip"', WEAPONS)
         self.assertIn('template.pusfume_role_pose = "to_gutter_runner"', WEAPONS)
 

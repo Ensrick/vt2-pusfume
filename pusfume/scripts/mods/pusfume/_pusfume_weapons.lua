@@ -741,14 +741,20 @@ local function prepare_assassin_claw_actions(actions)
                         and ASSASSIN_CLAW_SWEEP_CLIPS[sub_action_name] then
                     action.anim_event_1p =
                         ASSASSIN_CLAW_SWEEP_CLIPS[sub_action_name]
+                    -- The generic Elf end event is played directly on the
+                    -- hero camera unit before anim_end_event_1p. It cannot be
+                    -- allowed to precede the custom Janfon clip.
+                    action.anim_end_event = nil
                     action.anim_end_event_1p = "claws_idle"
                     posed = posed + 1
                 elseif type(action) == "table" and action.kind == "melee_start" then
                     action.anim_event_1p = "claws_idle"
+                    action.anim_end_event = nil
                     action.anim_end_event_1p = "claws_idle"
                     posed = posed + 1
                 elseif type(action) == "table" and action.kind == "block" then
                     action.anim_event_1p = "claws_block"
+                    action.anim_end_event = nil
                     action.anim_end_event_1p = "claws_idle"
                     posed = posed + 1
                 end

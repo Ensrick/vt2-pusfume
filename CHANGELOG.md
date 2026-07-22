@@ -10,6 +10,24 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Prepared v0.6.61 from the first v0.6.60 live test. Both Janfon hand rigs now
+  look correct; the native Skaven fur material fixes the neon fur in inventory
+  and gameplay. The opaque third-person body remains too dark specifically in
+  low-ambient gameplay lighting and is tracked as a separate shader-response
+  problem rather than a UV, fur, or hand-material regression.
+- Fixed the Assassin Blades block-release crash from session
+  `8c137b9e-6ed9-4649-8d3a-9a44227d28d8`. VT2 played the generic Elf
+  `parry_finished` event directly on the permanent hero camera unit before the
+  custom `claws_idle` override, producing a negative Stingray animation index.
+- Corrected custom start-event precedence so the explicit `anim_event_1p`
+  reaches Janfon's compiled clip instead of being discarded for the generic
+  hero/network event. Added a guarded direct end-event hook and removed generic
+  Elf end events from all Assassin action branches.
+- Renamed the inventory prototype to `Assassin Blades (Janfon Prototype)` and
+  documented its actual split: recovered Gutter Runner blade visuals, Janfon's
+  authored 99-bone hand animations, and a temporary hero dual-dagger action
+  graph. The v0.6.60 log proved only equip had reached Janfon's pipeline;
+  attacks and block had still used skipped generic events.
 - Built, byte-verified across all eight shipped files, locally deployed, and
   uploaded v0.6.60 as friends-only Steam ManifestID `3946661979316079793`
   from source commit `1e6993a`. The VT2 SDK manifest contains all nine custom

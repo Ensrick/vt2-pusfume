@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.60-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.61-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -53,6 +53,15 @@ with unchanged texture pixels. The third-person body's darker gameplay lighting
 is not claimed fixed in this candidate. Test source commit `1e6993a`, Workshop
 ManifestID `3946661979316079793`; all eight live files are hash-identical to
 staging.
+
+The first v0.6.60 live test confirmed that both Janfon hand rigs look correct
+and native Skaven fur response removes the neon fur. It also proved only
+`claws_equip` reached Janfon's custom pipeline: attacks resolved to skipped Elf
+events, and releasing block played generic `parry_finished` directly and
+crashed. v0.6.61 is the dispatch correction. Re-run equip, each light branch,
+heavy, push-stab, hold block, and release block. Every exercised action should
+log `Janfon assassin 1P clip`; block release must log `claws_idle` and remain
+in session. The inventory item is now `Assassin Blades (Janfon Prototype)`.
 
 The v0.6.44 candidate replaces the native Skaven first-person fallback with
 Janfon's human-rigged arms and opens all five heroes' melee and ranged weapons

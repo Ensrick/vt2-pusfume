@@ -12,9 +12,9 @@ return {
     pusfume_packmaster_hook_description = {
         en = "A recovered Packmaster hook that strikes and pulls Adventure enemies closer.",
     },
-    pusfume_assassin_claws_name = { en = "Assassin Claws (Prototype)" },
+    pusfume_assassin_claws_name = { en = "Assassin Blades (Janfon Prototype)" },
     pusfume_assassin_claws_description = {
-        en = "Recovered Gutter Runner claws using a temporary dual-dagger combat pattern.",
+        en = "Recovered Gutter Runner blades using Janfon's authored hand animations and a temporary hero dual-dagger combat pattern.",
     },
     pusfume_warpfire_thrower_name = { en = "Warpfire Thrower (Prototype)" },
     pusfume_warpfire_thrower_description = {
