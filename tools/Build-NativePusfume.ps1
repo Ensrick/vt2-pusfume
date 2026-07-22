@@ -1269,9 +1269,9 @@ function Set-PusfumeEmissionMask {
             # Release the FromFile lock before replacing the atlas in place.
             $source.Dispose()
             $source = $null
-            $temporaryPath = "$AtlasPath.packed.png"
+            $temporaryPath = "$AtlasPath.$PID.packed.png"
             $output.Save($temporaryPath, [Drawing.Imaging.ImageFormat]::Png)
-            Move-Item -LiteralPath $temporaryPath -Destination $AtlasPath -Force
+            [IO.File]::Move($temporaryPath, $AtlasPath, $true)
         } finally {
             if ($null -ne $eyeAttributes) { $eyeAttributes.Dispose() }
             if ($null -ne $graphics) { $graphics.Dispose() }
