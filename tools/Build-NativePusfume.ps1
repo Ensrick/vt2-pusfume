@@ -1240,6 +1240,7 @@ function Set-PusfumeEmissionMask {
             }
             $eyeAttributes.SetColorMatrix($eyeMatrix)
         }
+        $temporaryPath = "$AtlasPath.$PID.packed.png"
         try {
             if ($StampEye) {
                 $mask = [Drawing.Image]::FromFile($EyeMaskPath)
@@ -1269,14 +1270,13 @@ function Set-PusfumeEmissionMask {
             # Release the FromFile lock before replacing the atlas in place.
             $source.Dispose()
             $source = $null
-            $temporaryPath = "$AtlasPath.$PID.packed.png"
             $output.Save($temporaryPath, [Drawing.Imaging.ImageFormat]::Png)
-            [IO.File]::Move($temporaryPath, $AtlasPath, $true)
         } finally {
             if ($null -ne $eyeAttributes) { $eyeAttributes.Dispose() }
             if ($null -ne $graphics) { $graphics.Dispose() }
             $output.Dispose()
         }
+        [IO.File]::Move($temporaryPath, $AtlasPath, $true)
     } finally {
         if ($null -ne $mask) { $mask.Dispose() }
         if ($null -ne $source) { $source.Dispose() }
