@@ -215,6 +215,10 @@ Steam confirmed friends-only ManifestID `2481608271187325602` at 2026-07-18
 18. Stand still and confirm the new 138-bone body deforms the spine, head, tail, integrated fur, and whiskers.
 19. Walk and confirm the controller blends into the restored 25-frame original walk, then returns to Janfon's authored idle after stopping.
 20. Confirm Pusfume's atlas remains correctly aligned, no whole-body or dark-region green emissive glow returns, and the whisker cards have no tape-like lighting rectangle. Record the exact body region for any localized mismatch; offline audit found zero escaped loops but a missing expected `p_eye_g` material.
+21. Compare the body and both hand rigs under the same Keep lighting. Record
+    whether colors are merely underlit together or whether one rig has a
+    distinct black/shiny decode failure; do not infer texture gain from a
+    different camera or light angle.
 21. Turn, crouch, jump, dodge, attack, and use the career ability while watching the third-person model. These actions do not yet have dedicated Pusfume clips; record translation without matching pose as missing animation coverage, not a skinning regression.
 22. Note any rest-pose offset, detached region, inverted limb, or extreme stretch.
 

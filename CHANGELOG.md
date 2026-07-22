@@ -10,6 +10,10 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, byte-verified across all eight shipped files, locally deployed, and
+  uploaded v0.6.57 as friends-only Steam ManifestID `5450876427564200492`
+  from source commit `83907a9`. Final brightness remains a live lighting/tint
+  observation; this candidate deliberately adds no unmeasured color gain.
 - Split Janfon's diffuse handling by actual Stingray shader contract after the
   v0.6.56 live test improved hero-rigged hands but produced a pitch-black body
   and an engine-visible yet invisible Janfon-99 attachment.
