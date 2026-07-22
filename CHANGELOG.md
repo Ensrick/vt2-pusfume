@@ -10,6 +10,9 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, hash-verified across all eight deployed files, locally deployed, and
+  uploaded v0.6.54 as friends-only Steam ManifestID `8276097269856730781` from
+  source commit `3364e8d`.
 - Restored Fatshark's role-matched native Versus arm meshes for every rat
   weapon family. Live testing established that Janfon's 99-bone replacement
   rendered over the weapon instead of gripping it, while the original native

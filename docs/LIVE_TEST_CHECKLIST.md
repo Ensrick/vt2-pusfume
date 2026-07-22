@@ -14,7 +14,9 @@ and response bindings only on the hero-compatible hands. v0.6.54 replaces the
 mispositioned Janfon-99 shipping attachment with Fatshark's role-matched native
 Versus arms. Prioritize steps 4-5 under **Spawn smoke test** and verify the rat
 hands' fur/bracers and weapon grip separately from Janfon's hero hands. The dark
-third-person body is not expected to change in this candidate.
+third-person body is not expected to change in this candidate. The deployed
+candidate is source commit `3364e8d`, friends-only Workshop ManifestID
+`8276097269856730781`.
 
 The v0.6.44 candidate replaces the native Skaven first-person fallback with
 Janfon's human-rigged arms and opens all five heroes' melee and ranged weapons

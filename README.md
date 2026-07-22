@@ -21,7 +21,8 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The next friends-only live-test candidate is **v0.6.54-dev**. It retains the
+The current friends-only live-test candidate is **v0.6.54-dev**, source commit
+`3364e8d`, Workshop ManifestID `8276097269856730781`. It retains the
 weapon-aware dual first-person system: prototype Versus weapons use Fatshark's
 role-matched Packmaster, Gutter Runner, Globadier, Warpfire, or Ratling arms,
 while ordinary hero weapons use Janfon's 160-bone donor-rest human attachment.
