@@ -21,7 +21,8 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The next friends-only live-test candidate is **v0.6.53-dev**. It retains the
+The current friends-only live-test candidate is **v0.6.53-dev**, source commit
+`9cae562`, Workshop ManifestID `4689341082553975347`. It retains the
 weapon-aware dual first-person
 system built from both Janfon models: prototype Versus weapons use his 99-bone
 untouched-Skaven attachment, while ordinary hero weapons use his 160-bone

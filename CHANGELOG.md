@@ -10,6 +10,9 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, hash-verified across all eight deployed files, locally deployed, and
+  uploaded v0.6.53 as friends-only Steam ManifestID `4689341082553975347` from
+  source commit `9cae562`.
 - Corrected the v0.6.51 native-human material experiment's channel roles. Its
   normal slot had received the Globadier mask/emissive map, while its response
   slot had received Janfon's normal map. Janfon's handoff already contains the

@@ -13,7 +13,8 @@ uses the native-human first-person contract with corrected diffuse, normal,
 and response bindings only on the hero-compatible hands. Janfon's Skaven hands
 retain their authored material. Prioritize steps 4-5 under **Spawn smoke test**
 and compare the two weapon families separately. The dark third-person body is
-not expected to change in this candidate.
+not expected to change in this candidate. The deployed candidate is source
+commit `9cae562`, friends-only Workshop ManifestID `4689341082553975347`.
 
 The v0.6.44 candidate replaces the native Skaven first-person fallback with
 Janfon's human-rigged arms and opens all five heroes' melee and ranged weapons
