@@ -39,7 +39,8 @@ fur. Test source commit `c57728d`, Workshop ManifestID
 against v0.6.57.
 v0.6.59 is the same visual candidate with a crash guard for hook right-click:
 press and release block once and confirm unsupported `parry_pose` and
-`parry_finished` events are skipped without ending the session.
+`parry_finished` events are skipped without ending the session. Test source
+commit `e590554`, Workshop ManifestID `9187838202506746820`.
 
 The v0.6.44 candidate replaces the native Skaven first-person fallback with
 Janfon's human-rigged arms and opens all five heroes' melee and ranged weapons

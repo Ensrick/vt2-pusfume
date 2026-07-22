@@ -10,6 +10,10 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, byte-verified across all eight shipped files, locally deployed, and
+  uploaded the v0.6.59 hook crash guard as friends-only Steam ManifestID
+  `9187838202506746820` from source commit `e590554`. Native body, fur, and
+  first-person geometry/material outputs remain the v0.6.58 visual candidate.
 - Fixed the v0.6.58 hook right-click release crash. `parry_finished` exists on
   the permanent hero camera base but not on the active Janfon-99 Skaven rig;
   the animation guard now requires both units to support an event before the
