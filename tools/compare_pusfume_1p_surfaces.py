@@ -49,12 +49,27 @@ def find_weighted_mesh():
         for obj in bpy.context.scene.objects
         if obj.type == "MESH" and obj.vertex_groups
     ]
-    if len(candidates) != 1:
+    if not candidates:
         raise RuntimeError(
-            "Expected one weighted mesh, found %d: %s"
+            "Expected at least one weighted mesh, found %d: %s"
             % (len(candidates), [obj.name for obj in candidates])
         )
-    return candidates[0]
+
+    # Extracted VT2 units can separate skin, fur, and accessory surfaces.
+    # Prefer broad arm-group coverage, then the densest matching surface.
+    def arm_surface_rank(obj):
+        names = {group.name for group in obj.vertex_groups}
+        return (len(names.intersection(GROUPS)), len(obj.data.vertices))
+
+    selected = max(candidates, key=arm_surface_rank)
+    coverage, _ = arm_surface_rank(selected)
+    if coverage < 6:
+        raise RuntimeError(
+            "No weighted mesh covers both VT2 arms; candidates: %s"
+            % [(obj.name, arm_surface_rank(obj)) for obj in candidates]
+        )
+
+    return selected
 
 
 def mesh_bounds(mesh):

@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.57-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.58-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -32,6 +32,9 @@ Janfon-99 attachment logged one shown mesh with identity transforms and zero
 limb error but rendered invisibly. v0.6.57 preserves the hero-hand path,
 gamma-encodes diffuse for the third-person and Laurel sRGB donor contracts, and
 applies a dedicated Packmaster-skin child to Janfon-99. Test all three paths.
+v0.6.58 preserves those successful material paths, removes the disproven
+whole-mesh Versus offset, and removes the extra gamma transfer from dalokraff's
+fur. Compare grip placement and fur brightness directly against v0.6.57.
 
 The v0.6.44 candidate replaces the native Skaven first-person fallback with
 Janfon's human-rigged arms and opens all five heroes' melee and ranged weapons

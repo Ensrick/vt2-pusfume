@@ -376,7 +376,7 @@ if ($versusFirstPersonEnabled) {
         "--background", "--factory-startup", "--disable-autoexec",
         "--python", $versusFirstPersonTool, "--",
         $versusFirstPersonBlendPath, $versusFirstPersonDonorUnitPath,
-        $versusFirstPersonAssetPath, "--align-native-skaven-surface")
+        $versusFirstPersonAssetPath)
     Assert-HiddenToolSuccess $result `
         "Versus first-person Pusfume $($FirstPersonFormat.ToUpperInvariant()) preparation"
     if ((Get-FileHash -LiteralPath $versusFirstPersonBlendPath -Algorithm SHA256).Hash -ne $sourceBlendHash) {
@@ -1007,12 +1007,11 @@ if ($furEnabled) {
     $furDiffuseSource = if ($useLegacyFurTextureNames) { "psf_fur_d_rein.png" } else { "pusfume_fur_df.png" }
     $furNormalSource = if ($useLegacyFurTextureNames) { "psf_fur_n.tga" } else { "pusfume_fur_n.png" }
     $furResponseSource = if ($useLegacyFurTextureNames) { "psf_fur_s.tga" } else { "pusfume_fur_s.png" }
-    Write-FurTexture "pusfume_fur_df" $furDiffuseSource $false $FurDiffuseGain
+    # dalokraff's standalone fur diffuse is already authored in sRGB, unlike
+    # Janfon's body maps. Do not gamma-encode this texture a second time.
+    Write-FurTexture "pusfume_fur_df" $furDiffuseSource $true $FurDiffuseGain
     Write-FurTexture "pusfume_fur_nm" $furNormalSource $false
     Write-FurTexture "pusfume_fur_s" $furResponseSource $false
-    $furDiffusePath = Join-Path $textureRoot "pusfume_fur_df.png"
-    Convert-LinearDiffuseToSrgb $furDiffusePath $furDiffusePath
-    Write-NativeTextureRecipe "pusfume_fur_df" $true
     $textureNames += @("pusfume_fur_df", "pusfume_fur_nm", "pusfume_fur_s")
 }
 

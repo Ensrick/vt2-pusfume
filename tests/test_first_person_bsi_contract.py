@@ -48,7 +48,7 @@ class FirstPersonBsiContractTests(unittest.TestCase):
         self.assertNotIn('"--native-weight-donor"', human_build)
         self.assertNotIn('"--native-weight-donor"', versus_build)
         self.assertIn('"--align-native-hero-grips"', human_build)
-        self.assertIn('"--align-native-skaven-surface"', versus_build)
+        self.assertNotIn('"--align-native-skaven-surface"', versus_build)
 
     def test_skaven_surface_candidate_is_mesh_only(self):
         self.assertIn("NATIVE_SKAVEN_SURFACE_CORRECTION", self.blend_source)

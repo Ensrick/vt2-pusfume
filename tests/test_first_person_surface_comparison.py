@@ -18,6 +18,8 @@ class FirstPersonSurfaceComparisonTests(unittest.TestCase):
         source = TOOL.read_text(encoding="utf-8")
         ast.parse(source)
         self.assertIn("assignment.weight", source)
+        self.assertIn("arm_surface_rank", source)
+        self.assertIn("coverage < 6", source)
         self.assertIn("custom_to_donor", source)
         self.assertIn("PUSFUME_1P_SURFACE_COMPARISON=", source)
 

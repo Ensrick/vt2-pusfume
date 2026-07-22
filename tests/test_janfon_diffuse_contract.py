@@ -20,13 +20,15 @@ class JanfonDiffuseContractTests(unittest.TestCase):
         self.assertIn('Convert-LinearDiffuseToSrgb $atlasDiffusePath $atlasDiffusePath', BUILD)
         self.assertIn('Write-NativeTextureRecipe "pusfume_atlas_df" $true', BUILD)
 
-    def test_fur_diffuse_preserves_linear_values_under_laurel_srgb_contract(self):
+    def test_legacy_fur_diffuse_is_not_double_encoded(self):
         self.assertIn(
-            'Write-FurTexture "pusfume_fur_df" $furDiffuseSource $false $FurDiffuseGain',
+            'Write-FurTexture "pusfume_fur_df" $furDiffuseSource $true $FurDiffuseGain',
             BUILD,
         )
-        self.assertIn('Convert-LinearDiffuseToSrgb $furDiffusePath $furDiffusePath', BUILD)
-        self.assertIn('Write-NativeTextureRecipe "pusfume_fur_df" $true', BUILD)
+        fur_block = BUILD.split('Write-FurTexture "pusfume_fur_df"', 1)[1].split(
+            '$textureNames +=', 1
+        )[0]
+        self.assertNotIn("Convert-LinearDiffuseToSrgb", fur_block)
 
     def test_custom_skaven_hands_use_a_separate_native_material_contract(self):
         self.assertIn("CE6F40AD55CA6EDF.material", BUILD)

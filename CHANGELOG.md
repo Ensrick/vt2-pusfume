@@ -10,6 +10,17 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Removed v0.6.55's whole-mesh Janfon-99 bounds correction after the v0.6.57
+  live test made the Versus hands visible but showed them displaced at the
+  weapon. A corrected multi-surface donor audit proves Janfon's unmodified
+  hand centroids are already within `0.0118 m` of Packmaster's; the old bounds
+  correction moved them roughly `0.087 m` away to align unlike upper arms.
+- Stopped gamma-encoding dalokraff's standalone fur diffuse. Unlike Janfon's
+  linear-authored body maps, that legacy texture is already sRGB-authored; the
+  second transfer made the separate fur cards neon bright in v0.6.57.
+- Updated the first-person surface diagnostic to select the native arm skin
+  deterministically from extracted multi-mesh VT2 units instead of rejecting
+  every donor containing separate skin, fur, and accessory surfaces.
 - Built, byte-verified across all eight shipped files, locally deployed, and
   uploaded v0.6.57 as friends-only Steam ManifestID `5450876427564200492`
   from source commit `83907a9`. Final brightness remains a live lighting/tint

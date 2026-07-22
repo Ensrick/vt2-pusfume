@@ -205,8 +205,8 @@ Test-Condition ($firstPersonSurfaceText -match 'def weighted_group_centroids' -a
     $firstPersonBsiToolText -match 'native_weight_donor' -and `
     $nativeBuildText -notmatch '--native-weight-donor' -and `
     $nativeBuildText -match '--align-native-hero-grips' -and `
-    $nativeBuildText -match '--align-native-skaven-surface') `
-    "first-person authored-weight guard" "shipping preserves Janfon's skin weights and applies only rigid, measured surface alignment"
+    $nativeBuildText -notmatch '--align-native-skaven-surface') `
+    "first-person authored-weight guard" "shipping preserves Janfon's skin weights, keeps measured hero grip alignment, and leaves Skaven hand centroids untouched"
 Test-Condition ($nativeBuildText -match '\[string\]\$FirstPersonBlend' -and `
     $nativeBuildText -match '\[string\]\$FirstPersonDonorUnit' -and `
     $nativeBuildText -match '\[string\]\$VersusFirstPersonBlend' -and `
@@ -457,10 +457,11 @@ Test-Condition ($nativeBuildText -match '\[switch\]\$LegacyFur' -and `
 Test-Condition ($nativeBuildText -match '\$srgb = "false"' -and `
     $nativeBuildText -match 'Convert-LinearDiffuseToSrgb \$atlasDiffusePath \$atlasDiffusePath' -and `
     $nativeBuildText -match 'Write-NativeTextureRecipe "pusfume_atlas_df" \$true' -and `
-    $nativeBuildText -match 'Convert-LinearDiffuseToSrgb \$furDiffusePath \$furDiffusePath' -and `
+    $nativeBuildText -match 'Write-FurTexture "pusfume_fur_df" \$furDiffuseSource \$true' -and `
+    $nativeBuildText -notmatch 'Convert-LinearDiffuseToSrgb \$furDiffusePath \$furDiffusePath' -and `
     $nativeBuildText -match 'pusfume_1p_skaven_child' -and `
     $nativeBuildText -match 'CE6F40AD55CA6EDF') `
-    "Janfon diffuse color space" "linear-authored diffuse values are preserved through distinct hero, third-person, Laurel, and Packmaster shader contracts"
+    "Pusfume diffuse color space" "Janfon's linear-authored maps and dalokraff's sRGB-authored fur retain distinct shader contracts"
 Test-Condition ($nativeText -match 'function M\.native_skin_name' -and `
     $nativeText -notmatch 'third_person_attachment = nil' -and `
     $uiText -match 'MenuWorldPreviewer, "request_spawn_hero_unit"' -and `
