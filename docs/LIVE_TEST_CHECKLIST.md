@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.54-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.55-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -10,13 +10,11 @@ placement, but its isolated native-human 1P material rendered black and shiny.
 v0.6.52 kept the corrected geometry but showed that the compiled material also
 changes deformation, and its shared override altered both hand rigs. v0.6.53
 uses the native-human first-person contract with corrected diffuse, normal,
-and response bindings only on the hero-compatible hands. v0.6.54 replaces the
-mispositioned Janfon-99 shipping attachment with Fatshark's role-matched native
-Versus arms. Prioritize steps 4-5 under **Spawn smoke test** and verify the rat
-hands' fur/bracers and weapon grip separately from Janfon's hero hands. The dark
-third-person body is not expected to change in this candidate. The deployed
-candidate is source commit `3364e8d`, friends-only Workshop ManifestID
-`8276097269856730781`.
+and response bindings only on the hero-compatible hands. v0.6.54's native-arm
+substitution is superseded. v0.6.55 restores Janfon-99 and changes only its
+mesh-to-bone surface offset by the measured Packmaster comparison. Prioritize
+steps 4-5 under **Spawn smoke test** and compare the rat-weapon grip against
+v0.6.53. The dark third-person body is not expected to change in this candidate.
 
 The v0.6.44 candidate replaces the native Skaven first-person fallback with
 Janfon's human-rigged arms and opens all five heroes' melee and ranged weapons

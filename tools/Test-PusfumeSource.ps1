@@ -204,8 +204,9 @@ Test-Condition ($firstPersonSurfaceText -match 'def weighted_group_centroids' -a
     $firstPersonFbxToolText -match 'j_leftarmroll' -and `
     $firstPersonBsiToolText -match 'native_weight_donor' -and `
     $nativeBuildText -notmatch '--native-weight-donor' -and `
-    $nativeBuildText -match '--align-native-hero-grips') `
-    "first-person authored-weight guard" "the rejected surface transfer remains research-only and shipping preserves Janfon's skin weights"
+    $nativeBuildText -match '--align-native-hero-grips' -and `
+    $nativeBuildText -match '--align-native-skaven-surface') `
+    "first-person authored-weight guard" "shipping preserves Janfon's skin weights and applies only rigid, measured surface alignment"
 Test-Condition ($nativeBuildText -match '\[string\]\$FirstPersonBlend' -and `
     $nativeBuildText -match '\[string\]\$FirstPersonDonorUnit' -and `
     $nativeBuildText -match '\[string\]\$VersusFirstPersonBlend' -and `

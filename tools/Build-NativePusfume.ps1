@@ -363,7 +363,7 @@ if ($versusFirstPersonEnabled) {
         "--background", "--factory-startup", "--disable-autoexec",
         "--python", $versusFirstPersonTool, "--",
         $versusFirstPersonBlendPath, $versusFirstPersonDonorUnitPath,
-        $versusFirstPersonAssetPath)
+        $versusFirstPersonAssetPath, "--align-native-skaven-surface")
     Assert-HiddenToolSuccess $result `
         "Versus first-person Pusfume $($FirstPersonFormat.ToUpperInvariant()) preparation"
     if ((Get-FileHash -LiteralPath $versusFirstPersonBlendPath -Algorithm SHA256).Hash -ne $sourceBlendHash) {

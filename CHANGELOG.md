@@ -10,10 +10,20 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Superseded v0.6.54's incorrect native-arm substitution and restored Janfon's
+  99-bone Skaven handoff as the canonical rat-weapon asset.
+- Proved Janfon's Skaven armature matches the compiled donor within
+  `0.00000025 m`, then isolated the visible over-weapon placement to the mesh
+  surface rather than skeleton compatibility.
+- Added a reversible mesh-only Skaven alignment candidate measured from the
+  compiled Packmaster skin: `(-0.001391, -0.051609, +0.063270) m`. The build
+  rejects edge deformation and leaves bones, weights, UVs, and materials intact.
+- Added reproducible headless compiled-unit import, armature alignment, and
+  multi-surface bounds tools for Blender 5.2 investigations.
 - Built, hash-verified across all eight deployed files, locally deployed, and
   uploaded v0.6.54 as friends-only Steam ManifestID `8276097269856730781` from
   source commit `3364e8d`.
-- Restored Fatshark's role-matched native Versus arm meshes for every rat
+- In the superseded v0.6.54 candidate, restored Fatshark's role-matched native Versus arm meshes for every rat
   weapon family. Live testing established that Janfon's 99-bone replacement
   rendered over the weapon instead of gripping it, while the original native
   arms had natural fur/bracers and correct weapon-relative placement.

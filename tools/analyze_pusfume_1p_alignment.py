@@ -89,9 +89,12 @@ def main():
     target_points = []
     rows = []
     for bone_name in FIT_BONES:
-        donor_name = DONOR_NAME_FALLBACKS.get(bone_name, bone_name)
         bone = armature.data.bones.get(bone_name)
+        donor_name = bone_name
         donor = donor_by_hash.get(short_hash(donor_name))
+        if donor is None:
+            donor_name = DONOR_NAME_FALLBACKS.get(bone_name, bone_name)
+            donor = donor_by_hash.get(short_hash(donor_name))
         if not bone or not donor:
             raise RuntimeError(f"Missing alignment pair {bone_name}->{donor_name}")
         source = (armature.matrix_world @ bone.matrix_local).translation

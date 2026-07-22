@@ -32,13 +32,18 @@ def main():
         arguments, "--native-weight-donor"
     )
     align_native_hero_grips = "--align-native-hero-grips" in arguments
+    align_native_skaven_surface = "--align-native-skaven-surface" in arguments
     arguments = [
-        value for value in arguments if value != "--align-native-hero-grips"
+        value
+        for value in arguments
+        if value not in ("--align-native-hero-grips", "--align-native-skaven-surface")
     ]
+    if align_native_hero_grips and align_native_skaven_surface:
+        raise SystemExit("Hero-grip and Skaven-surface alignment are mutually exclusive")
     if len(arguments) != 3:
         raise SystemExit(
             "Usage: prepare_pusfume_1p_bsi.py -- INPUT.blend DONOR.unit "
-            "OUTPUT.bsi [--align-native-hero-grips] "
+            "OUTPUT.bsi [--align-native-hero-grips|--align-native-skaven-surface] "
             "[--native-weight-donor DONOR.blend]"
         )
 
@@ -62,7 +67,9 @@ def main():
     grip_alignment = (
         preparation.align_arm_surfaces_to_native_grips(mesh)
         if align_native_hero_grips
-        else None
+        else preparation.align_mesh_to_native_skaven_surface(mesh)
+            if align_native_skaven_surface
+            else None
     )
     weight_transfer = (
         preparation.transfer_weights_from_native_surface(

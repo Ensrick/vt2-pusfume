@@ -48,6 +48,17 @@ class FirstPersonBsiContractTests(unittest.TestCase):
         self.assertNotIn('"--native-weight-donor"', human_build)
         self.assertNotIn('"--native-weight-donor"', versus_build)
         self.assertIn('"--align-native-hero-grips"', human_build)
+        self.assertIn('"--align-native-skaven-surface"', versus_build)
+
+    def test_skaven_surface_candidate_is_mesh_only(self):
+        self.assertIn("NATIVE_SKAVEN_SURFACE_CORRECTION", self.blend_source)
+        self.assertIn("def align_mesh_to_native_skaven_surface", self.blend_source)
+        skaven_alignment = self.blend_source.split(
+            "def align_mesh_to_native_skaven_surface", 1
+        )[1].split("def transfer_weights_from_native_surface", 1)[0]
+        self.assertIn("vertex.co += local_correction", skaven_alignment)
+        self.assertNotIn("bone.", skaven_alignment)
+        self.assertIn("maximum_edge_length_delta", skaven_alignment)
 
     def test_shipping_build_uses_native_human_material_with_correct_map_roles(self):
         self.assertIn('"--expect-size", "96"', self.build)

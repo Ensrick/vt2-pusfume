@@ -36,6 +36,9 @@ NATIVE_HERO_GRIP_CORRECTIONS = {
     "left": Vector((-0.002193, -0.009542, 0.019491)),
     "right": Vector((0.001012, -0.013382, 0.011272)),
 }
+# Measured against the compiled Packmaster skin bounds. This is a mesh-only
+# A/B correction; the 99-bone armature already matches the donor rest pose.
+NATIVE_SKAVEN_SURFACE_CORRECTION = Vector((-0.001391, -0.051609, 0.06327))
 SIDE_WEIGHT_EPSILON = 0.0001
 EDGE_LENGTH_TOLERANCE = 0.000001
 WEIGHT_TRANSFER_NEIGHBORS = 8
@@ -297,6 +300,52 @@ def align_arm_surfaces_to_native_grips(mesh_object):
             side: [round(component, 6) for component in correction]
             for side, correction in NATIVE_HERO_GRIP_CORRECTIONS.items()
         },
+    }
+
+
+def align_mesh_to_native_skaven_surface(mesh_object):
+    """Rigidly align Janfon's Skaven arm surface without moving its bones."""
+    before_lengths = {
+        edge.index: (
+            mesh_object.data.vertices[edge.vertices[0]].co
+            - mesh_object.data.vertices[edge.vertices[1]].co
+        ).length
+        for edge in mesh_object.data.edges
+    }
+    local_correction = (
+        mesh_object.matrix_world.inverted().to_3x3()
+        @ NATIVE_SKAVEN_SURFACE_CORRECTION
+    )
+    for vertex in mesh_object.data.vertices:
+        vertex.co += local_correction
+    bpy.context.view_layer.update()
+
+    maximum_edge_length_delta = max(
+        (
+            abs(
+                (
+                    mesh_object.data.vertices[edge.vertices[0]].co
+                    - mesh_object.data.vertices[edge.vertices[1]].co
+                ).length
+                - before_lengths[edge.index]
+            )
+            for edge in mesh_object.data.edges
+        ),
+        default=0.0,
+    )
+    if maximum_edge_length_delta > EDGE_LENGTH_TOLERANCE:
+        raise RuntimeError(
+            "Native Skaven surface alignment deformed an edge by %.8f"
+            % maximum_edge_length_delta
+        )
+
+    return {
+        "maximum_edge_length_delta": maximum_edge_length_delta,
+        "vertices": len(mesh_object.data.vertices),
+        "world_correction": [
+            round(component, 6)
+            for component in NATIVE_SKAVEN_SURFACE_CORRECTION
+        ],
     }
 
 
@@ -693,13 +742,18 @@ def main():
     arguments = arguments_after_separator()
     native_weight_donor = pop_path_option(arguments, "--native-weight-donor")
     align_native_hero_grips = "--align-native-hero-grips" in arguments
+    align_native_skaven_surface = "--align-native-skaven-surface" in arguments
     arguments = [
-        value for value in arguments if value != "--align-native-hero-grips"
+        value
+        for value in arguments
+        if value not in ("--align-native-hero-grips", "--align-native-skaven-surface")
     ]
+    if align_native_hero_grips and align_native_skaven_surface:
+        raise SystemExit("Hero-grip and Skaven-surface alignment are mutually exclusive")
     if len(arguments) != 3:
         raise SystemExit(
             "Usage: prepare_pusfume_1p_blend.py -- INPUT.blend DONOR.unit "
-            "OUTPUT.fbx [--align-native-hero-grips] "
+            "OUTPUT.fbx [--align-native-hero-grips|--align-native-skaven-surface] "
             "[--native-weight-donor DONOR.blend]"
         )
 
@@ -721,7 +775,9 @@ def main():
     grip_alignment = (
         align_arm_surfaces_to_native_grips(mesh)
         if align_native_hero_grips
-        else None
+        else align_mesh_to_native_skaven_surface(mesh)
+            if align_native_skaven_surface
+            else None
     )
     weight_transfer = (
         transfer_weights_from_native_surface(mesh, armature, native_weight_donor)
