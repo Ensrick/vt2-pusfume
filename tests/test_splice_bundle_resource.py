@@ -261,6 +261,27 @@ class SpliceBundleResourceTests(unittest.TestCase):
         self.assertEqual(struct.unpack_from("<fff", patched, offset),
                          (0.0, 0.0, 0.0))
 
+    def test_eight_character_variable_name_is_not_parsed_as_hex(self):
+        game_child = build_material_payload(
+            [("texture_map_02af90f8", 0xDD74D8319F514D96)],
+            [("tint_fur", (0.1, 0.2, 0.3))])
+        extracted = self.dir / "child.material"
+        extracted.write_bytes(bytes(game_child))
+        out = self.dir / "payload.bin"
+        rc = self.run_main(make_child, [
+            "make_spliced_child.py", "--extracted", str(extracted),
+            "--resource", "hash:90BDF3BAC6F81BA8",
+            "--map", "DD74D8319F514D96=C263ECB79A8DCEC0",
+            "--set-variable", "tint_fur=0,0,1",
+            "--out", str(out),
+        ])
+        self.assertEqual(rc, 0)
+        variables = make_child.read_variable_bindings(out.read_bytes())
+        components, offset = variables[make_child._short_hash("tint_fur")]
+        self.assertEqual(components, 3)
+        self.assertEqual(struct.unpack_from("<fff", out.read_bytes(), offset),
+                         (0.0, 0.0, 1.0))
+
     def test_make_spliced_child_rejects_wrong_variable_shape(self):
         game_child = build_material_payload(
             [("texture_map_02af90f8", 0xDD74D8319F514D96)],
