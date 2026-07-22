@@ -101,6 +101,9 @@ DXBC disassembly verified the native base-colour, tangent-normal, and packed-
 response slots before the Pusfume atlas was mapped, and both native HSV tint
 paths are neutral so Janfon's baked colours remain authoritative. Hands, fur,
 geometry, UVs, weights, animations, and unrelated world effects are unchanged.
+The candidate is source commit `73eddfe`, friends-only Workshop ManifestID
+`4590557917691442433`; all eight installed files are hash-identical to staging
+at `175,304,594` bytes.
 Exact Packmaster dragging remains a larger career-state feature. The localized
 chest UV/material seam is tracked separately in issue #28.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person

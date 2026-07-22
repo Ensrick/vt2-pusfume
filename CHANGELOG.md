@@ -18,6 +18,10 @@ request rather than in release notes.
   cosmetic HSV controls are neutralized so Janfon's baked colours pass through.
   First-person hands, standalone fur, geometry, UVs, weights, animations, and
   unrelated world effects are unchanged.
+- Built, byte-verified across all eight installed files (`175,304,594` bytes),
+  locally deployed, and uploaded v0.6.62 as friends-only Steam ManifestID
+  `4590557917691442433` from source commit `73eddfe`. The source and native
+  material preflights pass with 131 Python regressions.
 - Prepared v0.6.61 from the first v0.6.60 live test. Both Janfon hand rigs now
   look correct; the native Skaven fur material fixes the neon fur in inventory
   and gameplay. The opaque third-person body remains too dark specifically in

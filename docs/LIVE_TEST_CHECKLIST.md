@@ -75,6 +75,9 @@ Keep sunlight, and the same deep-shadow location used for v0.6.61. The body
 should retain visible brown skin and clothing detail in shadow instead of
 becoming a black silhouette. Confirm hero and Versus hands still look correct,
 fur remains non-neon, and no unrelated world effect has changed.
+Test source commit `73eddfe`, friends-only Workshop ManifestID
+`4590557917691442433`; all eight installed files are hash-identical to staging
+at `175,304,594` bytes.
 
 The v0.6.44 candidate replaces the native Skaven first-person fallback with
 Janfon's human-rigged arms and opens all five heroes' melee and ranged weapons
