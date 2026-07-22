@@ -438,8 +438,8 @@ Test-Condition ($nativeBuildText -match '\[switch\]\$LegacyFur' -and `
     $animatedFbxToolText -match 'after\["mean"\] >= before\["mean"\] \* 0\.65' -and `
     $animatedFbxToolText -match 'Legacy fur weight transfer left' -and `
     $animatedFbxToolText -match 'Transferred action did not deform legacy fur' -and `
-    $nativeBuildText -match '\[double\]\$BodyDiffuseGain = 1\.2' -and `
-    $nativeBuildText -match '\[double\]\$FurDiffuseGain = 0\.55' -and `
+    $nativeBuildText -match '\[double\]\$BodyDiffuseGain = 1\.0' -and `
+    $nativeBuildText -match '\[double\]\$FurDiffuseGain = 1\.0' -and `
     $nativeBuildText -match '\$furMaterialEntry = if \(\$furEnabled\)' -and `
     $nativeBuildText -match 'p_fur = "materials/pusfume/pusfume_fur"' -and `
     $nativeBuildText -match '\$furRenderableEntry = if \(\$LegacyFur\)' -and `
@@ -454,6 +454,10 @@ Test-Condition ($nativeBuildText -match '\[switch\]\$LegacyFur' -and `
     $nativeBuildText.IndexOf('function Write-FurTexture') -gt `
         $nativeBuildText.IndexOf('"@ | Set-Content -LiteralPath (Join-Path $textureRoot "$Name.texture")')) `
     "dalokraff fur integration" "licensed fur is weight-transferred, deformation-checked, and packaged by a callable texture helper"
+Test-Condition ($nativeBuildText -match '\$srgb = "false"' -and `
+    $nativeBuildText -match 'Write-FurTexture "pusfume_fur_df" \$furDiffuseSource \$false \$FurDiffuseGain' -and `
+    $nativeBuildText -match 'Write-NativeTextureRecipe "pusfume_atlas_df" \$false') `
+    "Janfon diffuse color space" "body, hands, fur, whiskers, and outfit diffuse maps preserve Blender's linear Non-Color contract"
 Test-Condition ($nativeText -match 'function M\.native_skin_name' -and `
     $nativeText -notmatch 'third_person_attachment = nil' -and `
     $uiText -match 'MenuWorldPreviewer, "request_spawn_hero_unit"' -and `

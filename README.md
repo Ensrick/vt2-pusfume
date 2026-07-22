@@ -21,7 +21,7 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The next friends-only live-test candidate is **v0.6.55-dev**. It retains the
+The next friends-only live-test candidate is **v0.6.56-dev**. It retains the
 weapon-aware dual first-person system using Janfon's assets: prototype Versus
 weapons use his 99-bone Skaven attachment, while ordinary hero weapons use his
 160-bone donor-rest human attachment.
@@ -50,6 +50,13 @@ Janfon's 99-bone mesh and applies a measured mesh-only correction against the
 compiled Packmaster skin. Its bones already matched within `0.00000025 m`; no
 bone, weight, UV, material, or edge-length data is changed. This candidate is
 source commit `b5ff287`, Workshop ManifestID `5620515288318076233`.
+v0.6.56 corrects the shared darkness affecting Janfon's body, both first-person
+hand meshes, fur, whiskers, and reused outfit textures. His Blender files feed
+all diffuse images into the V2 Ubershader as linear `Non-Color` data, while the
+native build had incorrectly compiled them as sRGB. The new candidate preserves
+that authored linear sampling and removes the old body/fur gain compensation;
+normal, packed response, emission, geometry, UV, weight, and animation data are
+unchanged.
 Exact Packmaster dragging remains a larger career-state feature. The localized
 chest UV/material seam is tracked separately in issue #28.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person

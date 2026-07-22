@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.55-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.56-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -14,9 +14,15 @@ and response bindings only on the hero-compatible hands. v0.6.54's native-arm
 substitution is superseded. v0.6.55 restores Janfon-99 and changes only its
 mesh-to-bone surface offset by the measured Packmaster comparison. Prioritize
 steps 4-5 under **Spawn smoke test** and compare the rat-weapon grip against
-v0.6.53. The candidate is source commit `b5ff287`, Workshop ManifestID
+v0.6.53. That candidate is source commit `b5ff287`, Workshop ManifestID
 `5620515288318076233`, and its eight live files are hash-identical to staging.
-The dark third-person body is not expected to change in this candidate.
+The dark third-person body was intentionally unchanged in v0.6.55.
+
+v0.6.56 is the shared Janfon diffuse-color-space test. Compare the selector,
+third-person body, human-compatible hands, rat-weapon hands, fur, and whiskers
+against Janfon's Blender/video reference. Diffuse maps now preserve his linear
+`Non-Color` sampling instead of being sRGB-decoded by Stingray; normal, packed
+response, emission, UV, skinning, and animation data are unchanged.
 
 The v0.6.44 candidate replaces the native Skaven first-person fallback with
 Janfon's human-rigged arms and opens all five heroes' melee and ranged weapons

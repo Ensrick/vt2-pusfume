@@ -20,8 +20,8 @@ param(
     [switch]$IntegratedFur,
     [string]$LegacyFurRoot = ".build\reference_legacy_pusfume",
     [string]$IntegratedFurTextureRoot = "",
-    [double]$BodyDiffuseGain = 1.2,
-    [double]$FurDiffuseGain = 0.55,
+    [double]$BodyDiffuseGain = 1.0,
+    [double]$FurDiffuseGain = 1.0,
     [switch]$HeroPreview,
     [switch]$ParentChildMaterial,
     [switch]$NoDonorTextureShadow,
@@ -647,11 +647,10 @@ function Write-NativeTexture {
     }
 
     Copy-Item -LiteralPath $source -Destination (Join-Path $textureRoot "$Name.png") -Force
-    $srgb = if ($Name.EndsWith("_df") -or $Name -eq "pusfume_eyenormal") {
-        "true"
-    } else {
-        "false"
-    }
+    # Janfon authored every image feeding the V2 Ubershader, including diffuse,
+    # as Blender Non-Color data. Preserve that linear sampling contract here;
+    # sRGB decoding made the same albedo substantially darker in Stingray.
+    $srgb = "false"
     # Diffuse and normal maps compile as BC7 to match Fatshark's own SDK
     # normal-map treatment (endurance_badges *_nm.texture ships format="BC7").
     # BC7 is the same 8 bpp as DXT5 (no bundle-size cost) but carries ~8-bit
@@ -807,9 +806,8 @@ function Write-PusfumeAtlas {
         $opaqueMatrix.Matrix43 = 1
         $opaqueAttributes.SetColorMatrix($opaqueMatrix)
         if ($Suffix -eq "df") {
-            # BodyDiffuseGain applies to the body tile ONLY; the outfit tiles
-            # (globadier/armor/metal/ammo) keep their authored brightness
-            # instead of a 1.2x highlight-clipping boost.
+            # BodyDiffuseGain applies to the body tile only and defaults to the
+            # authored 1.0. It remains an explicit diagnostic override.
             $opaqueGainAttributes = New-Object Drawing.Imaging.ImageAttributes
             $gainMatrix = New-Object Drawing.Imaging.ColorMatrix
             $gainMatrix.Matrix00 = $BodyDiffuseGain
@@ -965,7 +963,7 @@ if ($furEnabled) {
     $furDiffuseSource = if ($useLegacyFurTextureNames) { "psf_fur_d_rein.png" } else { "pusfume_fur_df.png" }
     $furNormalSource = if ($useLegacyFurTextureNames) { "psf_fur_n.tga" } else { "pusfume_fur_n.png" }
     $furResponseSource = if ($useLegacyFurTextureNames) { "psf_fur_s.tga" } else { "pusfume_fur_s.png" }
-    Write-FurTexture "pusfume_fur_df" $furDiffuseSource $true $FurDiffuseGain
+    Write-FurTexture "pusfume_fur_df" $furDiffuseSource $false $FurDiffuseGain
     Write-FurTexture "pusfume_fur_nm" $furNormalSource $false
     Write-FurTexture "pusfume_fur_s" $furResponseSource $false
     $textureNames += @("pusfume_fur_df", "pusfume_fur_nm", "pusfume_fur_s")
@@ -1149,7 +1147,7 @@ Write-PusfumeAtlas "pusfume_atlas_s" "s" ([Drawing.Color]::Black)
 # and stamps ONLY the eye mask into it. The clear is the neutral value
 # metallic=0 / AO=255 / B=255 / alpha=0.
 Write-PusfumeAtlas "pusfume_atlas_ma" "s" ([Drawing.Color]::FromArgb(0, 0, 255, 255))
-Write-NativeTextureRecipe "pusfume_atlas_df" $true
+Write-NativeTextureRecipe "pusfume_atlas_df" $false
 Write-NativeTextureRecipe "pusfume_atlas_nm" $false
 Write-NativeTextureRecipe "pusfume_atlas_s" $false
 Write-NativeTextureRecipe "pusfume_atlas_ma" $false

@@ -10,6 +10,13 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Corrected the shared darkness across Janfon's body, first-person hands, fur,
+  whiskers, and outfit surfaces. His Blender V2 Ubershader graphs feed all
+  diffuse images as linear `Non-Color` data, but the native pipeline had marked
+  those same textures as sRGB, causing Stingray to darken them during decode.
+- Compiled all Janfon character diffuse maps with `srgb = false` and returned
+  the body/fur pixel gains to neutral `1.0`. Normals, packed response maps,
+  emission masks, geometry, UVs, weights, and animations are unchanged.
 - Superseded v0.6.54's incorrect native-arm substitution and restored Janfon's
   99-bone Skaven handoff as the canonical rat-weapon asset.
 - Proved Janfon's Skaven armature matches the compiled donor within
