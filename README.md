@@ -92,6 +92,9 @@ events. The weapon is now labeled `Assassin Blades (Janfon Prototype)` to make
 its recovered blade visuals, Janfon-authored hand clips, and hero dual-dagger
 gameplay graph explicit. The low-ambient third-person body darkness remains a
 separate shader-response investigation.
+The deployed v0.6.61 candidate is source commit `829c026`, friends-only
+Workshop ManifestID `3816877228129224808`; all eight installed files are
+hash-identical to staging and GitHub source preflight passed.
 Exact Packmaster dragging remains a larger career-state feature. The localized
 chest UV/material seam is tracked separately in issue #28.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person

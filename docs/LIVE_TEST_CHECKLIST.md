@@ -62,6 +62,12 @@ crashed. v0.6.61 is the dispatch correction. Re-run equip, each light branch,
 heavy, push-stab, hold block, and release block. Every exercised action should
 log `Janfon assassin 1P clip`; block release must log `claws_idle` and remain
 in session. The inventory item is now `Assassin Blades (Janfon Prototype)`.
+Test source commit `829c026`, Workshop ManifestID `3816877228129224808`; all
+eight live files are hash-identical to staging and GitHub source preflight
+passed. This candidate preserves the confirmed correct hero hands, Versus
+hands, inventory body, and non-neon fur. Record opaque body appearance in Keep
+sunlight and deep shadow separately; low-ambient gameplay darkness is not
+claimed fixed.
 
 The v0.6.44 candidate replaces the native Skaven first-person fallback with
 Janfon's human-rigged arms and opens all five heroes' melee and ranged weapons

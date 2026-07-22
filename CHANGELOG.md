@@ -29,6 +29,11 @@ request rather than in release notes.
   graph. The v0.6.60 log proved only equip had reached Janfon's pipeline;
   attacks and block had still used skipped generic events.
 - Built, byte-verified across all eight shipped files, locally deployed, and
+  uploaded v0.6.61 as friends-only Steam ManifestID `3816877228129224808`
+  from source commit `829c026`. GitHub source preflight passed. This candidate
+  changes Assassin animation dispatch only; the confirmed hand, fur, and body
+  material outputs are unchanged from v0.6.60.
+- Built, byte-verified across all eight shipped files, locally deployed, and
   uploaded v0.6.60 as friends-only Steam ManifestID `3946661979316079793`
   from source commit `1e6993a`. The VT2 SDK manifest contains all nine custom
   Assassin clips; both compiled first-person skeleton audits passed.
