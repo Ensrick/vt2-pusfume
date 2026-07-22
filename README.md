@@ -21,8 +21,8 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The current friends-only live-test candidate is **v0.6.51-dev**, Workshop
-ManifestID `1488565901872057356`. It retains the weapon-aware dual first-person
+The current friends-only live-test candidate is **v0.6.52-dev**. It retains the
+weapon-aware dual first-person
 system built from both Janfon models: prototype Versus weapons use his 99-bone
 untouched-Skaven attachment, while ordinary hero weapons use his 160-bone
 donor-rest human attachment. Fatshark's hero first-person unit remains the sole
@@ -36,10 +36,11 @@ was absent, and reconciles the initially wielded weapon after inventory init.
 The v0.6.49 live test disproved rest-surface alignment as the cause of the
 outstretched ordinary-weapon arms. The v0.6.50 live test rejected nearest-
 surface native weight transfer because it retained the separation and pulled
-finger vertices into visible strings. v0.6.51 restores Janfon's authored skin
-weights and replaces the incorrect Globadier third-person material parent with
-the extracted native human first-person material contract; the Versus
-attachment remains unchanged.
+finger vertices into visible strings. v0.6.51 restored Janfon's authored skin
+weights and corrected the hand placement, but its isolated native-human 1P
+material test rendered the arms black and mirror-like. v0.6.52 preserves the
+corrected geometry and restores the previously proven direct-UV character
+material payload; the Versus attachment remains unchanged.
 Exact Packmaster dragging remains a larger career-state feature. The localized
 chest UV/material seam is tracked separately in issue #28.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person
@@ -187,7 +188,6 @@ py -m unittest discover -s tests -v
   -IdleAnimationFbx ".build\generated-native\pusfume_3p_authored_idle_clip.fbx" `
   -FirstPersonBlend ".build\janfon_1p_human_20260719\pusfume_1p_human.blend" `
   -FirstPersonDonorUnit ".build\donor_human_1p_extract\units\beings\player\empire_soldier\first_person_base\chr_first_person_mesh.unit" `
-  -FirstPersonMaterialDonor ".build\donor_human_1p_extract\046F5616B1180D05.material" `
   -VersusFirstPersonBlend ".build\janfon_1p_claws_20260719\pusfume_1p_arms claws base.blend" `
   -VersusFirstPersonDonorUnit ".build\donor_skaven_1p_extract\B62B2EB36EEED507.unit" `
   -Upload

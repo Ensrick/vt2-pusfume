@@ -10,6 +10,13 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Preserved v0.6.51's corrected authored-weight hand placement while reverting
+  only its failed native-human first-person material experiment. v0.6.52 uses
+  the previously textured 768-byte character payload with Pusfume's direct UV
+  maps, making appearance the sole changed variable for the next live test.
+- Live-tested v0.6.51: the arms and fingers appeared in the correct location,
+  but the 96-byte native-human first-person payload rendered them black and
+  mirror-like despite successful resource loading and no material error.
 - Built, hash-verified, locally deployed, and uploaded the v0.6.51 native-human
   first-person material candidate as friends-only Steam ManifestID
   `1488565901872057356`.

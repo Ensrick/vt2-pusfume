@@ -1,15 +1,15 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.50-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.52-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
-The v0.6.49 grip-alignment candidate (ManifestID `7786674794995638739`) did not
-change the outstretched ordinary-weapon arms. v0.6.50 replaces that failed
-offset with native hero deformation weights while preserving Janfon's mesh and
-the Versus attachment. The deployed v0.6.50 candidate is source commit
-`2bb4e19`, friends-only Workshop ManifestID `5613645880035377351`. Prioritize
-steps 4-5 under **Spawn smoke test**.
+The v0.6.50 native-weight transfer retained the separation and introduced
+finger strings. v0.6.51 restored Janfon's authored weights and corrected the
+placement, but its isolated native-human 1P material rendered black and shiny.
+v0.6.52 keeps the corrected geometry and changes only the material back to the
+previously textured direct-UV payload. Prioritize steps 4-5 under **Spawn smoke
+test** and compare placement and appearance separately.
 
 The v0.6.44 candidate replaces the native Skaven first-person fallback with
 Janfon's human-rigged arms and opens all five heroes' melee and ranged weapons

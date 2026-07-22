@@ -49,10 +49,12 @@ class FirstPersonBsiContractTests(unittest.TestCase):
         self.assertNotIn('"--native-weight-donor"', versus_build)
         self.assertIn('"--align-native-hero-grips"', human_build)
 
-    def test_shipping_build_uses_native_human_first_person_material(self):
-        self.assertIn('"--expect-size", "96"', self.build)
-        self.assertIn('"--expect-parent", "D97596A091982F4B"', self.build)
-        self.assertIn("$firstPersonMaterialDonorPath", self.build)
+    def test_shipping_build_uses_proven_textured_first_person_material(self):
+        self.assertIn('"--expect-parent", "3D25339231384C80"', self.build)
+        self.assertIn('"DD74D8319F514D96=E0C4E09D80AE735B"', self.build)
+        self.assertIn('"E334A8CB6BCB5E6D=3B3F6545AF6782F5"', self.build)
+        self.assertNotIn("$firstPersonMaterialDonorPath", self.build)
+        self.assertNotIn('"--expect-parent", "D97596A091982F4B"', self.build)
 
 
 if __name__ == "__main__":
