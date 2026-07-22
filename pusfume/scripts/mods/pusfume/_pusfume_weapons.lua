@@ -719,6 +719,16 @@ end
 
 local sanitize_packmaster_melee_actions
 
+local ASSASSIN_CLAW_SWEEP_CLIPS = {
+    heavy_attack = "claws_light_attack_right_first",
+    heavy_attack_stab = "claws_light_attack_stab_left_hit",
+    light_attack_left = "claws_light_attack_right_first",
+    light_attack_right = "claws_light_attack_right_second",
+    light_attack_quick_left = "claws_light_attack_stab_left",
+    light_attack_last = "claws_light_attack_last",
+    push_stab = "claws_light_attack_stab_left_hit",
+}
+
 local function prepare_assassin_claw_actions(actions)
     local posed = 0
 
@@ -726,14 +736,20 @@ local function prepare_assassin_claw_actions(actions)
 
     for _, sub_actions in pairs(actions or {}) do
         if type(sub_actions) == "table" then
-            for _, action in pairs(sub_actions) do
-                if type(action) == "table"
-                        and (action.kind == "melee_start" or action.kind == "sweep") then
-                    -- jump_start/attack_finished are native Gutter Runner 1P
-                    -- events; the Elf dagger event names are not present on
-                    -- the shared Skaven first-person controller.
-                    action.anim_event_1p = "jump_start"
-                    action.anim_end_event_1p = "attack_finished"
+            for sub_action_name, action in pairs(sub_actions) do
+                if type(action) == "table" and action.kind == "sweep"
+                        and ASSASSIN_CLAW_SWEEP_CLIPS[sub_action_name] then
+                    action.anim_event_1p =
+                        ASSASSIN_CLAW_SWEEP_CLIPS[sub_action_name]
+                    action.anim_end_event_1p = "claws_idle"
+                    posed = posed + 1
+                elseif type(action) == "table" and action.kind == "melee_start" then
+                    action.anim_event_1p = "claws_idle"
+                    action.anim_end_event_1p = "claws_idle"
+                    posed = posed + 1
+                elseif type(action) == "table" and action.kind == "block" then
+                    action.anim_event_1p = "claws_block"
+                    action.anim_end_event_1p = "claws_idle"
                     posed = posed + 1
                 end
             end
@@ -1010,11 +1026,12 @@ local function register_templates()
         local template = deep_clone(assassin_source)
 
         template.actions = deep_clone(assassin_actions.actions)
-        template.wield_anim = "idle"
+        template.wield_anim = "claws_equip"
         template.pusfume_role_pose = "to_gutter_runner"
         state.assassin_pose_actions = prepare_assassin_claw_actions(template.actions)
         Weapons[assassin_definition.template_name] = template
     else
+        installed_assassin.wield_anim = "claws_equip"
         installed_assassin.pusfume_role_pose = "to_gutter_runner"
         state.assassin_pose_actions = prepare_assassin_claw_actions(
             installed_assassin.actions)

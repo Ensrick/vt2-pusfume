@@ -159,6 +159,34 @@ local function play_first_person_pose(extension, event_name)
     return false
 end
 
+local function play_custom_first_person_clip(extension, event_name)
+    local clips = installed_config and installed_config.assassin_first_person_clips
+    local clip = type(clips) == "table" and clips[event_name]
+
+    if not clip or extension._pusfume_active_skaven_role ~= "gutter_runner" then
+        return false
+    end
+
+    local animation_unit = extension._pusfume_active_animation_unit
+    if not animation_unit or not Unit.alive(animation_unit) then
+        return false
+    end
+
+    local clip_id = Unit.crossfade_animation(
+        animation_unit, clip.clip, 1, 0.08, clip.loop == true, "normal")
+    extension._pusfume_assassin_clip = {
+        event = event_name,
+        id = clip_id,
+        duration = clip.duration,
+    }
+    mod:info(
+        "[pusfume] Janfon assassin 1P clip event=%s clip=%s id=%s duration=%.3f loop=%s",
+        event_name, clip.clip, tostring(clip_id), clip.duration or 0,
+        tostring(clip.loop == true))
+
+    return true
+end
+
 local function update_first_person_weapon_pose(extension, equipment)
     local wielded_slot = equipment and equipment.wielded_slot
 
@@ -2040,6 +2068,10 @@ local function install_first_person_hook(registry, config)
         -- event resolves to a negative Stingray animation index and CTDs
         -- (2026-07-19 22:41 potion wield). Skip any event the rig does not
         -- carry; weapons keep their sanitized contracts.
+        if play_custom_first_person_clip(extension, event) then
+            return
+        end
+
         if skip_missing_first_person_event(
                 extension, extension.first_person_unit, event) then
             return
@@ -2054,6 +2086,12 @@ local function install_first_person_hook(registry, config)
                 event_1p, event, first_person_unit, ...)
             local first_person_extension = weapon_extension.first_person_extension
             local actual_event = event or event_1p
+
+            if first_person_extension
+                    and play_custom_first_person_clip(
+                        first_person_extension, actual_event) then
+                return
+            end
 
             if skip_missing_first_person_event(
                     first_person_extension, first_person_unit, actual_event) then

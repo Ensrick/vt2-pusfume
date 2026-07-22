@@ -171,6 +171,17 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn("local actual_event = event or event_1p", self.native)
         self.assertIn("skip_missing_first_person_event", self.native)
 
+    def test_assassin_clips_crossfade_on_the_active_skaven_rig(self):
+        self.assertIn("local function play_custom_first_person_clip", self.native)
+        self.assertIn('extension._pusfume_active_skaven_role ~= "gutter_runner"', self.native)
+        self.assertIn("extension._pusfume_active_animation_unit", self.native)
+        self.assertIn("Unit.crossfade_animation(", self.native)
+        self.assertIn("play_custom_first_person_clip(extension, event)", self.native)
+        self.assertIn(
+            "play_custom_first_person_clip(\n                        first_person_extension, actual_event)",
+            self.native,
+        )
+
     def test_animation_guard_checks_the_active_rig_not_only_the_camera_base(self):
         guard = self.native.split(
             "local function skip_missing_first_person_event", 1

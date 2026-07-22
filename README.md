@@ -21,7 +21,7 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The next friends-only live-test candidate is **v0.6.59-dev**. It retains the
+The next friends-only live-test candidate is **v0.6.60-dev**. It retains the
 weapon-aware dual first-person system using Janfon's assets: prototype Versus
 weapons use his 99-bone Skaven attachment, while ordinary hero weapons use his
 160-bone donor-rest human attachment.
@@ -74,6 +74,13 @@ darker gameplay-world body remain separate lighting/response investigations.
 v0.6.59 additionally makes hook right-click release crash-safe by validating
 animation events against the active Skaven rig as well as the permanent hero
 camera base; it makes no visual-asset changes relative to v0.6.58.
+v0.6.60 adds the first complete custom first-person weapon-animation pipeline:
+all nine actions in Janfon's Gutter Runner claw handoff are exported by Blender
+5.2, compiled against the 99-bone attachment skeleton, and mapped to Assassin
+Blade equip, idle, block, light, heavy, and push-stab actions. Hero-compatible
+and Versus hands now share the proven Packmaster material contract. Standalone
+fur now uses the native Skaven 1-bit climate material instead of the Laurel
+plume material; no diffuse gain or third-person body pixel change is included.
 Exact Packmaster dragging remains a larger career-state feature. The localized
 chest UV/material seam is tracked separately in issue #28.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person

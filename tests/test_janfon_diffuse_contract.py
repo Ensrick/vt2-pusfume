@@ -35,6 +35,18 @@ class JanfonDiffuseContractTests(unittest.TestCase):
         self.assertIn("pusfume_1p_skaven_child", BUILD)
         self.assertIn("pusfume_body_skaven_df", BUILD)
 
+    def test_hero_and_versus_hands_share_the_proven_skaven_material(self):
+        self.assertIn('$firstPersonHeroMaterial = if ($versusFirstPersonEnabled)', BUILD)
+        self.assertIn('"child_materials/pusfume/pusfume_1p_skaven_child"', BUILD)
+
+    def test_fur_uses_native_skaven_material_instead_of_laurel_plume(self):
+        fur = BUILD.split("# Fur needs the enemy fur response", 1)[1]
+        self.assertIn("4322B11893593962", fur)
+        self.assertIn('"--expect-size", "256"', fur)
+        self.assertIn('"--expect-parent", "7B55B884FAFA2B12"', fur)
+        self.assertIn("1916CFCA6ED85BFD=20A7120B25F414F7", fur)
+        self.assertNotIn("C70B1AAD3B363E24", fur)
+
     def test_legacy_gain_compensation_is_neutral(self):
         self.assertRegex(BUILD, r"\[double\]\$BodyDiffuseGain = 1\.0")
         self.assertRegex(BUILD, r"\[double\]\$FurDiffuseGain = 1\.0")

@@ -174,7 +174,13 @@ class WeaponContractTests(unittest.TestCase):
         self.assertIn("Weapons.vs_gutter_runner_claws", WEAPONS)
         self.assertIn("Weapons.dual_wield_daggers_template_1", WEAPONS)
         self.assertIn("prepare_assassin_claw_actions", WEAPONS)
-        self.assertIn('action.anim_event_1p = "jump_start"', WEAPONS)
+        self.assertIn('heavy_attack_stab = "claws_light_attack_stab_left_hit"', WEAPONS)
+        self.assertIn('light_attack_left = "claws_light_attack_right_first"', WEAPONS)
+        self.assertIn('light_attack_right = "claws_light_attack_right_second"', WEAPONS)
+        self.assertIn('light_attack_quick_left = "claws_light_attack_stab_left"', WEAPONS)
+        self.assertIn('light_attack_last = "claws_light_attack_last"', WEAPONS)
+        self.assertIn('push_stab = "claws_light_attack_stab_left_hit"', WEAPONS)
+        self.assertIn('template.wield_anim = "claws_equip"', WEAPONS)
         self.assertIn('template.pusfume_role_pose = "to_gutter_runner"', WEAPONS)
 
     def test_every_weapon_chain_target_is_validated_before_registration(self):

@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.59-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.60-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -41,6 +41,16 @@ v0.6.59 is the same visual candidate with a crash guard for hook right-click:
 press and release block once and confirm unsupported `parry_pose` and
 `parry_finished` events are skipped without ending the session. Test source
 commit `e590554`, Workshop ManifestID `9187838202506746820`.
+
+v0.6.60 is the Assassin-animation and material-contract test. Equip the
+Assassin Blade, then verify its equip motion, idle motion, held block, chained
+light attacks, heavy attack, and push-stab are visibly distinct and do not
+crash. The log should contain `Janfon assassin 1P clip` entries naming the
+corresponding `claws_*` clips. Compare ordinary hero-weapon hands against the
+Versus hands: both now use the proven Packmaster child material. Compare fur in
+the inventory, sunlight, and shadow; it now uses native Skaven fur response
+with unchanged texture pixels. The third-person body's darker gameplay lighting
+is not claimed fixed in this candidate.
 
 The v0.6.44 candidate replaces the native Skaven first-person fallback with
 Janfon's human-rigged arms and opens all five heroes' melee and ranged weapons

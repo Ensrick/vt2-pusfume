@@ -66,6 +66,7 @@ $animatedFbxToolPath = Join-Path $repoRoot "tools\prepare_animated_pusfume_fbx.p
 $idleFbxToolPath = Join-Path $repoRoot "tools\generate_idle_pusfume_fbx.py"
 $firstPersonFbxToolPath = Join-Path $repoRoot "tools\prepare_pusfume_1p_blend.py"
 $firstPersonBsiToolPath = Join-Path $repoRoot "tools\prepare_pusfume_1p_bsi.py"
+$firstPersonActionToolPath = Join-Path $repoRoot "tools\export_pusfume_1p_actions.py"
 $compiledFirstPersonRestPath = Join-Path $repoRoot "tools\validate_compiled_1p_rest.py"
 $untouchedBodyToolPath = Join-Path $repoRoot "tools\prepare_pusfume_untouched_3p.py"
 $firstPersonDiagnosticPath = Join-Path $repoRoot "tools\diagnose_pusfume_1p_blend.py"
@@ -108,6 +109,7 @@ $animatedFbxToolText = Get-Content -LiteralPath $animatedFbxToolPath -Raw
 $idleFbxToolText = Get-Content -LiteralPath $idleFbxToolPath -Raw
 $firstPersonFbxToolText = Get-Content -LiteralPath $firstPersonFbxToolPath -Raw
 $firstPersonBsiToolText = Get-Content -LiteralPath $firstPersonBsiToolPath -Raw
+$firstPersonActionToolText = Get-Content -LiteralPath $firstPersonActionToolPath -Raw
 $compiledFirstPersonRestText = Get-Content -LiteralPath $compiledFirstPersonRestPath -Raw
 $untouchedBodyToolText = Get-Content -LiteralPath $untouchedBodyToolPath -Raw
 $firstPersonDiagnosticText = Get-Content -LiteralPath $firstPersonDiagnosticPath -Raw
@@ -141,7 +143,7 @@ Test-Condition ((Test-Path -LiteralPath $nativeMilestonePath) -and `
     $nativeMilestoneText -match '2405082174877027150' -and `
     $nativeMilestoneText -match 'Build-NativePusfume\.ps1 -HeroPreview -SplicedGameChild' -and `
     $nativeMilestoneText -match 'texture_map_27b67fd2.*Emissive' -and `
-    $nativeMilestoneText -match 'Only idle and walk are animated') `
+    $nativeMilestoneText -match 'Third-person animation still covers only idle and walk') `
     "native milestone documentation" "known-good build, material contract, and animation boundary are recorded"
 Test-Condition ($workflowText -match 'actions/setup-python@v6' -and `
     $workflowText -match 'python -m unittest discover -s tests -v') `
@@ -163,6 +165,14 @@ Test-Condition ($nativeConfigText -match 'first_person_unit\s*=\s*false' -and `
     $nativeConfigText -match 'first_person_material_package\s*=\s*false' -and `
     $nativeConfigText -match 'first_person_materials\s*=\s*false') `
     "first-person source default" "private handoff remains disabled in public source"
+Test-Condition ($firstPersonActionToolText -match 'EXPECTED_BONES\s*=\s*99' -and `
+    $firstPersonActionToolText -match 'claws_light_attack_stab_left_hit' -and `
+    $firstPersonActionToolText -match 'maximum_pose_delta' -and `
+    $nativeBuildText -match '\[switch\]\$AssassinFirstPersonAnimations' -and `
+    $nativeBuildText -match 'units/pusfume/anims/\$\(\$action\.action\),animation' -and `
+    $nativeText -match 'Unit\.crossfade_animation' -and `
+    $weaponsText -match 'claws_light_attack_right_first') `
+    "Assassin animation pipeline" "nine authored 99-bone clips are deformation-checked, compiled, manifest-checked, and mapped to the active Gutter Runner rig"
 Test-Condition ($firstPersonFbxToolText -match 'REQUIRED_GROUPS' -and `
     $firstPersonFbxToolText -match 'MAXIMUM_ORPHAN_WEIGHT\s*=\s*0\.05' -and `
     $firstPersonFbxToolText -match 'reset_bind_pose' -and `
@@ -253,8 +263,10 @@ Test-Condition ($nativeText -match 'PlayerUnitFirstPerson, "init"' -and `
     $nativeText -match 'apply_first_person_materials' -and `
     $nativeText -match 'Unit\.set_material\(hero_unit, slot_name, material_name\)' -and `
     $nativeText -notmatch 'for _, unit in ipairs\(\{ hero_unit, versus_unit \}\)' -and `
-    $nativeText -match 'first_person_attachment') `
-    "first-person runtime" "human arms receive the native-human material while Skaven arms preserve their authored material"
+    $nativeText -match 'first_person_attachment' -and `
+    $nativeBuildText -match '\$firstPersonHeroMaterial = if \(\$versusFirstPersonEnabled\)' -and `
+    $nativeBuildText -match 'pusfume_1p_skaven_child') `
+    "first-person runtime" "human and Skaven Janfon arms share the proven Packmaster material while retaining separate geometry and rigs"
 Test-Condition ($nativeText -match 'config\.first_person_direct_link' -and `
     $nativeText -match 'AttachmentNodeLinking\.first_person_attachment' -and `
     $nativeText -match 'First-person donor-rest direct links active' -and `
@@ -462,6 +474,13 @@ Test-Condition ($nativeBuildText -match '\$srgb = "false"' -and `
     $nativeBuildText -match 'pusfume_1p_skaven_child' -and `
     $nativeBuildText -match 'CE6F40AD55CA6EDF') `
     "Pusfume diffuse color space" "Janfon's linear-authored maps and dalokraff's sRGB-authored fur retain distinct shader contracts"
+Test-Condition ($nativeBuildText -match 'hash:4322B11893593962' -and `
+    $nativeBuildText -match '"--expect-size", "256"' -and `
+    $nativeBuildText -match '"--expect-parent", "7B55B884FAFA2B12"' -and `
+    $nativeBuildText -match '1916CFCA6ED85BFD=20A7120B25F414F7' -and `
+    $nativeBuildText -match 'E7AC0D635A39E926=57505EBDF932A68B' -and `
+    $nativeBuildText -match '4E1893E178945A92=D7B1C45DEFA31C39') `
+    "native Skaven fur material" "fur preserves the game's 1-bit climate response while patching only Pusfume's diffuse, normal, and response maps"
 Test-Condition ($nativeText -match 'function M\.native_skin_name' -and `
     $nativeText -notmatch 'third_person_attachment = nil' -and `
     $uiText -match 'MenuWorldPreviewer, "request_spawn_hero_unit"' -and `

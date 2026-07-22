@@ -10,6 +10,25 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Prepared v0.6.60 as the first complete Janfon Assassin-animation pipeline.
+  Blender 5.2 exports nine authored actions from the untouched 99-bone handoff
+  as independent armature-only FBXs; the VT2 SDK compiles and manifest-checks
+  all nine clips against the same skeleton used by Janfon's Versus attachment.
+- Wired Assassin Blade equip, idle, block, light, heavy, push-stab, and attack
+  completion events to those clips. Runtime playback crossfades only the active
+  Gutter Runner animation base, leaving ordinary hero and other rat weapons on
+  their existing animation contracts.
+- Rebound Janfon's hero-compatible hands to the same proven 416-byte Packmaster
+  child material as his correctly lit Versus hands. Geometry, UVs, weights,
+  alignment, and texture pixels are unchanged.
+- Replaced the Laurel-plume material incorrectly reused for standalone fur with
+  Fatshark's native 256-byte Skaven 1-bit climate fur contract, patching only
+  Pusfume's diffuse, normal, and response resource IDs. This is intended to
+  address neon fur without unmeasured diffuse gain.
+- Added regressions for the nine-action export contract, compiled-resource
+  manifest, action mapping, active-rig playback, shared hand material, and
+  native Skaven fur material. The darker gameplay-world body remains a separate
+  lighting/material-response investigation and is deliberately unchanged.
 - Built, byte-verified across all eight shipped files, locally deployed, and
   uploaded the v0.6.59 hook crash guard as friends-only Steam ManifestID
   `9187838202506746820` from source commit `e590554`. Native body, fur, and

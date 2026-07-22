@@ -13,6 +13,7 @@ class AnimationHandoffContractTests(unittest.TestCase):
     def test_blender_animation_tools_are_valid_python(self):
         for relative_path in (
             "tools/extract_pusfume_authored_idle.py",
+            "tools/export_pusfume_1p_actions.py",
             "tools/render_fbx_animation_samples.py",
             "tools/retarget_pusfume_walk.py",
             "tools/validate_pusfume_animation_contract.py",
@@ -27,6 +28,32 @@ class AnimationHandoffContractTests(unittest.TestCase):
         self.assertIn('$modelFbxPath, $idleFbxPath, $animationFbxPath', build)
         self.assertIn('pusfume_3p_walk.fbx', build)
         self.assertIn('pusfume_3p_idle.fbx', build)
+
+    def test_assassin_handoff_exports_and_packages_all_authored_clips(self):
+        exporter = self.read("tools/export_pusfume_1p_actions.py")
+        build = self.read("tools/Build-NativePusfume.ps1")
+        expected = (
+            "claws_equip",
+            "claws_idle",
+            "claws_run",
+            "claws_block",
+            "claws_light_attack_right_first",
+            "claws_light_attack_right_second",
+            "claws_light_attack_stab_left",
+            "claws_light_attack_stab_left_hit",
+            "claws_light_attack_last",
+        )
+        for clip in expected:
+            with self.subTest(clip=clip):
+                self.assertIn(f'"{clip}"', exporter)
+        self.assertIn("EXPECTED_BONES = 99", exporter)
+        self.assertIn("maximum_pose_delta", exporter)
+        self.assertIn("action.frame_range", exporter)
+        self.assertIn("bake_anim_use_all_actions=False", exporter)
+        self.assertIn("[switch]$AssassinFirstPersonAnimations", build)
+        self.assertIn("export_pusfume_1p_actions.py", build)
+        self.assertIn('bones = "units/pusfume/pusfume_1p_versus_arms"', build)
+        self.assertIn('$requiredCompiledResources += "units/pusfume/anims/', build)
 
     def test_native_build_never_opens_external_tool_windows(self):
         build = self.read("tools/Build-NativePusfume.ps1")

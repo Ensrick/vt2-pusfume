@@ -10,6 +10,7 @@ param(
     [string]$VersusFirstPersonBlend = "",
     [string]$VersusFirstPersonDonorUnit = "",
     [string]$VersusFirstPersonMaterialDonor = ".build\donor_skaven_1p_extract\CE6F40AD55CA6EDF.material",
+    [switch]$AssassinFirstPersonAnimations,
     [ValidateSet("bsi", "fbx")]
     [string]$FirstPersonFormat = "bsi",
     [string]$TextureSource = ".build\pusfume_handoff\textures conv",
@@ -135,7 +136,7 @@ if ($BodyDiffuseGain -lt 0.5 -or $BodyDiffuseGain -gt 2.0) {
 if ($FurDiffuseGain -lt 0.25 -or $FurDiffuseGain -gt 1.5) {
     throw "FurDiffuseGain must be between 0.25 and 1.5"
 }
-# Both fur layouts use the same proven Laurel skinned-cutout material binding.
+# Both fur layouts use the same native Skaven 1-bit climate material binding.
 if ($LegacyFur -and $IntegratedFur) {
     throw "LegacyFur and IntegratedFur are mutually exclusive"
 }
@@ -164,6 +165,10 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $sourceMod = Join-Path $repoRoot "pusfume"
 $firstPersonEnabled = -not [string]::IsNullOrWhiteSpace($FirstPersonBlend)
 $versusFirstPersonEnabled = -not [string]::IsNullOrWhiteSpace($VersusFirstPersonBlend)
+$assassinFirstPersonAnimationsEnabled = $AssassinFirstPersonAnimations.IsPresent
+if ($assassinFirstPersonAnimationsEnabled -and -not $versusFirstPersonEnabled) {
+    throw "AssassinFirstPersonAnimations requires VersusFirstPersonBlend"
+}
 if ($firstPersonEnabled -and -not $SplicedGameChild) {
     throw "FirstPersonBlend requires -SplicedGameChild for the proven skinned material binding"
 }
@@ -240,6 +245,7 @@ if ($versusFirstPersonEnabled) {
         throw "VersusFirstPersonMaterialDonor must be an extracted compiled VT2 material: $versusFirstPersonMaterialDonorPath"
     }
 }
+
 $legacyFurPath = $null
 $legacyBodyPath = $null
 $legacyFurTextureRoot = $null
@@ -385,6 +391,29 @@ if ($versusFirstPersonEnabled) {
     if (-not (Test-Path -LiteralPath $versusFirstPersonAssetPath -PathType Leaf) -or `
             (Get-Item -LiteralPath $versusFirstPersonAssetPath).Length -lt 1024) {
         throw "Versus first-person preparation produced no usable output"
+    }
+}
+
+$assassinFirstPersonAnimationRoot = $null
+$assassinFirstPersonAnimationManifest = $null
+if ($assassinFirstPersonAnimationsEnabled) {
+    $assassinFirstPersonAnimationRoot = Join-Path $generatedRoot "pusfume_1p_claw_actions"
+    $assassinFirstPersonAnimationTool = Join-Path $repoRoot `
+        "tools\export_pusfume_1p_actions.py"
+    $result = Invoke-HiddenTool -FilePath $blenderExePath -ArgumentList @(
+        "--background", "--factory-startup", "--disable-autoexec",
+        "--python", $assassinFirstPersonAnimationTool, "--",
+        $versusFirstPersonBlendPath, $assassinFirstPersonAnimationRoot)
+    Assert-HiddenToolSuccess $result "Janfon assassin first-person action export"
+    $assassinFirstPersonAnimationManifest = Join-Path `
+        $assassinFirstPersonAnimationRoot "pusfume_1p_claw_actions.json"
+    if (-not (Test-Path -LiteralPath $assassinFirstPersonAnimationManifest -PathType Leaf)) {
+        throw "Janfon assassin action export produced no manifest"
+    }
+    $assassinManifest = Get-Content -LiteralPath `
+        $assassinFirstPersonAnimationManifest -Raw | ConvertFrom-Json
+    if ($assassinManifest.bones -ne 99 -or $assassinManifest.actions.Count -ne 9) {
+        throw "Janfon assassin action manifest changed: bones=$($assassinManifest.bones) actions=$($assassinManifest.actions.Count)"
     }
 }
 
@@ -572,6 +601,33 @@ tolerance = {
 '@
 $animationRecipe | Set-Content -LiteralPath (Join-Path $animationRoot "pusfume_3p_walk.animation") -Encoding utf8
 $animationRecipe | Set-Content -LiteralPath (Join-Path $animationRoot "pusfume_3p_idle.animation") -Encoding utf8
+
+if ($assassinFirstPersonAnimationsEnabled) {
+    $assassinAnimationRecipe = @'
+bones = "units/pusfume/pusfume_1p_versus_arms"
+tolerance = {
+    "" = [
+        0.001
+        0.001
+        0
+        false
+    ]
+}
+'@
+    foreach ($action in $assassinManifest.actions) {
+        $actionName = [string]$action.action
+        $sourceActionFbx = Join-Path $assassinFirstPersonAnimationRoot `
+            "$actionName.fbx"
+        if (-not (Test-Path -LiteralPath $sourceActionFbx -PathType Leaf) -or
+                (Get-Item -LiteralPath $sourceActionFbx).Length -lt 1024) {
+            throw "Janfon assassin action FBX is missing or empty: $actionName"
+        }
+        Copy-Item -LiteralPath $sourceActionFbx `
+            -Destination (Join-Path $animationRoot "$actionName.fbx") -Force
+        $assassinAnimationRecipe | Set-Content -LiteralPath `
+            (Join-Path $animationRoot "$actionName.animation") -Encoding utf8
+    }
+}
 
 @'
 events = {
@@ -1539,12 +1595,17 @@ $firstPersonMaterialPackageValue = if ($firstPersonEnabled) {
 } else {
     "false"
 }
+$firstPersonHeroMaterial = if ($versusFirstPersonEnabled) {
+    "child_materials/pusfume/pusfume_1p_skaven_child"
+} else {
+    "child_materials/pusfume/pusfume_1p_body_child"
+}
 $firstPersonMaterialsValue = if ($firstPersonEnabled) {
-@'
+@"
 {
-        p_main = "child_materials/pusfume/pusfume_1p_body_child",
+        p_main = "$firstPersonHeroMaterial",
     }
-'@
+"@
 } else {
     "false"
 }
@@ -1573,6 +1634,19 @@ $firstPersonDirectLinkValue = if ($firstPersonEnabled) { "true" } else { "false"
 # role-specific Skaven arms resident only for Versus weapon families.
 $nativeSkavenFirstPersonValue = if ($firstPersonEnabled) { "false" } else { "true" }
 $dualFirstPersonRigsValue = if ($firstPersonEnabled) { "true" } else { "false" }
+$assassinFirstPersonClipConfigValue = if ($assassinFirstPersonAnimationsEnabled) {
+    $loopingClips = @("claws_idle", "claws_run", "claws_block")
+    $clipEntries = $assassinManifest.actions | ForEach-Object {
+        $loop = if ($loopingClips -contains $_.action) { "true" } else { "false" }
+        $duration = [double]$_.duration
+        $durationText = $duration.ToString("0.######", `
+            [Globalization.CultureInfo]::InvariantCulture)
+        "        $($_.action) = { clip = `"units/pusfume/anims/$($_.action)`", duration = $durationText, loop = $loop },"
+    }
+    "{`n$($clipEntries -join "`n")`n    }"
+} else {
+    "false"
+}
 
 @"
 return {
@@ -1585,6 +1659,7 @@ return {
     first_person_material_package = $firstPersonMaterialPackageValue,
     first_person_materials = $firstPersonMaterialsValue,
     first_person_skaven_material = $firstPersonSkavenMaterialValue,
+    assassin_first_person_clips = $assassinFirstPersonClipConfigValue,
     first_person_direct_link = $firstPersonDirectLinkValue,
     native_skaven_first_person = $nativeSkavenFirstPersonValue,
     native_versus_first_person = $nativeVersusFirstPersonValue,
@@ -1620,6 +1695,13 @@ $versusFirstPersonUnitPackageEntry = if ($versusFirstPersonEnabled) {
 } else {
     ""
 }
+$assassinAnimationPackageEntries = if ($assassinFirstPersonAnimationsEnabled) {
+    ($assassinManifest.actions | ForEach-Object {
+        "    `"units/pusfume/anims/$($_.action)`""
+    }) -join "`n"
+} else {
+    ""
+}
 
 @"
 
@@ -1631,7 +1713,7 @@ $versusFirstPersonUnitPackageEntry
 "@ | Add-Content -LiteralPath (Join-Path $stageMod `
     "resource_packages\pusfume\pusfume.package") -Encoding utf8
 
-@'
+@"
 
 state_machine = [
     "units/pusfume/pusfume_3p"
@@ -1644,8 +1726,9 @@ bones = [
 animation = [
     "units/pusfume/anims/pusfume_3p_walk"
     "units/pusfume/anims/pusfume_3p_idle"
+$assassinAnimationPackageEntries
 ]
-'@ | Add-Content -LiteralPath (Join-Path $stageMod `
+"@ | Add-Content -LiteralPath (Join-Path $stageMod `
     "resource_packages\pusfume\pusfume.package") -Encoding utf8
 
 $rootTextureEntries = $textureNames | ForEach-Object { "    `"textures/pusfume/$_`"" }
@@ -1695,6 +1778,11 @@ if ($firstPersonEnabled) {
 }
 if ($versusFirstPersonEnabled) {
     $requiredCompiledResources += "units/pusfume/pusfume_1p_versus_arms,unit,"
+}
+if ($assassinFirstPersonAnimationsEnabled) {
+    foreach ($action in $assassinManifest.actions) {
+        $requiredCompiledResources += "units/pusfume/anims/$($action.action),animation,"
+    }
 }
 foreach ($resource in $requiredCompiledResources) {
     if (-not $processedBundlesText.Contains(",$resource")) {
@@ -2035,22 +2123,39 @@ if ($SplicedGameChild) {
 
     Write-Host "Spliced Laurel feather payload (128 bytes, Pusfume whisker maps) into $($whiskerSplicedInto[0])"
     if ($furEnabled) {
-        # Reuse the same proven skinned alpha-card binding for fur, but patch
-        # all three channels to the licensed dalokraff texture set.
+        # Fur needs the enemy fur response/ambient contract, not the Laurel
+        # plume shader. Preserve Fatshark's native 1-bit climate material and
+        # patch only diffuse, normal, and response resources to Pusfume's maps.
+        $skavenFurGameBundle = Join-Path $GameBundleDir "6766ece9a8417e33"
+        if (-not (Test-Path -LiteralPath $skavenFurGameBundle -PathType Leaf)) {
+            throw "Installed Skaven fur game bundle not found: $skavenFurGameBundle"
+        }
+        $skavenFurExtractDir = Join-Path $generatedRoot "skaven-fur-bundle-extract"
+        New-Item -ItemType Directory -Path $skavenFurExtractDir -Force | Out-Null
+        $result = Invoke-HiddenTool -FilePath $UnpackerExe -ArgumentList @(
+            "extract", $skavenFurGameBundle, $skavenFurExtractDir, "--flatten",
+            "--include", "*4322B11893593962*")
+        Assert-HiddenToolSuccess $result "Skaven fur donor bundle extraction"
+        $skavenFurMaterialPath = Join-Path $skavenFurExtractDir `
+            "4322B11893593962.material"
+        if (-not (Test-Path -LiteralPath $skavenFurMaterialPath -PathType Leaf)) {
+            throw "Skaven fur extraction did not produce 4322B11893593962.material"
+        }
+
         $furPayload = Join-Path $generatedRoot "spliced_fur_payload.bin"
         $result = Invoke-HiddenPython @(
             (Join-Path $repoRoot "tools\make_spliced_child.py"),
-            "--extracted", $laurelMaterialPath,
-            "--resource", "hash:C70B1AAD3B363E24", "--expect-size", "128",
-            "--expect-parent", "F85B289742D5D69A",
-            "--map", "C9CF19C214612D75=20A7120B25F414F7",
-            "--map", "CDA03B9B0226037A=57505EBDF932A68B",
-            "--map", "D3FD8377A3DE498A=D7B1C45DEFA31C39",
-            "--expect-texture", "texture_map_c0ba2942=20A7120B25F414F7",
-            "--expect-texture", "texture_map_59cd86b9=57505EBDF932A68B",
-            "--expect-texture", "texture_map_b788717c=D7B1C45DEFA31C39",
+            "--extracted", $skavenFurMaterialPath,
+            "--resource", "hash:4322B11893593962", "--expect-size", "256",
+            "--expect-parent", "7B55B884FAFA2B12",
+            "--map", "1916CFCA6ED85BFD=20A7120B25F414F7",
+            "--map", "E7AC0D635A39E926=57505EBDF932A68B",
+            "--map", "4E1893E178945A92=D7B1C45DEFA31C39",
+            "--expect-texture", "texture_map_5e198820=20A7120B25F414F7",
+            "--expect-texture", "0526F37D=57505EBDF932A68B",
+            "--expect-texture", "texture_map_502c6e03=D7B1C45DEFA31C39",
             "--out", $furPayload)
-        Assert-HiddenToolSuccess $result "Spliced Laurel fur payload generation"
+        Assert-HiddenToolSuccess $result "Spliced native Skaven fur payload generation"
 
         $furSplicedInto = @()
         foreach ($bundleFile in (Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)) {
@@ -2073,7 +2178,7 @@ if ($SplicedGameChild) {
             throw "Expected the fur child in exactly 1 bundle, spliced $($furSplicedInto.Count)"
         }
 
-        Write-Host "Spliced Laurel feather payload (128 bytes, dalokraff fur maps) into $($furSplicedInto[0])"
+        Write-Host "Spliced native Skaven fur payload (256 bytes, Pusfume maps) into $($furSplicedInto[0])"
     }
 }
 
@@ -2189,3 +2294,4 @@ Write-Host "Native Pusfume hero preview enabled: $($HeroPreview.IsPresent)"
 Write-Host "Native Pusfume first-person arms enabled: $firstPersonEnabled format=$FirstPersonFormat"
 Write-Host "Native Pusfume Fatshark role arms enabled: $($firstPersonEnabled -and -not $versusFirstPersonEnabled)"
 Write-Host "Native Pusfume experimental Janfon Versus arms enabled: $versusFirstPersonEnabled format=$FirstPersonFormat"
+Write-Host "Native Pusfume Janfon Assassin animations enabled: $assassinFirstPersonAnimationsEnabled clips=$($assassinManifest.actions.Count)"

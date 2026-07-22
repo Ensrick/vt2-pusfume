@@ -4,6 +4,7 @@ return {
     donor_package = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/chr_third_person_mesh",
     donor_texture_shadow = false,
     donor_texture_shadow_package = false,
+    assassin_first_person_clips = false,
     enabled = false,
     first_person_material_package = false,
     first_person_materials = false,
