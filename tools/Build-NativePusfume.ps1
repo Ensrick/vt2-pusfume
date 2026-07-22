@@ -9,6 +9,7 @@ param(
     [string]$FirstPersonMaterialDonor = ".build\donor_human_1p_extract\046F5616B1180D05.material",
     [string]$VersusFirstPersonBlend = "",
     [string]$VersusFirstPersonDonorUnit = "",
+    [string]$VersusFirstPersonMaterialDonor = ".build\donor_skaven_1p_extract\CE6F40AD55CA6EDF.material",
     [ValidateSet("bsi", "fbx")]
     [string]$FirstPersonFormat = "bsi",
     [string]$TextureSource = ".build\pusfume_handoff\textures conv",
@@ -168,6 +169,7 @@ if ($firstPersonEnabled -and -not $SplicedGameChild) {
 }
 $versusFirstPersonBlendPath = $null
 $versusFirstPersonDonorUnitPath = $null
+$versusFirstPersonMaterialDonorPath = $null
 if ($versusFirstPersonEnabled -and -not $firstPersonEnabled) {
     throw "VersusFirstPersonBlend requires the hero-compatible FirstPersonBlend"
 }
@@ -225,6 +227,17 @@ if ($versusFirstPersonEnabled) {
     }
     if ([IO.Path]::GetExtension($versusFirstPersonDonorUnitPath) -ine ".unit") {
         throw "VersusFirstPersonDonorUnit must be an extracted compiled VT2 unit: $versusFirstPersonDonorUnitPath"
+    }
+    if ([string]::IsNullOrWhiteSpace($VersusFirstPersonMaterialDonor)) {
+        throw "VersusFirstPersonBlend requires -VersusFirstPersonMaterialDonor for the native Skaven skin contract"
+    }
+    $versusFirstPersonMaterialDonorPath = if ([IO.Path]::IsPathRooted($VersusFirstPersonMaterialDonor)) {
+        (Resolve-Path $VersusFirstPersonMaterialDonor).Path
+    } else {
+        (Resolve-Path (Join-Path $repoRoot $VersusFirstPersonMaterialDonor)).Path
+    }
+    if ([IO.Path]::GetExtension($versusFirstPersonMaterialDonorPath) -ine ".material") {
+        throw "VersusFirstPersonMaterialDonor must be an extracted compiled VT2 material: $versusFirstPersonMaterialDonorPath"
     }
 }
 $legacyFurPath = $null
@@ -727,6 +740,21 @@ common = {
 "@ | Set-Content -LiteralPath (Join-Path $textureRoot "$Name.texture") -Encoding utf8
 }
 
+function Convert-LinearDiffuseToSrgb {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Source,
+        [Parameter(Mandatory)]
+        [string]$Output
+    )
+
+    $result = Invoke-HiddenPython @(
+        (Join-Path $repoRoot "tools\encode_linear_diffuse.py"),
+        $Source,
+        $Output)
+    Assert-HiddenToolSuccess $result "Linear diffuse encoding for $Output"
+}
+
 function Write-FurTexture {
     param(
         [string]$Name,
@@ -959,6 +987,22 @@ function Write-NativeMaterial {
 foreach ($textureName in $textureNames) {
     Write-NativeTexture $textureName
 }
+
+# Janfon's human-rigged hands use the direct linear map. Native Skaven and
+# Laurel-derived material parents require an sRGB texture resource, so they get
+# gamma-encoded copies that decode back to the same authored linear values.
+$whiskerDiffusePath = Join-Path $textureRoot "pusfume_whiskers_df.png"
+Convert-LinearDiffuseToSrgb $whiskerDiffusePath $whiskerDiffusePath
+Write-NativeTextureRecipe "pusfume_whiskers_df" $true
+
+if ($versusFirstPersonEnabled) {
+    $skavenHandDiffuseName = "pusfume_body_skaven_df"
+    $skavenHandDiffusePath = Join-Path $textureRoot "$skavenHandDiffuseName.png"
+    Convert-LinearDiffuseToSrgb `
+        (Join-Path $textureRoot "pusfume_body_new_df.png") $skavenHandDiffusePath
+    Write-NativeTextureRecipe $skavenHandDiffuseName $true
+    $textureNames += $skavenHandDiffuseName
+}
 if ($furEnabled) {
     $furDiffuseSource = if ($useLegacyFurTextureNames) { "psf_fur_d_rein.png" } else { "pusfume_fur_df.png" }
     $furNormalSource = if ($useLegacyFurTextureNames) { "psf_fur_n.tga" } else { "pusfume_fur_n.png" }
@@ -966,6 +1010,9 @@ if ($furEnabled) {
     Write-FurTexture "pusfume_fur_df" $furDiffuseSource $false $FurDiffuseGain
     Write-FurTexture "pusfume_fur_nm" $furNormalSource $false
     Write-FurTexture "pusfume_fur_s" $furResponseSource $false
+    $furDiffusePath = Join-Path $textureRoot "pusfume_fur_df.png"
+    Convert-LinearDiffuseToSrgb $furDiffusePath $furDiffusePath
+    Write-NativeTextureRecipe "pusfume_fur_df" $true
     $textureNames += @("pusfume_fur_df", "pusfume_fur_nm", "pusfume_fur_s")
 }
 
@@ -1147,7 +1194,9 @@ Write-PusfumeAtlas "pusfume_atlas_s" "s" ([Drawing.Color]::Black)
 # and stamps ONLY the eye mask into it. The clear is the neutral value
 # metallic=0 / AO=255 / B=255 / alpha=0.
 Write-PusfumeAtlas "pusfume_atlas_ma" "s" ([Drawing.Color]::FromArgb(0, 0, 255, 255))
-Write-NativeTextureRecipe "pusfume_atlas_df" $false
+$atlasDiffusePath = Join-Path $textureRoot "pusfume_atlas_df.png"
+Convert-LinearDiffuseToSrgb $atlasDiffusePath $atlasDiffusePath
+Write-NativeTextureRecipe "pusfume_atlas_df" $true
 Write-NativeTextureRecipe "pusfume_atlas_nm" $false
 Write-NativeTextureRecipe "pusfume_atlas_s" $false
 Write-NativeTextureRecipe "pusfume_atlas_ma" $false
@@ -1297,11 +1346,36 @@ textures = {
         $firstPersonChildTemplate | Set-Content -LiteralPath (Join-Path $childMaterialRoot `
             "pusfume_1p_body_child.material") -Encoding utf8
 
-        @'
+        if ($versusFirstPersonEnabled) {
+            # Compiler placeholder only. Post-compile replacement uses the
+            # extracted Packmaster skin child so Janfon-99 keeps a native
+            # Skaven skinning/material contract.
+            $skavenFirstPersonChildTemplate = Get-Content -LiteralPath (Join-Path $repoRoot `
+                "tools\material_templates\character_skinned.material") -Raw
+            $skavenFirstPersonChildTemplate = $skavenFirstPersonChildTemplate.Replace(
+                "__COLOR_MAP__", "textures/pusfume/pusfume_body_skaven_df")
+            $skavenFirstPersonChildTemplate = $skavenFirstPersonChildTemplate.Replace(
+                "__NORMAL_MAP__", "textures/pusfume/skaven_body_nm")
+            $skavenFirstPersonChildTemplate = $skavenFirstPersonChildTemplate.Replace(
+                "__DETAIL_MAP__", "textures/pusfume/skaven_body_s")
+            $skavenFirstPersonChildTemplate = $skavenFirstPersonChildTemplate.Replace(
+                "__EMISSIVE_MAP__", "textures/pusfume/pusfume_body_skaven_df")
+            $skavenFirstPersonChildTemplate | Set-Content -LiteralPath (Join-Path $childMaterialRoot `
+                "pusfume_1p_skaven_child.material") -Encoding utf8
+        }
+
+        $firstPersonChildEntries = @(
+            '    "child_materials/pusfume/pusfume_1p_body_child"'
+        )
+        if ($versusFirstPersonEnabled) {
+            $firstPersonChildEntries += '    "child_materials/pusfume/pusfume_1p_skaven_child"'
+        }
+
+        @"
 material = [
-    "child_materials/pusfume/pusfume_1p_body_child"
+$($firstPersonChildEntries -join "`n")
 ]
-'@ | Set-Content -LiteralPath (Join-Path $stageMod `
+"@ | Set-Content -LiteralPath (Join-Path $stageMod `
             "resource_packages\pusfume\native_1p_child.package") -Encoding utf8
     }
 
@@ -1475,6 +1549,11 @@ $firstPersonMaterialsValue = if ($firstPersonEnabled) {
 } else {
     "false"
 }
+$firstPersonSkavenMaterialValue = if ($versusFirstPersonEnabled) {
+    '"child_materials/pusfume/pusfume_1p_skaven_child"'
+} else {
+    "false"
+}
 
 # Donor texture shadowing: after the SDK build, the atlas textures' bundled
 # identities are renamed to the ids the game's mtr_outfit child binds (parsed
@@ -1506,6 +1585,7 @@ return {
     enabled = true,
     first_person_material_package = $firstPersonMaterialPackageValue,
     first_person_materials = $firstPersonMaterialsValue,
+    first_person_skaven_material = $firstPersonSkavenMaterialValue,
     first_person_direct_link = $firstPersonDirectLinkValue,
     native_skaven_first_person = $nativeSkavenFirstPersonValue,
     native_versus_first_person = $nativeVersusFirstPersonValue,
@@ -1853,6 +1933,49 @@ if ($SplicedGameChild) {
         }
 
         Write-Host "Spliced native human 1P payload (96 bytes, corrected direct UV maps) into $($firstPersonSplicedInto[0])"
+
+        if ($versusFirstPersonEnabled) {
+            $skavenFirstPersonPayload = Join-Path $generatedRoot `
+                "spliced_1p_skaven_child_payload.bin"
+            $result = Invoke-HiddenPython @(
+                (Join-Path $repoRoot "tools\make_spliced_child.py"),
+                "--extracted", $versusFirstPersonMaterialDonorPath,
+                "--resource", "hash:CE6F40AD55CA6EDF", "--expect-size", "416",
+                "--expect-parent", "C5415A5F1754113C",
+                "--map", "856B882FAC0D4FCB=9D08E482EAB03E64",
+                "--map", "7D05D21342CCF4EE=3B3F6545AF6782F5",
+                "--map", "C5CA0978087610A3=DF5A1D6679E28376",
+                "--expect-texture", "CC30441D=9D08E482EAB03E64",
+                "--expect-texture", "12BF624D=3B3F6545AF6782F5",
+                "--expect-texture", "FC0DCB23=DF5A1D6679E28376",
+                "--out", $skavenFirstPersonPayload)
+            Assert-HiddenToolSuccess $result `
+                "Spliced Packmaster first-person child payload generation"
+
+            $skavenFirstPersonSplicedInto = @()
+            foreach ($bundleFile in (Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)) {
+                $result = Invoke-HiddenPython @(
+                    $spliceTool, $bundleFile.FullName, "--type", "material",
+                    "--name", "child_materials/pusfume/pusfume_1p_skaven_child",
+                    "--payload", $skavenFirstPersonPayload, "--dry-run")
+                if ($result.ExitCode -eq 0) {
+                    $result = Invoke-HiddenPython @(
+                        $spliceTool, $bundleFile.FullName, "--type", "material",
+                        "--name", "child_materials/pusfume/pusfume_1p_skaven_child",
+                        "--payload", $skavenFirstPersonPayload)
+                    Assert-HiddenToolSuccess $result `
+                        "Skaven first-person material splice on $($bundleFile.Name)"
+                    $skavenFirstPersonSplicedInto += $bundleFile.Name
+                }
+            }
+
+            if ($skavenFirstPersonSplicedInto.Count -ne 1) {
+                throw "Expected the Skaven first-person child in exactly 1 bundle, spliced $($skavenFirstPersonSplicedInto.Count)"
+            }
+
+            Write-Host ("Spliced native Packmaster 1P payload (416 bytes, " +
+                "Janfon gamma-encoded diffuse) into $($skavenFirstPersonSplicedInto[0])")
+        }
     }
 
     # Laurel's compiled feather material is the proven skinned alpha-card

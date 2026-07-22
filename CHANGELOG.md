@@ -10,6 +10,13 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Split Janfon's diffuse handling by actual Stingray shader contract after the
+  v0.6.56 live test improved hero-rigged hands but produced a pitch-black body
+  and an engine-visible yet invisible Janfon-99 attachment.
+- Kept Janfon-160 on direct linear diffuse; gamma-encoded the linear-authored
+  body, fur, and whisker pixels before their required sRGB donor bindings; and
+  replaced Janfon-99's generic material with a patched 416-byte Packmaster skin
+  child. Geometry, UVs, weights, alignment, and animation remain unchanged.
 - Corrected the shared darkness across Janfon's body, first-person hands, fur,
   whiskers, and outfit surfaces. His Blender V2 Ubershader graphs feed all
   diffuse images as linear `Non-Color` data, but the native pipeline had marked

@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.56-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.57-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -25,6 +25,13 @@ against Janfon's Blender/video reference. Diffuse maps now preserve his linear
 response, emission, UV, skinning, and animation data are unchanged. Test source
 commit `41b6b28`, Workshop ManifestID `8120410193085696537`; all eight live
 files are hash-identical to staging.
+
+The v0.6.56 result was split: Janfon-160 hero hands improved substantially,
+the third-person body became pitch black except for emissive eyes, and the
+Janfon-99 attachment logged one shown mesh with identity transforms and zero
+limb error but rendered invisibly. v0.6.57 preserves the hero-hand path,
+gamma-encodes diffuse for the third-person and Laurel sRGB donor contracts, and
+applies a dedicated Packmaster-skin child to Janfon-99. Test all three paths.
 
 The v0.6.44 candidate replaces the native Skaven first-person fallback with
 Janfon's human-rigged arms and opens all five heroes' melee and ranged weapons

@@ -21,7 +21,7 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The next friends-only live-test candidate is **v0.6.56-dev**. It retains the
+The next friends-only live-test candidate is **v0.6.57-dev**. It retains the
 weapon-aware dual first-person system using Janfon's assets: prototype Versus
 weapons use his 99-bone Skaven attachment, while ordinary hero weapons use his
 160-bone donor-rest human attachment.
@@ -58,6 +58,12 @@ that authored linear sampling and removes the old body/fur gain compensation;
 normal, packed response, emission, geometry, UV, weight, and animation data are
 unchanged. The candidate is source commit `41b6b28`, Workshop ManifestID
 `8120410193085696537`.
+The v0.6.56 live test confirmed linear sampling improves Janfon's hero-rigged
+hands, but disproved a single shared texture contract: the Globadier-derived
+third-person child rendered pitch black and Janfon-99 was engine-visible but
+produced no pixels. v0.6.57 keeps the improved hero hands, gamma-encodes the
+linear-authored body/fur/whisker diffuse before their required sRGB donor
+bindings, and gives Janfon-99 a dedicated Packmaster-skin child material.
 Exact Packmaster dragging remains a larger career-state feature. The localized
 chest UV/material seam is tracked separately in issue #28.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person

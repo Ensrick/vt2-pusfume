@@ -1211,9 +1211,30 @@ local function apply_first_person_materials(extension, config)
         Unit.set_material(hero_unit, slot_name, material_name)
     end
 
+    local skaven_material = config.first_person_skaven_material
+    local skaven_attachments = extension._pusfume_skaven_first_person_attachments
+    if type(skaven_material) == "string" and skaven_attachments then
+        if not can_get("material", skaven_material) then
+            if not state.first_person_material_error_logged then
+                state.first_person_material_error_logged = true
+                mod:error("[pusfume] Skaven first-person material is unavailable: %s",
+                    skaven_material)
+            end
+
+            return false
+        end
+
+        for _, skaven_unit in pairs(skaven_attachments) do
+            if skaven_unit and Unit.alive(skaven_unit) then
+                Unit.set_material(skaven_unit, "p_main", skaven_material)
+            end
+        end
+    end
+
     extension._pusfume_first_person_materials_applied = true
     state.first_person_materials_applied = true
-    mod:info("[pusfume] Native human first-person material applied; Skaven material preserved")
+    mod:info("[pusfume] Janfon first-person materials applied: human=%s skaven=%s",
+        tostring(materials.p_main), tostring(skaven_material))
 
     return true
 end

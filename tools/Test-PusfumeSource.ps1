@@ -455,9 +455,12 @@ Test-Condition ($nativeBuildText -match '\[switch\]\$LegacyFur' -and `
         $nativeBuildText.IndexOf('"@ | Set-Content -LiteralPath (Join-Path $textureRoot "$Name.texture")')) `
     "dalokraff fur integration" "licensed fur is weight-transferred, deformation-checked, and packaged by a callable texture helper"
 Test-Condition ($nativeBuildText -match '\$srgb = "false"' -and `
-    $nativeBuildText -match 'Write-FurTexture "pusfume_fur_df" \$furDiffuseSource \$false \$FurDiffuseGain' -and `
-    $nativeBuildText -match 'Write-NativeTextureRecipe "pusfume_atlas_df" \$false') `
-    "Janfon diffuse color space" "body, hands, fur, whiskers, and outfit diffuse maps preserve Blender's linear Non-Color contract"
+    $nativeBuildText -match 'Convert-LinearDiffuseToSrgb \$atlasDiffusePath \$atlasDiffusePath' -and `
+    $nativeBuildText -match 'Write-NativeTextureRecipe "pusfume_atlas_df" \$true' -and `
+    $nativeBuildText -match 'Convert-LinearDiffuseToSrgb \$furDiffusePath \$furDiffusePath' -and `
+    $nativeBuildText -match 'pusfume_1p_skaven_child' -and `
+    $nativeBuildText -match 'CE6F40AD55CA6EDF') `
+    "Janfon diffuse color space" "linear-authored diffuse values are preserved through distinct hero, third-person, Laurel, and Packmaster shader contracts"
 Test-Condition ($nativeText -match 'function M\.native_skin_name' -and `
     $nativeText -notmatch 'third_person_attachment = nil' -and `
     $uiText -match 'MenuWorldPreviewer, "request_spawn_hero_unit"' -and `
