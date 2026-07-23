@@ -138,6 +138,12 @@ The deployed v0.6.65 candidate is source commit `c044569`, friends-only
 Workshop ManifestID `8566173679127636529`; all eight installed files are
 SHA-256-identical to staging at `179,162,189` bytes. Live verification remains
 open for both the Assassin clip driver and third-person material response.
+That test reached the manual Assassin driver, then crashed when the fallback
+event guard queried its intentionally controllerless unit. v0.6.66 guards that
+Stingray API call without changing any model or material. The deployed
+candidate is source commit `0f27275`, friends-only Workshop ManifestID
+`5717799537931992801`; all eight installed files hash-match staging at
+`179,170,445` bytes.
 Exact Packmaster dragging remains a larger career-state feature. The localized
 chest UV/material seam is tracked separately in issue #28.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person

@@ -16,6 +16,10 @@ request rather than in release notes.
   event lookup now verifies the unit still has an animation state machine
   before calling Stingray's assert-prone event API. Models and materials are
   unchanged.
+- Built, locally deployed, hash-verified, and uploaded v0.6.66 friends-only
+  from source commit `0f27275` as Steam ManifestID `5717799537931992801`.
+  All eight installed files match staging at `179,170,445` bytes; 135 tests,
+  source preflight, native compilation, skeleton, and material gates pass.
 - Prepared v0.6.65 from the rejected v0.6.64 live result. The newest log proved
   the runtime was layering clip IDs `11` through `18` in about one second and
   interrupting a `1.97 s` attack after roughly `0.72 s`. Janfon's Assassin

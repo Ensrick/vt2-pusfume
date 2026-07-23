@@ -109,6 +109,14 @@ Test source commit `c044569`, friends-only Workshop ManifestID
 `8566173679127636529`; all eight installed files are SHA-256-identical to
 staging at `179,162,189` bytes.
 
+The v0.6.65 equip test reached the manual-time driver, then crashed when an
+`idle` fallback queried the intentionally disabled Skaven state machine.
+v0.6.66 makes that event query controller-safe and changes no visual asset.
+Repeat the same single-attack, chain/block, and three-lighting-context test on
+source commit `0f27275`, friends-only Workshop ManifestID
+`5717799537931992801`; all eight installed files are SHA-256-identical to
+staging at `179,170,445` bytes.
+
 The v0.6.44 candidate replaces the native Skaven first-person fallback with
 Janfon's human-rigged arms and opens all five heroes' melee and ranged weapons
 for hand compatibility testing. Its compiled unit matches 52 donor bones with

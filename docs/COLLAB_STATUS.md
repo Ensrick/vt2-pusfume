@@ -11,6 +11,15 @@ architecture and reproduction contract are in
 
 ## Latest shipment
 
+- 2026-07-22 local: v0.6.65 LIVE RESULT / v0.6.66 SHIPPED `[unverified]` -
+  Assassin equip reached the new manual-time driver and sampled its clip
+  correctly through `0.707 s`, then the fallback `idle` guard called
+  `Unit.has_animation_event` on the intentionally controllerless Skaven unit.
+  Stingray asserted at `_pusfume_native.lua:1652`. v0.6.66 requires a live
+  animation state machine before every guarded event lookup and changes no
+  model or material. Source `0f27275`; Steam friends-only ManifestID
+  `5717799537931992801`; all eight installed files hash-match staging at
+  `179,170,445` bytes. 135 tests and source preflight pass.
 - 2026-07-22 local: v0.6.64 LIVE RESULT / v0.6.65 SHIPPED `[unverified]` -
   a single Assassin attack still left a rigid mesh over the camera and the
   atlas-wide neutral AO made the third-person body bright/matte. The log showed
