@@ -10,6 +10,12 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, locally deployed, and uploaded v0.6.72 from source commit `9050192`
+  as friends-only Steam ManifestID `5520324437947310881` at 2026-07-23
+  12:51:53 America/Chicago. All eight installed files are SHA-256-identical
+  to staging at `178,109,865` bytes; 147 tests, source preflight, and the
+  Blender 5.2 globe-removal/deformation gate pass. Live acceptance remains
+  pending.
 - Accepted the v0.6.71 leather correction in live testing. The green orb
   remained even though the log proved both hidden Warpfire units received the
   new reset, eliminating the ranged weapon as its owner.
