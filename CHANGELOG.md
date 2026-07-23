@@ -10,6 +10,13 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, locally deployed, and uploaded v0.6.74 from source commit `ee3a9a4`
+  as friends-only Steam ManifestID `353510783120204742` at 2026-07-23
+  13:51:38 America/Chicago. The first Steam transfer returned `File Not
+  Found`; an unchanged staged retry succeeded. All eight installed files
+  (178,147,444 bytes) are SHA-256-identical to staging. The 146-test
+  regression suite and full source preflight pass; live acceptance remains
+  pending.
 - Rejected v0.6.73 in live testing: the backpack geometry was restored, but
   the green effect remained. Its owner-particle diagnostic reported
   `metadata_cleared=0`, disproving that hypothesis. v0.6.74 removes that hook
