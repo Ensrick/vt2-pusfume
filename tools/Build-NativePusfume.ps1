@@ -1551,7 +1551,9 @@ textures = {
 '@ | Set-Content -LiteralPath (Join-Path $childMaterialRoot "pusfume_outfit_child.material") -Encoding utf8
 
     @'
-parent_material = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/mtr_skin"
+// Compiler placeholder only: the SDK cannot resolve mtr_skin source data.
+// Post-compile splicing replaces this complete payload with native mtr_skin.
+parent_material = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/mtr_outfit"
 material_contexts = {
 	surface_material = ""
 }
