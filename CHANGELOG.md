@@ -10,6 +10,12 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, locally deployed, hash-verified, and uploaded v0.6.69 friends-only
+  from source commit `c1a31e5` as Steam ManifestID
+  `6993854942758947216`. All eight installed files match staging at
+  `179,246,394` bytes; 139 tests, source preflight, Blender 5.2 handoff,
+  compiled-rest, animation, material-response, and dual-child splice gates
+  pass.
 - Prepared v0.6.69 from the rejected v0.6.68 live result. Weapon visibility
   now re-arms whenever either wielded first-person unit changes or a supported
   hide reason returns, fixing Assassin claws that animated but remained hidden
