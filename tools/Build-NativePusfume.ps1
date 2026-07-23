@@ -403,7 +403,8 @@ if ($assassinFirstPersonAnimationsEnabled) {
     $result = Invoke-HiddenTool -FilePath $blenderExePath -ArgumentList @(
         "--background", "--factory-startup", "--disable-autoexec",
         "--python", $assassinFirstPersonAnimationTool, "--",
-        $versusFirstPersonBlendPath, $assassinFirstPersonAnimationRoot)
+        $versusFirstPersonBlendPath, $versusFirstPersonDonorUnitPath,
+        $assassinFirstPersonAnimationRoot)
     Assert-HiddenToolSuccess $result "Janfon assassin first-person action export"
     $assassinFirstPersonAnimationManifest = Join-Path `
         $assassinFirstPersonAnimationRoot "pusfume_1p_claw_actions.json"
@@ -1152,6 +1153,7 @@ function Set-PusfumeEmissionMask {
         [Parameter(Mandatory)][string]$AtlasPath,
         [Parameter(Mandatory)][ValidateSet("blue", "alpha")][string]$Channel,
         [switch]$StampEye,
+        [switch]$NeutralAo,
         [string]$EyeMaskPath,
         [int]$AtlasSize,
         [int]$EyeOriginX,
@@ -1211,6 +1213,12 @@ function Set-PusfumeEmissionMask {
         # bytes directly and retain metallic/AO/normal data verbatim.
         $channelOffset = if ($Channel -eq "blue") { 0 } else { 3 }
         Set-PackedChannel $output @($channelOffset) @([byte]0) $full
+        if ($NeutralAo) {
+            # Janfon's body UVs cover response-map regions whose donor AO is
+            # zero. Neutralize AO only; preserve metallic, unused response,
+            # emission, normals, diffuse, and every authored UV unchanged.
+            Set-PackedChannel $output @(1) @([byte]255) $full
+        }
 
         # 2) Optional eye stamp: route the mask luminance (source red) into the
         #    emission channel while pinning the other channels to neutral.
@@ -1320,23 +1328,26 @@ function Assert-PusfumeBodyResponse {
                 for ($column = 0; $column -lt 2048; $column += 16) {
                     $referenceOffset = $row * $referenceStride + $column * 4
                     $packedOffset = $row * $packedStride + $column * 4
-                    foreach ($channel in 0..2) {
+                    foreach ($channel in @(0, 2)) {
                         if ($referenceBytes[$referenceOffset + $channel] -ne `
                                 $packedBytes[$packedOffset + $channel]) {
                             $mismatches++
                         }
+                    }
+                    if ($packedBytes[$packedOffset + 1] -ne 255) {
+                        $mismatches++
                     }
                     $aoTotal += $packedBytes[$packedOffset + 1]
                     $samples++
                 }
             }
             $meanAo = $aoTotal / $samples
-            if ($mismatches -ne 0 -or $meanAo -lt 16) {
+            if ($mismatches -ne 0 -or $meanAo -ne 255) {
                 throw ("Packed Pusfume body response failed: samples=$samples " +
-                    "rgb_mismatches=$mismatches mean_ao=$([Math]::Round($meanAo, 2))")
+                    "response_mismatches=$mismatches mean_ao=$([Math]::Round($meanAo, 2))")
             }
             Write-Host ("Packed Pusfume body response preserved: samples=$samples " +
-                "rgb_mismatches=0 mean_ao=$([Math]::Round($meanAo, 2))")
+                "response_mismatches=0 mean_ao=$([Math]::Round($meanAo, 2))")
         } finally {
             $reference.UnlockBits($referenceData)
             $packed.UnlockBits($packedData)
@@ -1397,7 +1408,8 @@ if ($EmissionProbe) {
         "tools\pusfume_atlas_layout.json") -Raw | ConvertFrom-Json
     $eyeTile = $eyeLayout.tiles.eye
     Set-PusfumeEmissionMask `
-        -AtlasPath (Join-Path $textureRoot "pusfume_atlas_ma.png") -Channel "alpha" -StampEye `
+        -AtlasPath (Join-Path $textureRoot "pusfume_atlas_ma.png") -Channel "alpha" `
+        -StampEye -NeutralAo `
         -EyeMaskPath (Join-Path $textureSourcePath "skaven_eyemask.png") `
         -AtlasSize ([int]$eyeLayout.atlas_size) `
         -EyeOriginX ([int]$eyeTile.origin[0]) -EyeOriginY ([int]$eyeTile.origin[1]) `
@@ -1792,7 +1804,7 @@ return {
     parent_child_package = $parentChildPackageValue,
     fur_child_material = $furChildMaterialValue,
     whisker_child_material = $whiskerChildMaterialValue,
-    whisker_donor_package = "units/beings/player/empire_soldier_knight/headpiece/es_k_hat_07",
+    whisker_donor_package = false,
     manual_clip_length = 0.8,
     manual_clip_name = "units/pusfume/anims/pusfume_3p_walk",
     manual_clip_probe = false,

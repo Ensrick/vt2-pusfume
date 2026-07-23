@@ -507,10 +507,12 @@ Test-Condition ($nativeConfigText -match 'parent_child_material\s*=\s*false' -an
     $nativeText -match 'mod:unload_package\(config\.parent_child_package\)' -and `
     $nativeText -match 'Unit\.set_material\(unit, slot_name, material\)' -and `
     $nativeText -match 'Unit\.set_material\(unit, WHISKER_MATERIAL_SLOT, config\.whisker_child_material\)' -and `
+    $nativeBuildText -match 'whisker_donor_package = false' -and `
+    $nativeText -match 'type\(config\.whisker_donor_package\) ~= "string"' -and `
+    $nativeText -match 'state\.whisker_donor_package_loaded = true' -and `
     $nativeText -match 'Managers\.package:load\(config\.whisker_donor_package, WHISKER_DONOR_PACKAGE_REFERENCE\)' -and `
-    $nativeText -match 'Managers\.package:unload\(config\.whisker_donor_package, WHISKER_DONOR_PACKAGE_REFERENCE\)' -and `
-    $nativeBuildText -match 'units/beings/player/empire_soldier_knight/headpiece/es_k_hat_07') `
-    "parent-child material" "VMF resolves opaque and skinned-alpha children through one ordered mod package"
+    $nativeText -match 'Managers\.package:unload\(config\.whisker_donor_package, WHISKER_DONOR_PACKAGE_REFERENCE\)') `
+    "parent-child material" "VMF resolves embedded opaque and skinned-alpha children through one ordered mod package"
 Test-Condition ($nativeText -match 'pusfume_material_probe' -and `
     $nativeText -match 'donor_raw\s*=\s*true' -and `
     $nativeText -match 'donor_atlas\s*=\s*true' -and `

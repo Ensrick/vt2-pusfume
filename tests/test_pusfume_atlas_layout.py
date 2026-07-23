@@ -71,7 +71,9 @@ class PusfumeAtlasLayoutTests(unittest.TestCase):
         self.assertIn("function Set-PackedChannel", build)
         self.assertIn("LockBits", build)
         self.assertIn("function Assert-PusfumeBodyResponse", build)
-        self.assertIn("rgb_mismatches", build)
+        self.assertIn("response_mismatches", build)
+        self.assertIn("-StampEye -NeutralAo", build)
+        self.assertIn("$meanAo -ne 255", build)
         self.assertNotIn("$zeroMatrix.Matrix33 = 0", build)
 
 

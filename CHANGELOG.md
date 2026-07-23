@@ -10,6 +10,18 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Prepared v0.6.64 from the partial v0.6.63 live result. Opaque atlas AO is
+  neutralized to `255`; this changes no diffuse, normal, metallic, emission,
+  UV, geometry, fur, or whisker data and prevents zero-AO regions from turning
+  black under ambient-only gameplay lighting.
+- Corrected the Assassin skeleton contract rather than applying another event
+  workaround. Janfon's rotations are now retargeted through each source and
+  donor local-rest matrix onto the same 99-bone Fatshark-rebound skeleton used
+  by the visible first-person unit. Blender validates every posed frame against
+  a bounded mesh envelope before export.
+- Removed the obsolete runtime Laurel-package requirement from spliced builds.
+  The complete whisker child payload is embedded during compilation, so
+  preflight now evaluates the shipped material instead of an unused hat unit.
 - Prepared v0.6.63 from the rejected v0.6.62 lighting test. The body shader was
   not the cause: clearing `MA.alpha` through GDI+ premultiplied and erased the
   packed metallic/AO RGB response, leaving almost no ambient response in world

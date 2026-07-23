@@ -12,6 +12,17 @@ class RuntimePresentationTests(unittest.TestCase):
         cls.native = (MOD_ROOT / "_pusfume_native.lua").read_text(encoding="utf-8")
         cls.registry = (MOD_ROOT / "_pusfume_registry.lua").read_text(encoding="utf-8")
         cls.ui = (MOD_ROOT / "_pusfume_ui.lua").read_text(encoding="utf-8")
+        cls.build = (ROOT / "tools" / "Build-NativePusfume.ps1").read_text(
+            encoding="utf-8-sig"
+        )
+
+    def test_embedded_whisker_child_has_no_runtime_laurel_dependency(self):
+        self.assertIn('whisker_donor_package = false', self.build)
+        self.assertIn(
+            'if type(config.whisker_donor_package) ~= "string" then',
+            self.native,
+        )
+        self.assertIn("state.whisker_donor_package_loaded = true", self.native)
 
     def test_pusfume_uses_playable_globadier_voice_switch(self):
         self.assertIn('PUSFUME_CHARACTER_VO = "vs_poison_wind_globadier"', self.native)

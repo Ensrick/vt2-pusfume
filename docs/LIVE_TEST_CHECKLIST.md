@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.63-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.64-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -89,6 +89,15 @@ non-looping action.
 Test source commit `5fd1f9c`, friends-only Workshop ManifestID
 `2559622198151416662`; all eight installed files hash-match staging at
 `179,239,055` bytes.
+
+The v0.6.63 live result was partial: some body surfaces improved, others stayed
+black, and the Assassin arms still became a rigid screen-blocking mesh. In
+v0.6.64, inspect every opaque third-person surface in the same deep shadow;
+the AO-neutral candidate must retain diffuse detail everywhere. Then equip the
+Assassin Blades and test equip, idle, all chained lights, heavy, push-stab,
+block, and release. These clips now target the compiled donor-rest skeleton,
+not Janfon's original rest basis. `/pusfume_preflight` must no longer fail on a
+missing Laurel package because the whisker child is embedded in this build.
 
 The v0.6.44 candidate replaces the native Skaven first-person fallback with
 Janfon's human-rigged arms and opens all five heroes' melee and ranged weapons

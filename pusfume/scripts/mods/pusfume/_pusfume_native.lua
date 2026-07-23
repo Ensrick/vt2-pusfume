@@ -367,6 +367,12 @@ local function ensure_whisker_donor_package(config)
     if type(config.whisker_child_material) ~= "string" then
         return true
     end
+    if type(config.whisker_donor_package) ~= "string" then
+        -- Spliced builds embed the complete Laurel-derived child payload.
+        -- There is no remaining runtime dependency on the original hat unit.
+        state.whisker_donor_package_loaded = true
+        return true
+    end
 
     if state.whisker_donor_package_loaded then
         return true
@@ -2359,9 +2365,10 @@ function M.donor_status()
         whisker_material_ok = type(config.whisker_child_material) == "string"
             and can_get("material", config.whisker_child_material) == true,
         whisker_applied = state.whisker_material_applied,
-        whisker_package_ok = type(config.whisker_donor_package) == "string"
-            and can_get("package", config.whisker_donor_package) == true,
-        whisker_package_loaded = state.whisker_donor_package_loaded,
+        whisker_package_ok = type(config.whisker_donor_package) ~= "string"
+            or can_get("package", config.whisker_donor_package) == true,
+        whisker_package_loaded = type(config.whisker_donor_package) ~= "string"
+            or state.whisker_donor_package_loaded,
     }
 end
 

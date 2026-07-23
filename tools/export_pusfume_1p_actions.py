@@ -12,6 +12,14 @@ import os
 import sys
 
 import bpy
+from mathutils import Matrix
+
+
+TOOLS_DIR = os.path.dirname(os.path.abspath(__file__))
+if TOOLS_DIR not in sys.path:
+    sys.path.insert(0, TOOLS_DIR)
+
+import prepare_pusfume_1p_blend as preparation  # noqa: E402
 
 
 ACTION_NAMES = (
@@ -28,23 +36,28 @@ ACTION_NAMES = (
 EXPECTED_BONES = 99
 FPS = 30
 TRANSFORM_PROPERTIES = ("location", "scale")
+MAXIMUM_POSED_VERTEX_DISPLACEMENT = 1.5
 
 
 def arguments_after_separator():
     return sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else []
 
 
-def find_armature():
-    armatures = [obj for obj in bpy.context.scene.objects if obj.type == "ARMATURE"]
-    if len(armatures) != 1:
-        raise RuntimeError("Expected one armature, found %d" % len(armatures))
-    armature = armatures[0]
+def validate_armature(armature):
     if len(armature.data.bones) != EXPECTED_BONES:
         raise RuntimeError(
             "Janfon claw animation contract requires %d bones, found %d"
             % (EXPECTED_BONES, len(armature.data.bones))
         )
-    return armature
+
+
+def duplicate_source_armature(armature):
+    source = armature.copy()
+    source.data = armature.data.copy()
+    source.name = "pusfume_1p_source_animation_rig"
+    bpy.context.scene.collection.objects.link(source)
+    source.animation_data_clear()
+    return source
 
 
 def assign_action(armature, action):
@@ -112,27 +125,15 @@ def sanitize_pose_transforms(armature, action):
     }
 
 
-def maximum_pose_delta(armature, frame_start, frame_end):
-    bpy.context.scene.frame_set(frame_start)
-    first = {bone.name: bone.matrix.copy() for bone in armature.pose.bones}
-    maximum = 0.0
-    for frame in range(frame_start + 1, frame_end + 1):
-        bpy.context.scene.frame_set(frame)
-        maximum = max(
-            maximum,
-            max(
-                abs(first[bone.name][row][column] - bone.matrix[row][column])
-                for bone in armature.pose.bones
-                for row in range(4)
-                for column in range(4)
-            ),
-        )
-    return maximum
+def local_rest_matrix(bone):
+    if bone.parent is None:
+        return bone.matrix_local.copy()
+    return bone.parent.matrix_local.inverted() @ bone.matrix_local
 
 
-def export_action(armature, action, output_dir):
-    assign_action(armature, action)
-    transform_audit = sanitize_pose_transforms(armature, action)
+def retarget_action(source, target, mesh, action, rest_points):
+    assign_action(source, action)
+    transform_audit = sanitize_pose_transforms(source, action)
     keyed_start, keyed_end = (int(round(value)) for value in action.frame_range)
     # Janfon retained negative helper keys on the looping clips. Gameplay clips
     # begin at frame 1; trimming the lead-in avoids a negative Stingray timeline.
@@ -144,14 +145,114 @@ def export_action(armature, action, output_dir):
     bpy.context.scene.render.fps = FPS
     bpy.context.scene.frame_start = frame_start
     bpy.context.scene.frame_end = frame_end
-    motion = maximum_pose_delta(armature, frame_start, frame_end)
-    if motion < 0.001:
-        raise RuntimeError("Action %s does not move the rig: %.8f" % (action.name, motion))
+
+    source_rest = {
+        bone.name: local_rest_matrix(bone) for bone in source.data.bones
+    }
+    target_rest = {
+        bone.name: local_rest_matrix(bone) for bone in target.data.bones
+    }
+    if set(source_rest) != set(target_rest):
+        raise RuntimeError("Source and donor-rest Assassin skeletons differ")
+
+    target.animation_data_clear()
+    target.animation_data_create()
+    first_pose = None
+    maximum_pose_delta = 0.0
+    maximum_vertex_displacement = 0.0
+    maximum_vertex_radius = 0.0
+    for frame in range(frame_start, frame_end + 1):
+        bpy.context.scene.frame_set(frame)
+        for pose_bone in target.pose.bones:
+            pose_bone.matrix_basis = Matrix.Identity(4)
+
+        for bone_name in source_rest:
+            source_basis = source.pose.bones[bone_name].matrix_basis
+            parent_space_delta = (
+                source_rest[bone_name]
+                @ source_basis
+                @ source_rest[bone_name].inverted()
+            )
+            target_basis = (
+                target_rest[bone_name].inverted()
+                @ parent_space_delta
+                @ target_rest[bone_name]
+            )
+            target_pose = target.pose.bones[bone_name]
+            target_pose.rotation_mode = "QUATERNION"
+            target_pose.location = (0.0, 0.0, 0.0)
+            target_pose.scale = (1.0, 1.0, 1.0)
+            target_pose.rotation_quaternion = target_basis.to_quaternion()
+
+        bpy.context.view_layer.update()
+        if first_pose is None:
+            first_pose = {
+                bone.name: bone.matrix.copy() for bone in target.pose.bones
+            }
+        else:
+            maximum_pose_delta = max(
+                maximum_pose_delta,
+                max(
+                    abs(first_pose[bone.name][row][column] - bone.matrix[row][column])
+                    for bone in target.pose.bones
+                    for row in range(4)
+                    for column in range(4)
+                ),
+            )
+
+        posed_points = preparation.evaluated_vertex_positions(mesh)
+        maximum_vertex_displacement = max(
+            maximum_vertex_displacement,
+            max(
+                (posed_points[index] - rest_points[index]).length
+                for index in range(len(rest_points))
+            ),
+        )
+        maximum_vertex_radius = max(
+            maximum_vertex_radius,
+            max((point.length for point in posed_points), default=0.0),
+        )
+
+        for pose_bone in target.pose.bones:
+            pose_bone.keyframe_insert(
+                data_path="rotation_quaternion", frame=frame, group=pose_bone.name
+            )
+
+    target_action = target.animation_data and target.animation_data.action
+    if target_action is None:
+        raise RuntimeError("Action %s produced no retargeted action" % action.name)
+    target_action.name = action.name + "_donor_rest"
+    if maximum_pose_delta < 0.001:
+        raise RuntimeError(
+            "Action %s does not move the donor-rest rig: %.8f"
+            % (action.name, maximum_pose_delta)
+        )
+    if maximum_vertex_displacement > MAXIMUM_POSED_VERTEX_DISPLACEMENT:
+        raise RuntimeError(
+            "Action %s leaves the first-person envelope: %.6f m"
+            % (action.name, maximum_vertex_displacement)
+        )
+
+    return target_action, {
+        "maximum_pose_delta": maximum_pose_delta,
+        "maximum_vertex_displacement": maximum_vertex_displacement,
+        "maximum_vertex_radius": maximum_vertex_radius,
+        "transform_audit": transform_audit,
+    }, frame_start, frame_end, keyed_start
+
+
+def export_action(source, target, mesh, action, rest_points, output_dir):
+    target_action, retarget_audit, frame_start, frame_end, keyed_start = (
+        retarget_action(source, target, mesh, action, rest_points)
+    )
 
     output_path = os.path.join(output_dir, action.name + ".fbx")
+    bpy.ops.object.select_all(action="DESELECT")
+    target.select_set(True)
+    bpy.context.view_layer.objects.active = target
     bpy.ops.export_scene.fbx(
         filepath=output_path,
-        use_selection=False,
+        use_selection=True,
         axis_forward="-Y",
         axis_up="Z",
         object_types={"ARMATURE"},
@@ -171,36 +272,57 @@ def export_action(armature, action, output_dir):
         "frame_end": frame_end,
         "frame_start": frame_start,
         "keyed_frame_start": keyed_start,
-        "maximum_pose_delta": motion,
+        "maximum_pose_delta": retarget_audit["maximum_pose_delta"],
         "output": output_path,
         "output_bytes": os.path.getsize(output_path),
-        "transform_audit": transform_audit,
+        "retarget_audit": retarget_audit,
+        "target_action": target_action.name,
     }
 
 
-def main(input_path, output_dir):
+def main(input_path, donor_unit_path, output_dir):
     bpy.ops.wm.open_mainfile(filepath=input_path, load_ui=False)
-    armature = find_armature()
+    mesh, target = preparation.find_arms_and_rig()
+    validate_armature(target)
+    source = duplicate_source_armature(target)
     actions = {action.name: action for action in bpy.data.actions}
     missing = sorted(set(ACTION_NAMES) - set(actions))
     if missing:
         raise RuntimeError("Janfon claw handoff is missing actions: %s" % missing)
 
-    # Weapon reference meshes and the skinned arm display are not animation
-    # resources. Removing them from this in-memory copy keeps FBXs armature-only.
+    bind_reset = preparation.reset_bind_pose(mesh, target)
+    donor_conformance = preparation.conform_mesh_to_donor_rest(
+        mesh, target, donor_unit_path
+    )
+    donor_rebind = preparation.rebind_to_donor_rest(
+        mesh, target, donor_unit_path
+    )
+    target.data.pose_position = "REST"
+    rest_points = preparation.evaluated_vertex_positions(mesh)
+    target.data.pose_position = "POSE"
+
+    # Weapon reference objects are not animation resources. The skinned mesh
+    # remains in memory only for deformation-envelope validation; FBX export is
+    # selection-scoped to the donor-rest target armature.
     for scene_object in list(bpy.context.scene.objects):
-        if scene_object is not armature:
+        if scene_object not in (source, target, mesh):
             bpy.data.objects.remove(scene_object, do_unlink=True)
 
     os.makedirs(output_dir, exist_ok=True)
     exported = [
-        export_action(armature, actions[action_name], output_dir)
+        export_action(
+            source, target, mesh, actions[action_name], rest_points, output_dir
+        )
         for action_name in ACTION_NAMES
     ]
     manifest_path = os.path.join(output_dir, "pusfume_1p_claw_actions.json")
     manifest = {
         "actions": exported,
-        "bones": len(armature.data.bones),
+        "bind_reset": bind_reset,
+        "bones": len(target.data.bones),
+        "donor_conformance": donor_conformance,
+        "donor_rebind": donor_rebind,
+        "donor_unit": donor_unit_path,
         "fps": FPS,
         "source": input_path,
     }
@@ -211,6 +333,8 @@ def main(input_path, output_dir):
 
 
 arguments = arguments_after_separator()
-if len(arguments) != 2:
-    raise SystemExit("usage: export_pusfume_1p_actions.py -- INPUT.blend OUTPUT_DIR")
+if len(arguments) != 3:
+    raise SystemExit(
+        "usage: export_pusfume_1p_actions.py -- INPUT.blend DONOR.unit OUTPUT_DIR"
+    )
 main(*(os.path.abspath(argument) for argument in arguments))

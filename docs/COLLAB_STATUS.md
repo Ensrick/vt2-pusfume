@@ -11,6 +11,17 @@ architecture and reproduction contract are in
 
 ## Latest shipment
 
+- 2026-07-22 local: v0.6.63 LIVE RESULT / v0.6.64 CANDIDATE `[unverified]` -
+  packed-response preservation improved some third-person surfaces, but areas
+  using zero donor AO remained black. The Assassin mesh still locked across
+  the camera because rotation-only sanitation did not address the actual rest-
+  basis mismatch: the visible Janfon-99 unit is rebound to Fatshark's donor
+  skeleton while its clips were exported from Janfon's original skeleton.
+  v0.6.64 forces only opaque AO to neutral and rotation-retargets all nine clips
+  onto the exact donor-rest armature. Blender reports `0.00000250` maximum
+  rebind error and validates every animation frame within a `1.5 m` maximum
+  rest-displacement envelope. The obsolete Laurel runtime package dependency
+  is also removed for the embedded whisker child. Deployment pending.
 - 2026-07-22 local: v0.6.62 LIVE RESULT / v0.6.63 SHIPPED - the native
   `mtr_skin` substitution did not stop the third-person body from becoming a
   black silhouette in low world light. Atlas inspection found the actual

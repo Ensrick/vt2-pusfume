@@ -21,7 +21,7 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The next friends-only live-test candidate is **v0.6.63-dev**. It retains the
+The next friends-only live-test candidate is **v0.6.64-dev**. It retains the
 weapon-aware dual first-person system using Janfon's assets: prototype Versus
 weapons use his 99-bone Skaven attachment, while ordinary hero weapons use his
 160-bone donor-rest human attachment.
@@ -117,6 +117,14 @@ The deployed candidate is source commit `5fd1f9c`, friends-only Workshop
 ManifestID `2559622198151416662`; all eight installed files are hash-identical
 to staging at `179,239,055` bytes. Its build sampled 32,768 body-response
 points with zero RGB mismatches and mean AO `119.03`.
+The v0.6.63 live test improved some third-person surfaces, but areas sampling
+zero donor AO remained black. Its rotation-only Assassin export also failed:
+the clips still targeted Janfon's original rest skeleton while the visible
+99-bone unit uses a Fatshark donor-rest rebind. v0.6.64 neutralizes only the
+opaque atlas AO channel and retargets each authored rotation through the source
+and donor local-rest matrices before FBX export. Per-frame Blender deformation
+bounds now reject clips that leave the first-person envelope. The embedded
+whisker child also no longer falsely requires the original Laurel package.
 Exact Packmaster dragging remains a larger career-state feature. The localized
 chest UV/material seam is tracked separately in issue #28.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person

@@ -49,6 +49,10 @@ class AnimationHandoffContractTests(unittest.TestCase):
         self.assertIn("EXPECTED_BONES = 99", exporter)
         self.assertIn("maximum_pose_delta", exporter)
         self.assertIn("sanitize_pose_transforms", exporter)
+        self.assertIn("preparation.rebind_to_donor_rest", exporter)
+        self.assertIn("parent_space_delta", exporter)
+        self.assertIn("maximum_vertex_displacement", exporter)
+        self.assertIn("MAXIMUM_POSED_VERTEX_DISPLACEMENT", exporter)
         self.assertIn('TRANSFORM_PROPERTIES = ("location", "scale")', exporter)
         self.assertIn('"maximum_removed_delta"', exporter)
         self.assertIn('"removed_channels"', exporter)
@@ -56,6 +60,10 @@ class AnimationHandoffContractTests(unittest.TestCase):
         self.assertIn("bake_anim_use_all_actions=False", exporter)
         self.assertIn("[switch]$AssassinFirstPersonAnimations", build)
         self.assertIn("export_pusfume_1p_actions.py", build)
+        self.assertIn(
+            "$versusFirstPersonBlendPath, $versusFirstPersonDonorUnitPath,",
+            build,
+        )
         self.assertIn('bones = "units/pusfume/pusfume_1p_versus_arms"', build)
         self.assertIn('$requiredCompiledResources += "units/pusfume/anims/', build)
 
