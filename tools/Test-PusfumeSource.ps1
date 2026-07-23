@@ -605,7 +605,7 @@ Test-Condition ($nativeConfigText -match 'hide_donor_weapons\s*=\s*false' -and `
     $nativeBuildText -match 'hide_donor_weapons\s*=\s*false' -and `
     $nativeText -match 'unhide_weapons\(PACKMASTER_WEAPON_HIDE_REASON\)' -and `
     $nativeText -match 'unhide_weapons\(FIRST_PERSON_WEAPON_HIDE_REASON\)' -and `
-    $nativeText -match 'Unit\.has_animation_event\(first_person_unit, "to_armed"\)' -and `
+    $nativeText -match 'unit_has_animation_event\(first_person_unit, "to_armed"\)' -and `
     $nativeText -match 'Unit\.animation_has_variable\(first_person_unit, "armed"\)' -and `
     $uiText -notmatch 'Unit\.set_unit_visibility\(weapon_unit, false\)') `
     "prototype weapon visibility" "staged builds clear diagnostic and Packmaster hide seams, then capability-guard the native armed presentation"

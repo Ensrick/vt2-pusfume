@@ -10,6 +10,12 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Prepared v0.6.66 after the v0.6.65 live Assassin equip test reached the new
+  manual-time driver, then crashed when the fallback event guard queried
+  `idle` on its intentionally controllerless Skaven unit. Every first-person
+  event lookup now verifies the unit still has an animation state machine
+  before calling Stingray's assert-prone event API. Models and materials are
+  unchanged.
 - Prepared v0.6.65 from the rejected v0.6.64 live result. The newest log proved
   the runtime was layering clip IDs `11` through `18` in about one second and
   interrupting a `1.97 s` attack after roughly `0.72 s`. Janfon's Assassin

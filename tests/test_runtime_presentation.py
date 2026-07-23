@@ -68,7 +68,7 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn("extension:unhide_weapons(PACKMASTER_WEAPON_HIDE_REASON)", helper)
         self.assertIn("extension:unhide_weapons(FIRST_PERSON_WEAPON_HIDE_REASON)", helper)
         self.assertNotIn("extension:hide_weapons(", helper)
-        self.assertIn('Unit.has_animation_event(first_person_unit, "to_armed")', helper)
+        self.assertIn('unit_has_animation_event(first_person_unit, "to_armed")', helper)
         self.assertIn('Unit.animation_has_variable(first_person_unit, "armed")', helper)
         self.assertIn('extension:animation_set_variable("armed", 1)', helper)
         self.assertIn("update_first_person_weapon_pose(extension, equipment)", helper)
@@ -212,7 +212,18 @@ class RuntimePresentationTests(unittest.TestCase):
         )[1].split("local function set_unit_visible", 1)[0]
         self.assertIn("extension._pusfume_active_animation_unit", guard)
         self.assertIn("first_person_has_event and active_has_event", guard)
-        self.assertIn("Unit.has_animation_event(active_animation_unit, event)", guard)
+        self.assertIn("unit_has_animation_event(active_animation_unit, event)", guard)
+
+    def test_animation_event_queries_reject_controllerless_manual_clip_unit(self):
+        helper = self.native.split(
+            "local function unit_has_animation_event", 1
+        )[1].split("local function play_first_person_pose", 1)[0]
+        self.assertIn("Unit.has_animation_state_machine(unit)", helper)
+        self.assertIn("Unit.has_animation_event(unit, event_name)", helper)
+        guard = self.native.split(
+            "local function skip_missing_first_person_event", 1
+        )[1].split("local function set_unit_visible", 1)[0]
+        self.assertNotIn("Unit.has_animation_event(", guard)
 
     def test_first_person_probe_rearms_when_weapon_family_changes(self):
         self.assertIn(

@@ -146,6 +146,14 @@ local function ensure_native_skaven_first_person_packages(config)
     return all_loaded
 end
 
+local function unit_has_animation_event(unit, event_name)
+    return type(event_name) == "string"
+        and unit
+        and Unit.alive(unit)
+        and Unit.has_animation_state_machine(unit)
+        and Unit.has_animation_event(unit, event_name)
+end
+
 local function play_first_person_pose(extension, event_name)
     if extension._pusfume_active_skaven_role == "gutter_runner"
             and type(installed_config and installed_config.assassin_first_person_clips) == "table" then
@@ -157,8 +165,7 @@ local function play_first_person_pose(extension, event_name)
     local first_person_unit = extension._pusfume_active_animation_unit
         or extension.first_person_unit
 
-    if first_person_unit and Unit.alive(first_person_unit)
-            and Unit.has_animation_event(first_person_unit, event_name) then
+    if unit_has_animation_event(first_person_unit, event_name) then
         Unit.animation_event(first_person_unit, event_name)
         return true
     end
@@ -307,8 +314,7 @@ local function restore_first_person_weapons(extension)
     end
 
     local first_person_unit = extension.first_person_unit
-    local armed_event = first_person_unit
-        and Unit.has_animation_event(first_person_unit, "to_armed")
+    local armed_event = unit_has_animation_event(first_person_unit, "to_armed")
     local armed_variable = first_person_unit
         and Unit.animation_has_variable(first_person_unit, "armed")
 
@@ -1645,11 +1651,11 @@ local function skip_missing_first_person_event(extension, first_person_unit, eve
     end
 
     local active_animation_unit = extension._pusfume_active_animation_unit
-    local first_person_has_event = Unit.has_animation_event(first_person_unit, event)
+    local first_person_has_event = unit_has_animation_event(first_person_unit, event)
     local active_has_event = not active_animation_unit
         or not Unit.alive(active_animation_unit)
         or active_animation_unit == first_person_unit
-        or Unit.has_animation_event(active_animation_unit, event)
+        or unit_has_animation_event(active_animation_unit, event)
 
     if first_person_has_event and active_has_event then
         return false
