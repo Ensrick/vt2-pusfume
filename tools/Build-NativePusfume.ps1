@@ -1551,8 +1551,8 @@ textures = {
 '@ | Set-Content -LiteralPath (Join-Path $childMaterialRoot "pusfume_outfit_child.material") -Encoding utf8
 
     @'
-// Compiler placeholder only: the SDK cannot resolve mtr_skin source data.
-// Post-compile splicing replaces this complete payload with native mtr_skin.
+// Compiler placeholder only: the SDK cannot resolve enemy mtr_skin source data.
+// Post-compile splicing replaces this payload with the native Slave Rat child.
 parent_material = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/mtr_outfit"
 material_contexts = {
 	surface_material = ""
@@ -1881,6 +1881,7 @@ return {
     manual_skin_probe = false,
     root_animation_isolation = true,
     skin_name = "pusfume_skin",
+    skin_donor_package = "resource_packages/breeds/skaven_slave",
     third_person_unit = "units/pusfume/pusfume_3p",
 }
 "@ | Set-Content -LiteralPath (Join-Path $stageMod `
@@ -2083,7 +2084,7 @@ if ($ParentChildMaterial) {
 
 if ($SplicedGameChild) {
     # Preserve Janfon's authored material families. p_main uses the native
-    # Globadier skin response; equipment and armor use the native outfit
+    # Slave Rat skin response; equipment and armor use the native Globadier outfit
     # response. Applying either parent to every opaque slot was rejected by
     # live tests: skin-everywhere erased metal, outfit-everywhere blackened
     # flesh. Both payloads derive from installed data and never leave .build.
@@ -2154,27 +2155,38 @@ if ($SplicedGameChild) {
 
     Write-Host "Spliced game outfit child payload (768 bytes, restored metallic response) into $($splicedInto[0])"
 
-    $gameSkinChildPath = Join-Path $spliceExtractDir "D18F69CCD2253779.material"
+    $slaveGameBundle = Join-Path $GameBundleDir "f335e2e561364cb6"
+    if (-not (Test-Path -LiteralPath $slaveGameBundle -PathType Leaf)) {
+        throw "Installed Slave Rat game bundle not found: $slaveGameBundle"
+    }
+    $slaveExtractDir = Join-Path $generatedRoot "slave-rat-bundle-extract"
+    New-Item -ItemType Directory -Path $slaveExtractDir -Force | Out-Null
+    $result = Invoke-HiddenTool -FilePath $UnpackerExe -ArgumentList @(
+        "extract", $slaveGameBundle, $slaveExtractDir, "--flatten")
+    Assert-HiddenToolSuccess $result "Slave Rat donor bundle extraction"
+
+    $gameSkinChildPath = Join-Path $slaveExtractDir "FA4FAC2D0B40B919.material"
     if (-not (Test-Path -LiteralPath $gameSkinChildPath -PathType Leaf)) {
-        throw "Donor bundle extraction did not produce D18F69CCD2253779.material"
+        throw "Slave Rat bundle extraction did not produce FA4FAC2D0B40B919.material"
     }
     $skinSplicePayload = Join-Path $generatedRoot "spliced_skin_child_payload.bin"
     $result = Invoke-HiddenPython @(
         (Join-Path $repoRoot "tools\make_spliced_child.py"),
         "--extracted", $gameSkinChildPath,
-        "--resource", "hash:D18F69CCD2253779", "--expect-size", "496",
-        "--expect-parent", "BBBF9694DA11465F",
-        "--map", "ED67ABE0A2542484=C263ECB79A8DCEC0",
-        "--map", "4B7F05AED3F40BDF=A4215592F6297E57",
-        "--map", "A706B01BC822A417=818C87B860407405",
-        "--set-variable", "tint_skin=0,0,1",
-        "--set-variable", "tint_fur=0,0,1",
-        "--set-variable", "tint_color_power=1",
+        "--resource", "hash:FA4FAC2D0B40B919", "--expect-size", "608",
+        "--expect-parent", "D52A11EFCDA93CF6",
+        "--map", "F2FA955A20178C73=C263ECB79A8DCEC0",
+        "--map", "AE33E2E908F44F02=A4215592F6297E57",
+        "--map", "0802C219C1AD7262=818C87B860407405",
+        "--map", "E5904D9D75311D53=A4215592F6297E57",
+        "--set-variable", "tint_color_variation=32",
+        "--set-variable", "dirt_threshold=1",
         "--expect-texture", "texture_map_990e13c4=C263ECB79A8DCEC0",
         "--expect-texture", "texture_map_6e114674=A4215592F6297E57",
         "--expect-texture", "texture_map_8f6fa466=818C87B860407405",
+        "--expect-texture", "texture_map_c6238fdf=A4215592F6297E57",
         "--out", $skinSplicePayload)
-    Assert-HiddenToolSuccess $result "Spliced skin child payload generation"
+    Assert-HiddenToolSuccess $result "Spliced Slave Rat skin child payload generation"
 
     $skinSplicedInto = @()
     foreach ($bundleFile in (Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)) {
@@ -2197,7 +2209,7 @@ if ($SplicedGameChild) {
         throw "Expected the skin child in exactly 1 bundle, spliced $($skinSplicedInto.Count)"
     }
 
-    Write-Host "Spliced game skin child payload (496 bytes, neutral tint) into $($skinSplicedInto[0])"
+    Write-Host "Spliced Slave Rat skin child payload (608 bytes, neutral tint/dirt) into $($skinSplicedInto[0])"
 
     if ($firstPersonEnabled) {
         # The native human payload preserves the correct first-person skinning

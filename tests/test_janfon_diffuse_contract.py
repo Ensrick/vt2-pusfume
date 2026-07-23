@@ -52,8 +52,22 @@ class JanfonDiffuseContractTests(unittest.TestCase):
 
     def test_third_person_skin_and_outfit_keep_separate_native_parents(self):
         self.assertIn("pusfume_skin_child.material", BUILD)
-        self.assertIn('"--expect-size", "496"', BUILD)
-        self.assertIn('"--expect-parent", "BBBF9694DA11465F"', BUILD)
+        self.assertIn("FA4FAC2D0B40B919.material", BUILD)
+        self.assertIn('"--expect-size", "608"', BUILD)
+        self.assertIn('"--expect-parent", "D52A11EFCDA93CF6"', BUILD)
+        self.assertIn(
+            '"--set-variable", "tint_color_variation=32"',
+            BUILD,
+        )
+        self.assertIn('"--set-variable", "dirt_threshold=1"', BUILD)
+        self.assertIn(
+            '"--expect-texture", "texture_map_c6238fdf=A4215592F6297E57"',
+            BUILD,
+        )
+        self.assertIn(
+            'skin_donor_package = "resource_packages/breeds/skaven_slave"',
+            BUILD,
+        )
         self.assertIn("pusfume_outfit_child.material", BUILD)
         self.assertIn('"--expect-size", "768"', BUILD)
         self.assertIn('"--expect-parent", "3D25339231384C80"', BUILD)

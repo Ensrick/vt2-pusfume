@@ -10,6 +10,20 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Prepared v0.6.69 from the rejected v0.6.68 live result. Weapon visibility
+  now re-arms whenever either wielded first-person unit changes or a supported
+  hide reason returns, fixing Assassin claws that animated but remained hidden
+  after a role swap.
+- Replaced only `p_main`'s Globadier skin child with the installed Slave Rat
+  `mtr_skin` child that matches Janfon's mixed skin-and-leather body layout.
+  Janfon's diffuse, normal, and packed response remain authoritative; both
+  native skin-normal inputs use the authored atlas, while donor tint and dirt
+  variation are neutralized. The proven Globadier outfit child remains on
+  metal and apparatus, and fur, whiskers, hands, UVs, and geometry are
+  unchanged.
+- Rejected v0.6.68 in live testing: metallic apparatus rendered correctly,
+  but skin was black, leather/belts responded incorrectly, and Assassin claws
+  became invisible despite the custom clips continuing to advance.
 - Built, locally deployed, hash-verified, and uploaded v0.6.68 friends-only
   from source commit `53261d8` as Steam ManifestID
   `8652742101147699405`. All eight installed files match staging at

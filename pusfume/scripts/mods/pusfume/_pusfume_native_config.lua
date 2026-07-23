@@ -28,5 +28,6 @@ return {
     whisker_donor_package = false,
     root_animation_isolation = false,
     skin_name = "pusfume_skin",
+    skin_donor_package = false,
     third_person_unit = "units/pusfume/pusfume_3p",
 }

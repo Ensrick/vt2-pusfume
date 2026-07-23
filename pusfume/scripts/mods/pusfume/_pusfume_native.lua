@@ -292,12 +292,20 @@ local function restore_first_person_weapons(extension)
     local equipment = extension.inventory_extension:equipment()
     update_first_person_weapon_pose(extension, equipment)
 
-    if extension._pusfume_weapon_presentation_ready then
+    local right_weapon_unit = equipment and equipment.right_hand_wielded_unit
+    local left_weapon_unit = equipment and equipment.left_hand_wielded_unit
+    local weapon_unit = right_weapon_unit or left_weapon_unit
+    local hide_reasons = extension.hide_weapon_reasons or {}
+    local presentation_blocked = hide_reasons[PACKMASTER_WEAPON_HIDE_REASON]
+        or hide_reasons[FIRST_PERSON_WEAPON_HIDE_REASON]
+    local same_weapon_units =
+        extension._pusfume_presented_right_weapon_unit == right_weapon_unit
+        and extension._pusfume_presented_left_weapon_unit == left_weapon_unit
+
+    if extension._pusfume_weapon_presentation_ready
+            and same_weapon_units and not presentation_blocked then
         return true
     end
-
-    local weapon_unit = equipment and (equipment.right_hand_wielded_unit
-        or equipment.left_hand_wielded_unit)
 
     -- Wait until vanilla has spawned and linked the selected first-person
     -- weapon. Otherwise the visibility call succeeds too early and the later
@@ -341,19 +349,24 @@ local function restore_first_person_weapons(extension)
     extension._pusfume_weapons_hidden = false
     extension._pusfume_weapon_hide_pending = false
     extension._pusfume_weapon_presentation_ready = true
+    extension._pusfume_presented_right_weapon_unit = right_weapon_unit
+    extension._pusfume_presented_left_weapon_unit = left_weapon_unit
 
-    if not extension._pusfume_weapon_hide_logged then
+    if not same_weapon_units or presentation_blocked
+            or not extension._pusfume_weapon_hide_logged then
         extension._pusfume_weapon_hide_logged = true
         mod:info(
-            "[pusfume] First-person weapon armed slot=%s unit=%s root=%s scale=%s claw_nodes=%s/%s event=%s variable=%s remaining_hide_reasons=%s",
+            "[pusfume] First-person weapon armed slot=%s right=%s left=%s root=%s scale=%s claw_nodes=%s/%s event=%s variable=%s recovered_hidden=%s remaining_hide_reasons=%s",
             tostring(equipment.wielded_slot),
-            tostring(weapon_unit),
+            tostring(right_weapon_unit),
+            tostring(left_weapon_unit),
             tostring(Unit.local_position(weapon_unit, 0)),
             tostring(Unit.local_scale(weapon_unit, 0)),
             tostring(Unit.has_node(weapon_unit, "bottom_claw")),
             tostring(Unit.has_node(weapon_unit, "top_claw")),
             tostring(armed_event),
             tostring(armed_variable),
+            tostring(presentation_blocked == true),
             #remaining_reasons > 0 and table.concat(remaining_reasons, ",") or "none")
     end
 
@@ -361,6 +374,7 @@ local function restore_first_person_weapons(extension)
 end
 
 local DONOR_PACKAGE_REFERENCE = "pusfume_globadier_material"
+local SKIN_DONOR_PACKAGE_REFERENCE = "pusfume_slave_skin_material"
 local WHISKER_DONOR_PACKAGE_REFERENCE = "pusfume_laurel_material"
 local DONOR_TEXTURE_CHANNELS = {
     color = "texture_map_02af90f8",
@@ -476,6 +490,40 @@ local function ensure_whisker_donor_package(config)
     return state.whisker_donor_package_loaded
 end
 
+local function ensure_skin_donor_package(config)
+    if type(config.skin_donor_package) ~= "string" then
+        state.skin_donor_package_loaded = true
+        return true
+    end
+
+    if state.skin_donor_package_loaded then
+        return true
+    end
+
+    if not Managers.package or not can_get("package", config.skin_donor_package) then
+        if not state.skin_donor_package_error_logged then
+            state.skin_donor_package_error_logged = true
+            mod:error("[pusfume] Slave Rat skin donor package is unavailable: %s",
+                tostring(config.skin_donor_package))
+        end
+
+        return false
+    end
+
+    if not state.skin_donor_package_requested then
+        state.skin_donor_package_requested = true
+        Managers.package:load(config.skin_donor_package, SKIN_DONOR_PACKAGE_REFERENCE)
+        mod:info("[pusfume] Requested Slave Rat skin donor package: %s",
+            config.skin_donor_package)
+    end
+
+    state.skin_donor_package_loaded = Managers.package:has_loaded(
+        config.skin_donor_package,
+        SKIN_DONOR_PACKAGE_REFERENCE)
+
+    return state.skin_donor_package_loaded
+end
+
 local function ensure_first_person_material_package(config)
     if type(config.first_person_material_package) ~= "string" then
         return false
@@ -519,7 +567,8 @@ local function ensure_child_package(config)
         return true
     end
 
-    if not state.donor_package_loaded or not state.whisker_donor_package_loaded
+    if not state.donor_package_loaded or not state.skin_donor_package_loaded
+            or not state.whisker_donor_package_loaded
             or not mod.load_package or not mod.package_status then
         return false
     end
@@ -608,6 +657,7 @@ local function apply_donor_material_to_unit(unit, config)
     -- is the shared validity check for both preview-world and gameplay units.
     if not config.donor_material_enabled or not unit or not Unit.alive(unit)
             or not ensure_donor_package(config)
+            or not ensure_skin_donor_package(config)
             or not ensure_whisker_donor_package(config) then
         return false
     end
@@ -1983,6 +2033,8 @@ local function switch_first_person_rig(extension, inventory_extension, role)
             or extension._pusfume_active_skaven_role ~= role then
         extension._pusfume_first_person_probe_logged = nil
         extension._pusfume_first_person_probe_frames = 0
+        extension._pusfume_weapon_presentation_ready = nil
+        extension._pusfume_weapon_hide_logged = nil
     end
 
     local custom_assassin = role == "gutter_runner"
@@ -2624,6 +2676,15 @@ function M.shutdown(config)
         state.whisker_donor_package_loaded = false
         state.whisker_donor_package_error_logged = false
         mod:info("[pusfume] Released Laurel whisker donor package")
+    end
+
+    if state.skin_donor_package_requested and Managers.package then
+        Managers.package:unload(
+            config.skin_donor_package, SKIN_DONOR_PACKAGE_REFERENCE)
+        state.skin_donor_package_requested = false
+        state.skin_donor_package_loaded = false
+        state.skin_donor_package_error_logged = false
+        mod:info("[pusfume] Released Slave Rat skin donor package")
     end
 
     if state.donor_package_requested and Managers.package then

@@ -77,6 +77,16 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn('wielded_slot == "slot_ranged" and "to_warpfire_thrower"', self.native)
         self.assertNotIn("to_packmaster_claw", self.native)
         self.assertIn("extension._pusfume_weapon_hide_pending = false", self.native)
+        self.assertIn(
+            "extension._pusfume_presented_right_weapon_unit == right_weapon_unit",
+            helper,
+        )
+        self.assertIn(
+            "extension._pusfume_presented_left_weapon_unit == left_weapon_unit",
+            helper,
+        )
+        self.assertIn("and same_weapon_units and not presentation_blocked", helper)
+        self.assertIn("recovered_hidden=%s", helper)
         self.assertIn("restore_first_person_weapons(extension)", self.native)
 
     def test_weapon_baseline_uses_native_skaven_first_person_contract(self):
@@ -270,6 +280,10 @@ class RuntimePresentationTests(unittest.TestCase):
         )
         self.assertIn(
             "extension._pusfume_first_person_probe_frames = 0",
+            self.native,
+        )
+        self.assertIn(
+            "extension._pusfume_weapon_presentation_ready = nil",
             self.native,
         )
 
