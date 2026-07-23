@@ -22,6 +22,9 @@ request rather than in release notes.
 - Removed the obsolete runtime Laurel-package requirement from spliced builds.
   The complete whisker child payload is embedded during compilation, so
   preflight now evaluates the shipped material instead of an unused hat unit.
+- Deployed the friends-only v0.6.64 candidate from source commit `c917c00` as
+  Workshop ManifestID `989271468751950746`. All eight installed files match
+  staging at `177,122,644` bytes.
 - Prepared v0.6.63 from the rejected v0.6.62 lighting test. The body shader was
   not the cause: clearing `MA.alpha` through GDI+ premultiplied and erased the
   packed metallic/AO RGB response, leaving almost no ambient response in world

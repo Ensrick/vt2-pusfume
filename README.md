@@ -125,6 +125,9 @@ opaque atlas AO channel and retargets each authored rotation through the source
 and donor local-rest matrices before FBX export. Per-frame Blender deformation
 bounds now reject clips that leave the first-person envelope. The embedded
 whisker child also no longer falsely requires the original Laurel package.
+The v0.6.64 candidate is source commit `c917c00`, friends-only Workshop
+ManifestID `989271468751950746`; all eight installed files hash-match staging
+at `177,122,644` bytes. Live verification remains open.
 Exact Packmaster dragging remains a larger career-state feature. The localized
 chest UV/material seam is tracked separately in issue #28.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person

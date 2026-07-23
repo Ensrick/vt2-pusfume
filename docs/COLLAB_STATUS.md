@@ -11,7 +11,7 @@ architecture and reproduction contract are in
 
 ## Latest shipment
 
-- 2026-07-22 local: v0.6.63 LIVE RESULT / v0.6.64 CANDIDATE `[unverified]` -
+- 2026-07-22 local: v0.6.63 LIVE RESULT / v0.6.64 SHIPPED `[unverified]` -
   packed-response preservation improved some third-person surfaces, but areas
   using zero donor AO remained black. The Assassin mesh still locked across
   the camera because rotation-only sanitation did not address the actual rest-
@@ -21,7 +21,9 @@ architecture and reproduction contract are in
   onto the exact donor-rest armature. Blender reports `0.00000250` maximum
   rebind error and validates every animation frame within a `1.5 m` maximum
   rest-displacement envelope. The obsolete Laurel runtime package dependency
-  is also removed for the embedded whisker child. Deployment pending.
+  is also removed for the embedded whisker child. Source commit `c917c00`,
+  friends-only Workshop ManifestID `989271468751950746`; all eight installed
+  files hash-match staging at `177,122,644` bytes.
 - 2026-07-22 local: v0.6.62 LIVE RESULT / v0.6.63 SHIPPED - the native
   `mtr_skin` substitution did not stop the third-person body from becoming a
   black silhouette in low world light. Atlas inspection found the actual

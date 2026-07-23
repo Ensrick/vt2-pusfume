@@ -86,9 +86,9 @@ Blades and exercise each light attack, heavy attack, push-stab, block, and
 release. No action may leave a static twisted mesh over the camera. The log
 must enumerate Janfon's `claws_*` clips and return to `claws_idle` after each
 non-looping action.
-Test source commit `5fd1f9c`, friends-only Workshop ManifestID
-`2559622198151416662`; all eight installed files hash-match staging at
-`179,239,055` bytes.
+Test source commit `c917c00`, friends-only Workshop ManifestID
+`989271468751950746`; all eight installed files hash-match staging at
+`177,122,644` bytes.
 
 The v0.6.63 live result was partial: some body surfaces improved, others stayed
 black, and the Assassin arms still became a rigid screen-blocking mesh. In
