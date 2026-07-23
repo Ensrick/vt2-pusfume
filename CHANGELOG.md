@@ -10,6 +10,18 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Accepted the v0.6.71 leather correction in live testing. The green orb
+  remained even though the log proved both hidden Warpfire units received the
+  new reset, eliminating the ranged weapon as its owner.
+- Prepared v0.6.72 after auditing Janfon's exact shipping FBX in Blender 5.2.
+  The source `p_eye` material contains two real head-height eye islands plus
+  one inherited 482-vertex Globadier backpack globe. The native FBX
+  preparation now removes only that low globe behind strict component,
+  position, and topology gates while preserving both eyes.
+- Confirmed the current Assassin blocker belongs to runtime integration, not
+  missing work from Janfon. His nine authored clips pass deformation and
+  native compilation checks; the v0.6.71 live log shows equip, idle, and both
+  attack clips advancing through their expected durations on the 99-bone rig.
 - Built, locally deployed, and uploaded v0.6.71 from source commit `d5c108c`
   as friends-only Steam ManifestID `5522787303386064499` at 2026-07-23
   12:01:42 America/Chicago. All eight installed files are SHA-256-identical
