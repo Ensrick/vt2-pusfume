@@ -90,101 +90,6 @@ def connected_vertex_islands(mesh):
     return islands
 
 
-def remove_globadier_eye_globe(mesh_object):
-    """Remove the backpack globe accidentally sharing the emissive eye slot."""
-    mesh_data = mesh_object.data
-    material_names = [
-        material.name.split(".", 1)[0] for material in mesh_data.materials
-    ]
-    if "p_eye" not in material_names:
-        raise RuntimeError("The Pusfume body is missing its p_eye material")
-
-    eye_material_index = material_names.index("p_eye")
-    eye_polygons = [
-        polygon
-        for polygon in mesh_data.polygons
-        if polygon.material_index == eye_material_index
-    ]
-    vertex_to_polygons = {}
-    for polygon in eye_polygons:
-        for vertex_index in polygon.vertices:
-            vertex_to_polygons.setdefault(vertex_index, []).append(polygon.index)
-
-    polygons_by_index = {polygon.index: polygon for polygon in eye_polygons}
-    unseen = set(polygons_by_index)
-    components = []
-    while unseen:
-        seed = unseen.pop()
-        pending = [seed]
-        polygon_indices = {seed}
-        vertex_indices = set()
-        while pending:
-            polygon_index = pending.pop()
-            polygon = polygons_by_index[polygon_index]
-            for vertex_index in polygon.vertices:
-                vertex_indices.add(vertex_index)
-                for neighbor_index in vertex_to_polygons[vertex_index]:
-                    if neighbor_index in unseen:
-                        unseen.remove(neighbor_index)
-                        pending.append(neighbor_index)
-                        polygon_indices.add(neighbor_index)
-
-        coordinates = [mesh_data.vertices[index].co for index in vertex_indices]
-        components.append(
-            {
-                "max_z": max(coordinate.z for coordinate in coordinates),
-                "min_z": min(coordinate.z for coordinate in coordinates),
-                "polygon_indices": polygon_indices,
-                "polygons": len(polygon_indices),
-                "vertices": len(vertex_indices),
-            }
-        )
-
-    # Janfon's handoff contains two head-height eye islands and one inherited
-    # Globadier backpack globe below the chest. A strict topology/position gate
-    # prevents a future asset revision from silently deleting valid geometry.
-    backpack_components = [
-        component for component in components if component["max_z"] < 1.2
-    ]
-    head_components = [
-        component for component in components if component["min_z"] > 1.2
-    ]
-    if len(components) != 3 or len(backpack_components) != 1 or len(head_components) != 2:
-        raise RuntimeError(
-            "Pusfume p_eye component contract changed: "
-            f"components={len(components)} backpack={len(backpack_components)} "
-            f"head={len(head_components)}"
-        )
-
-    backpack = backpack_components[0]
-    if backpack["vertices"] != 482 or backpack["polygons"] not in (512, 960):
-        raise RuntimeError(
-            "Globadier backpack globe topology changed: "
-            f"vertices={backpack['vertices']} polygons={backpack['polygons']}"
-        )
-
-    editable = bmesh.new()
-    editable.from_mesh(mesh_data)
-    editable.faces.ensure_lookup_table()
-    remove_faces = [
-        editable.faces[index] for index in sorted(backpack["polygon_indices"])
-    ]
-    bmesh.ops.delete(editable, geom=remove_faces, context="FACES")
-    loose_vertices = [vertex for vertex in editable.verts if not vertex.link_faces]
-    if loose_vertices:
-        bmesh.ops.delete(editable, geom=loose_vertices, context="VERTS")
-    editable.to_mesh(mesh_data)
-    editable.free()
-    mesh_data.update()
-
-    remaining_eye_components = len(head_components)
-    return {
-        "removed_polygons": backpack["polygons"],
-        "removed_vertices": backpack["vertices"],
-        "remaining_eye_components": remaining_eye_components,
-    }
-
-
 def edge_lengths(mesh_object):
     matrix = mesh_object.matrix_world
     lengths = {}
@@ -426,7 +331,6 @@ def main(model_path, walk_path, output_path, fur_path=None, legacy_body_path=Non
 
     model_armature = model_armatures[0]
     model_mesh = model_meshes[0]
-    removed_globadier_globe = remove_globadier_eye_globe(model_mesh)
     if bool(fur_path) != bool(legacy_body_path):
         raise RuntimeError("Legacy fur and legacy body paths must be supplied together")
     fur_result = (
@@ -555,7 +459,6 @@ def main(model_path, walk_path, output_path, fur_path=None, legacy_body_path=Non
         "max_vertex_delta": max_vertex_delta,
         "output": output_path,
         "output_bytes": os.path.getsize(output_path),
-        "removed_globadier_globe": removed_globadier_globe,
         "vertices": len(model_mesh.data.vertices),
     }
     print("PUSFUME_ANIMATED_FBX=" + json.dumps(result, sort_keys=True))

@@ -10,6 +10,10 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Rejected v0.6.72 in live testing. The removed 482-vertex component was the
+  valid bottom of Janfon's backpack, leaving a visible hole, while the separate
+  Globadier particle/light orb remained. v0.6.73 restores that geometry and
+  moves the investigation back to the spawned effect owner.
 - Built, locally deployed, and uploaded v0.6.72 from source commit `9050192`
   as friends-only Steam ManifestID `5520324437947310881` at 2026-07-23
   12:51:53 America/Chicago. All eight installed files are SHA-256-identical

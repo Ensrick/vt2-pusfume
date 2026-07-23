@@ -122,16 +122,27 @@ class RuntimePresentationTests(unittest.TestCase):
 
     def test_inherited_versus_equipment_particles_are_removed_at_the_source(self):
         helper = self.native.split(
-            "local function suppress_inherited_equipment_particles", 1
+            "local function clear_linked_particle_metadata", 1
         )[1].split("local function hide_assassin_third_person_weapons", 1)[0]
         self.assertIn('Unit.has_data(weapon_unit, "particles")', helper)
         self.assertIn("pcall(World.destroy_particles", helper)
         self.assertIn('"particles", "node_part_pairs", 0', helper)
-        self.assertIn('Unit.set_data(weapon_unit, "has_linked_particles", nil)', helper)
+        self.assertIn('Unit.set_data(unit, "has_linked_particles", nil)', helper)
+        self.assertIn("extension._tp_unit_mesh", helper)
         self.assertIn(
             "suppress_inherited_equipment_particles(extension, unit)",
             self.native,
         )
+
+    def test_pusfume_owner_particles_are_blocked_before_cosmetics_tweaker(self):
+        helper = self.native.split(
+            "local function install_owner_particle_guard", 1
+        )[1].split("local function hide_assassin_third_person_weapons", 1)[0]
+        self.assertIn('mod:hook(GearUtils, "create_equipment"', helper)
+        self.assertIn("career_name == registry.CAREER_NAME", helper)
+        self.assertIn("clear_linked_particle_metadata(world, owner_unit)", helper)
+        self.assertIn("units_guarded=%d metadata_cleared=%d", helper)
+        self.assertIn("install_owner_particle_guard(registry)", self.native)
 
     def test_weapon_baseline_uses_native_skaven_first_person_contract(self):
         self.assertIn("SKAVEN_FIRST_PERSON_BASE", self.native)

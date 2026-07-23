@@ -15,12 +15,18 @@ class AnimationHandoffContractTests(unittest.TestCase):
             "tools/audit_blend_contract.py",
             "tools/extract_pusfume_authored_idle.py",
             "tools/export_pusfume_1p_actions.py",
+            "tools/prepare_animated_pusfume_fbx.py",
             "tools/render_fbx_animation_samples.py",
             "tools/retarget_pusfume_walk.py",
             "tools/validate_pusfume_animation_contract.py",
         ):
             with self.subTest(path=relative_path):
                 ast.parse(self.read(relative_path), filename=relative_path)
+
+    def test_animation_preparation_never_deletes_the_backpack_bottom(self):
+        preparer = self.read("tools/prepare_animated_pusfume_fbx.py")
+        self.assertNotIn("remove_globadier_eye_globe", preparer)
+        self.assertNotIn("Globadier backpack globe topology changed", preparer)
 
     def test_native_build_keeps_idle_and_walk_inputs_separate(self):
         build = self.read("tools/Build-NativePusfume.ps1")

@@ -79,6 +79,8 @@ local state = {
     whisker_material_applied = false,
     fur_material_applied = false,
     dialogue_voice_hook_installed = false,
+    owner_particle_guard_installed = false,
+    owner_particle_guard_logged = false,
     donor_texture_errors = {},
     donor_weapons_hidden = false,
     inactive_warpfire_units = setmetatable({}, { __mode = "k" }),
@@ -942,6 +944,28 @@ local function hide_donor_weapons(extension, unit, config)
     end
 end
 
+local function clear_linked_particle_metadata(world, unit)
+    if not unit or not Unit.alive(unit) then
+        return false
+    end
+
+    local has_particles = Unit.has_data(unit, "particles")
+    local has_linked_particle = Unit.has_data(unit, "has_linked_particles")
+    local particle_id = has_linked_particle
+        and Unit.get_data(unit, "has_linked_particles")
+
+    if particle_id and world then
+        pcall(World.destroy_particles, world, particle_id)
+    end
+    if has_particles then
+        Unit.set_data(unit, "particles", "node_part_pairs", 0)
+    end
+    Unit.set_data(unit, "has_linked_particles", nil)
+    Unit.set_data(unit, "inactive_particles", false)
+
+    return has_particles or has_linked_particle
+end
+
 local function suppress_inherited_equipment_particles(extension, unit)
     if not ALIVE[unit] or not extension.world then
         return
@@ -956,6 +980,15 @@ local function suppress_inherited_equipment_particles(extension, unit)
     end
 
     local suppressed = 0
+    for _, owner_unit in pairs({
+            unit,
+            extension._tp_unit_mesh,
+        }) do
+        if clear_linked_particle_metadata(extension.world, owner_unit) then
+            suppressed = suppressed + 1
+        end
+    end
+
     for _, slot_data in pairs(slots) do
         if type(slot_data) == "table" then
             for _, weapon_unit in pairs({
@@ -972,24 +1005,11 @@ local function suppress_inherited_equipment_particles(extension, unit)
                         and not state.particle_suppressed_units[weapon_unit]
                         and (Unit.has_data(weapon_unit, "particles")
                             or Unit.has_data(weapon_unit, "has_linked_particles")) then
-                    local particle_id = Unit.has_data(
-                            weapon_unit, "has_linked_particles")
-                        and Unit.get_data(weapon_unit, "has_linked_particles")
-
-                    if particle_id then
-                        pcall(World.destroy_particles, extension.world, particle_id)
-                    end
-
                     -- Material-Hijack reads this native Versus metadata whenever
                     -- equipment spawns or visibility returns. Clear the source
                     -- count as well as the already-linked particle so it cannot
                     -- recreate the Globadier/Warpfire idle glow.
-                    if Unit.has_data(weapon_unit, "particles") then
-                        Unit.set_data(
-                            weapon_unit, "particles", "node_part_pairs", 0)
-                    end
-                    Unit.set_data(weapon_unit, "has_linked_particles", nil)
-                    Unit.set_data(weapon_unit, "inactive_particles", false)
+                    clear_linked_particle_metadata(extension.world, weapon_unit)
                     state.particle_suppressed_units[weapon_unit] = true
                     suppressed = suppressed + 1
                 end
@@ -1002,6 +1022,52 @@ local function suppress_inherited_equipment_particles(extension, unit)
             "[pusfume] Suppressed inherited Versus equipment particles units=%d",
             suppressed)
     end
+end
+
+local function install_owner_particle_guard(registry)
+    if state.owner_particle_guard_installed or not GearUtils then
+        return state.owner_particle_guard_installed
+    end
+
+    mod:hook(GearUtils, "create_equipment", function(func, world, slot_name,
+            item_data, unit_1p, unit_3p, is_bot, unit_template,
+            extra_extension_data, ammo_percent, override_item_template,
+            override_item_units, career_name)
+        local career_extension = unit_3p and Unit.alive(unit_3p)
+            and ScriptUnit.has_extension(unit_3p, "career_system")
+        local is_pusfume = career_name == registry.CAREER_NAME
+            or career_extension
+                and type(career_extension.career_name) == "function"
+                and career_extension:career_name() == registry.CAREER_NAME
+
+        if is_pusfume then
+            local guarded = 0
+            local metadata_cleared = 0
+            for _, owner_unit in pairs({ unit_1p, unit_3p }) do
+                if owner_unit and Unit.alive(owner_unit) then
+                    guarded = guarded + 1
+                    if clear_linked_particle_metadata(world, owner_unit) then
+                        metadata_cleared = metadata_cleared + 1
+                    end
+                end
+            end
+
+            if not state.owner_particle_guard_logged then
+                state.owner_particle_guard_logged = true
+                mod:info(
+                    "[pusfume] Owner particle creation blocked before equipment spawn units_guarded=%d metadata_cleared=%d slot=%s",
+                    guarded, metadata_cleared, tostring(slot_name))
+            end
+        end
+
+        return func(world, slot_name, item_data, unit_1p, unit_3p, is_bot,
+            unit_template, extra_extension_data, ammo_percent,
+            override_item_template, override_item_units, career_name)
+    end)
+
+    state.owner_particle_guard_installed = true
+
+    return true
 end
 
 local function hide_assassin_third_person_weapons(unit)
@@ -2655,6 +2721,7 @@ function M.install(registry, config)
     install_cosmetic_hook(registry, config)
     local first_person_hook_ready = install_first_person_hook(registry, config)
     install_dialogue_voice_hook(registry)
+    install_owner_particle_guard(registry)
     install_probe_hook()
     install_material_probe_command(config)
 
