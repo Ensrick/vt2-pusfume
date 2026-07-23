@@ -21,7 +21,7 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The next friends-only live-test candidate is **v0.6.65-dev**. It retains the
+The next friends-only live-test candidate is **v0.6.67-dev**. It retains the
 weapon-aware dual first-person system using Janfon's assets: prototype Versus
 weapons use his 99-bone Skaven attachment, while ordinary hero weapons use his
 160-bone donor-rest human attachment.
@@ -144,6 +144,19 @@ Stingray API call without changing any model or material. The deployed
 candidate is source commit `0f27275`, friends-only Workshop ManifestID
 `5717799537931992801`; all eight installed files hash-match staging at
 `179,170,445` bytes.
+The v0.6.66 live test reached and sampled the custom Assassin clip, but vanilla
+`WeaponUnitExtension.start_action` then sent `equip_interrupt` directly to the
+same controllerless unit and asserted outside the existing event guards. It
+also confirmed the bright/matte metal and dark non-fur regression remained.
+v0.6.67 suppresses only that direct equip blend event while the manual
+Assassin driver owns the rig, then restores the shared action table. For the
+body, it restores the last visually better 768-byte Globadier `mtr_outfit`
+child retained through v0.6.61 while preserving raw packed channels and the
+later `p_main`-only AO floor. Fur, whiskers, both first-person hand materials,
+geometry, UVs, weights, and animations are unchanged. The deployed candidate
+is source commit `fef8240`, friends-only Workshop ManifestID
+`1645135128086142298`; all eight installed files are SHA-256-identical to
+staging at `179,161,925` bytes.
 Exact Packmaster dragging remains a larger career-state feature. The localized
 chest UV/material seam is tracked separately in issue #28.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person

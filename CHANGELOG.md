@@ -10,6 +10,11 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, locally deployed, hash-verified, and uploaded v0.6.67 friends-only
+  from source commit `fef8240` as Steam ManifestID
+  `1645135128086142298`. All eight installed files match staging at
+  `179,161,925` bytes; 136 tests, source preflight, native compilation,
+  skeleton, animation, and material gates pass.
 - Prepared v0.6.67 after v0.6.66 still rendered every metallic apparatus slot
   bright/matte and every non-fur surface dark. The regression began when
   v0.6.62 replaced the last visually better Globadier `mtr_outfit` child with

@@ -11,6 +11,20 @@ architecture and reproduction contract are in
 
 ## Latest shipment
 
+- 2026-07-22 local: v0.6.66 LIVE RESULT / v0.6.67 SHIPPED `[unverified]` -
+  Janfon's Assassin equip clip sampled correctly through about `0.706 s`, then
+  vanilla `WeaponUnitExtension.start_action` bypassed the existing guards and
+  sent `equip_interrupt` directly to the intentionally controllerless Skaven
+  unit. v0.6.67 suppresses only that equip blend event while the manual driver
+  owns the rig and restores the action setting afterward. The same test
+  confirmed bright/matte metal and dark non-fur surfaces: the body had
+  accidentally retained v0.6.62's rejected 496-byte `mtr_skin` child.
+  v0.6.67 restores the last visually better 768-byte Globadier `mtr_outfit`
+  child while retaining raw packed-channel preservation and the `p_main`-only
+  AO floor. Fur and both first-person hand materials are unchanged. Source
+  `fef8240`; Steam friends-only ManifestID `1645135128086142298`; all eight
+  installed files are SHA-256-identical to staging at `179,161,925` bytes.
+  136 tests and all source/native gates pass.
 - 2026-07-22 local: v0.6.65 LIVE RESULT / v0.6.66 SHIPPED `[unverified]` -
   Assassin equip reached the new manual-time driver and sampled its clip
   correctly through `0.707 s`, then the fallback `idle` guard called

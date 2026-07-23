@@ -1,6 +1,6 @@
 # Pusfume Live Test Checklist
 
-Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.65-dev`
+Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.67-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
@@ -116,6 +116,23 @@ Repeat the same single-attack, chain/block, and three-lighting-context test on
 source commit `0f27275`, friends-only Workshop ManifestID
 `5717799537931992801`; all eight installed files are SHA-256-identical to
 staging at `179,170,445` bytes.
+
+The v0.6.66 live test still crashed because vanilla `start_action` bypassed the
+guard and sent `equip_interrupt` directly to the controllerless Assassin rig.
+It also confirmed bright/matte apparatus metal and dark non-fur surfaces.
+Test v0.6.67 in this order:
+
+1. Open inventory and verify the apparatus metal has visible shine and depth.
+2. Inspect the non-fur third-person body in sunlight and in deep shadow; record
+   whether either context is too bright, matte, or black.
+3. Equip `Assassin Blades (Janfon Prototype)`, wait for idle, perform one light
+   attack, then a full light chain and block/release. No action may crash or
+   leave a rigid mesh across the camera.
+
+Fur, whiskers, and both first-person hand materials are intentionally unchanged
+to keep this A/B test isolated. Test source commit `fef8240`, friends-only
+Workshop ManifestID `1645135128086142298`; all eight installed files are
+SHA-256-identical to staging at `179,161,925` bytes.
 
 The v0.6.44 candidate replaces the native Skaven first-person fallback with
 Janfon's human-rigged arms and opens all five heroes' melee and ranged weapons
