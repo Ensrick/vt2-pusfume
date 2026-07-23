@@ -10,6 +10,11 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, locally deployed, and uploaded v0.6.71 from source commit `d5c108c`
+  as friends-only Steam ManifestID `5522787303386064499` at 2026-07-23
+  12:01:42 America/Chicago. All eight installed files are SHA-256-identical
+  to staging at `178,141,621` bytes; 145 tests and source preflight pass.
+  Live acceptance of the leather and inactive-Warpfire fixes remains pending.
 - Accepted the v0.6.70 body, fur, metal, and hand presentation in live
   testing. Two focused defects remain: Globadier leather straps render
   pale/white, and an inactive Warpfire visual can leave a floating green
