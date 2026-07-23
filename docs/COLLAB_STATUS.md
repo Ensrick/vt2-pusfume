@@ -11,6 +11,13 @@ architecture and reproduction contract are in
 
 ## Latest shipment
 
+- 2026-07-22 local: v0.6.64 LIVE RESULT / v0.6.65 CANDIDATE `[unverified]` -
+  a single Assassin attack still left a rigid mesh over the camera and the
+  atlas-wide neutral AO made the third-person body bright/matte. The log showed
+  clip IDs `11` through `18` overlapping and a `1.97 s` attack replaced after
+  about `0.72 s`. v0.6.65 uses the proven manual-time API with one clip owner
+  and action-window playback. AO `255` is reverted everywhere; only `p_main`
+  receives a floor of `64`. Fur and first-person hand materials are unchanged.
 - 2026-07-22 local: v0.6.63 LIVE RESULT / v0.6.64 SHIPPED `[unverified]` -
   packed-response preservation improved some third-person surfaces, but areas
   using zero donor AO remained black. The Assassin mesh still locked across

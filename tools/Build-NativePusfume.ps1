@@ -1153,7 +1153,11 @@ function Set-PusfumeEmissionMask {
         [Parameter(Mandatory)][string]$AtlasPath,
         [Parameter(Mandatory)][ValidateSet("blue", "alpha")][string]$Channel,
         [switch]$StampEye,
-        [switch]$NeutralAo,
+        [ValidateRange(0, 255)][int]$AoFloor = 0,
+        [int]$AoOriginX,
+        [int]$AoOriginY,
+        [int]$AoWidth,
+        [int]$AoHeight,
         [string]$EyeMaskPath,
         [int]$AtlasSize,
         [int]$EyeOriginX,
@@ -1208,16 +1212,51 @@ function Set-PusfumeEmissionMask {
             }
         }
 
+        function Set-PackedChannelFloor {
+            param(
+                [Drawing.Bitmap]$Bitmap,
+                [int]$ByteOffset,
+                [byte]$Minimum,
+                [Drawing.Rectangle]$Region
+            )
+
+            $data = $Bitmap.LockBits(
+                $full,
+                [Drawing.Imaging.ImageLockMode]::ReadWrite,
+                [Drawing.Imaging.PixelFormat]::Format32bppArgb)
+            try {
+                $stride = [Math]::Abs($data.Stride)
+                $bytes = New-Object byte[] ($stride * $height)
+                [Runtime.InteropServices.Marshal]::Copy(
+                    $data.Scan0, $bytes, 0, $bytes.Length)
+                foreach ($row in $Region.Top..($Region.Bottom - 1)) {
+                    $rowOffset = $row * $stride
+                    foreach ($column in $Region.Left..($Region.Right - 1)) {
+                        $offset = $rowOffset + $column * 4 + $ByteOffset
+                        if ($bytes[$offset] -lt $Minimum) {
+                            $bytes[$offset] = $Minimum
+                        }
+                    }
+                }
+                [Runtime.InteropServices.Marshal]::Copy(
+                    $bytes, 0, $data.Scan0, $bytes.Length)
+            } finally {
+                $Bitmap.UnlockBits($data)
+            }
+        }
+
         # ColorMatrix writes premultiply RGB when alpha becomes zero. These are
         # packed data textures, not composited color images, so edit the BGRA
         # bytes directly and retain metallic/AO/normal data verbatim.
         $channelOffset = if ($Channel -eq "blue") { 0 } else { 3 }
         Set-PackedChannel $output @($channelOffset) @([byte]0) $full
-        if ($NeutralAo) {
-            # Janfon's body UVs cover response-map regions whose donor AO is
-            # zero. Neutralize AO only; preserve metallic, unused response,
-            # emission, normals, diffuse, and every authored UV unchanged.
-            Set-PackedChannel $output @(1) @([byte]255) $full
+        if ($AoFloor -gt 0) {
+            # v0.6.64 proved that neutralizing the whole atlas destroys valid
+            # armor/outfit AO and produces a bright matte model. Clamp only the
+            # p_main body tile enough to prevent a zero ambient response.
+            $aoRegion = New-Object Drawing.Rectangle(
+                $AoOriginX, $AoOriginY, $AoWidth, $AoHeight)
+            Set-PackedChannelFloor $output 1 ([byte]$AoFloor) $aoRegion
         }
 
         # 2) Optional eye stamp: route the mask luminance (source red) into the
@@ -1321,6 +1360,7 @@ function Assert-PusfumeBodyResponse {
 
             $samples = 0
             $mismatches = 0
+            $corrected = 0
             [long]$aoTotal = 0
             # p_main occupies the left 2048x4096 body tile. Sampling every 16
             # pixels is deterministic and catches channel-wide packing loss.
@@ -1334,20 +1374,26 @@ function Assert-PusfumeBodyResponse {
                             $mismatches++
                         }
                     }
-                    if ($packedBytes[$packedOffset + 1] -ne 255) {
+                    $expectedAo = [Math]::Max(64, $referenceBytes[$referenceOffset + 1])
+                    if ($packedBytes[$packedOffset + 1] -ne $expectedAo) {
                         $mismatches++
+                    }
+                    if ($expectedAo -ne $referenceBytes[$referenceOffset + 1]) {
+                        $corrected++
                     }
                     $aoTotal += $packedBytes[$packedOffset + 1]
                     $samples++
                 }
             }
             $meanAo = $aoTotal / $samples
-            if ($mismatches -ne 0 -or $meanAo -ne 255) {
+            if ($mismatches -ne 0 -or $corrected -eq 0) {
                 throw ("Packed Pusfume body response failed: samples=$samples " +
-                    "response_mismatches=$mismatches mean_ao=$([Math]::Round($meanAo, 2))")
+                    "response_mismatches=$mismatches corrected=$corrected " +
+                    "mean_ao=$([Math]::Round($meanAo, 2))")
             }
             Write-Host ("Packed Pusfume body response preserved: samples=$samples " +
-                "response_mismatches=0 mean_ao=$([Math]::Round($meanAo, 2))")
+                "response_mismatches=0 corrected=$corrected floor=64 " +
+                "mean_ao=$([Math]::Round($meanAo, 2))")
         } finally {
             $reference.UnlockBits($referenceData)
             $packed.UnlockBits($packedData)
@@ -1407,9 +1453,12 @@ if ($EmissionProbe) {
     $eyeLayout = Get-Content -LiteralPath (Join-Path $repoRoot `
         "tools\pusfume_atlas_layout.json") -Raw | ConvertFrom-Json
     $eyeTile = $eyeLayout.tiles.eye
+    $bodyTile = $eyeLayout.tiles.body
     Set-PusfumeEmissionMask `
         -AtlasPath (Join-Path $textureRoot "pusfume_atlas_ma.png") -Channel "alpha" `
-        -StampEye -NeutralAo `
+        -StampEye -AoFloor 64 `
+        -AoOriginX ([int]$bodyTile.origin[0]) -AoOriginY ([int]$bodyTile.origin[1]) `
+        -AoWidth ([int]$bodyTile.size[0]) -AoHeight ([int]$bodyTile.size[1]) `
         -EyeMaskPath (Join-Path $textureSourcePath "skaven_eyemask.png") `
         -AtlasSize ([int]$eyeLayout.atlas_size) `
         -EyeOriginX ([int]$eyeTile.origin[0]) -EyeOriginY ([int]$eyeTile.origin[1]) `

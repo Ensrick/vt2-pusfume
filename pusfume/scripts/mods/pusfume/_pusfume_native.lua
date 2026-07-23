@@ -147,6 +147,13 @@ local function ensure_native_skaven_first_person_packages(config)
 end
 
 local function play_first_person_pose(extension, event_name)
+    if extension._pusfume_active_skaven_role == "gutter_runner"
+            and type(installed_config and installed_config.assassin_first_person_clips) == "table" then
+        -- Janfon's clips are driven directly below. Re-entering the native
+        -- Gutter Runner state machine here would overwrite their bone output.
+        return true
+    end
+
     local first_person_unit = extension._pusfume_active_animation_unit
         or extension.first_person_unit
 
@@ -158,6 +165,15 @@ local function play_first_person_pose(extension, event_name)
 
     return false
 end
+
+local ASSASSIN_CLIP_TARGET_DURATION = {
+    claws_equip = 1.1,
+    claws_light_attack_right_first = 0.7,
+    claws_light_attack_right_second = 0.7,
+    claws_light_attack_stab_left = 0.7,
+    claws_light_attack_stab_left_hit = 0.7,
+    claws_light_attack_last = 0.7,
+}
 
 local function play_custom_first_person_clip(extension, event_name)
     local clips = installed_config and installed_config.assassin_first_person_clips
@@ -172,19 +188,68 @@ local function play_custom_first_person_clip(extension, event_name)
         return false
     end
 
+    local previous = extension._pusfume_assassin_clip
+    if previous and previous.event == event_name and clip.loop == true then
+        return true
+    end
+
+    if Unit.has_animation_state_machine(animation_unit)
+            and not extension._pusfume_assassin_manual_driver then
+        Unit.disable_animation_state_machine(animation_unit)
+        extension._pusfume_assassin_manual_driver = true
+        mod:info("[pusfume] Janfon assassin manual-time driver enabled")
+    end
+
     local clip_id = Unit.crossfade_animation(
         animation_unit, clip.clip, 1, 0.08, clip.loop == true, "normal")
+    Unit.crossfade_animation_set_speed(animation_unit, clip_id, 0)
+    Unit.crossfade_animation_set_time(animation_unit, clip_id, 0, true)
+    local target_duration = ASSASSIN_CLIP_TARGET_DURATION[event_name]
+        or clip.duration
     extension._pusfume_assassin_clip = {
+        animation_unit = animation_unit,
         event = event_name,
         id = clip_id,
         duration = clip.duration,
+        loop = clip.loop == true,
+        next_sample = 0.1,
+        playback_rate = clip.duration / target_duration,
+        started_at = Managers.time and Managers.time:time("game") or 0,
+        target_duration = target_duration,
     }
     mod:info(
-        "[pusfume] Janfon assassin 1P clip event=%s clip=%s id=%s duration=%.3f loop=%s",
+        "[pusfume] Janfon assassin 1P clip event=%s clip=%s id=%s duration=%.3f target=%.3f rate=%.3f loop=%s",
         event_name, clip.clip, tostring(clip_id), clip.duration or 0,
+        target_duration, clip.duration / target_duration,
         tostring(clip.loop == true))
 
     return true
+end
+
+local function update_custom_first_person_clip(extension, t)
+    local active = extension._pusfume_assassin_clip
+    if not active or extension._pusfume_active_skaven_role ~= "gutter_runner"
+            or not active.animation_unit or not Unit.alive(active.animation_unit) then
+        return
+    end
+
+    local elapsed = math.max(0, t - active.started_at)
+    local clip_time = elapsed * active.playback_rate
+    if active.loop then
+        clip_time = clip_time % active.duration
+    else
+        clip_time = math.min(clip_time, active.duration)
+    end
+    Unit.crossfade_animation_set_time(
+        active.animation_unit, active.id, clip_time, true)
+
+    if elapsed >= active.next_sample and active.next_sample <= 0.7 then
+        mod:info(
+            "[pusfume] Janfon assassin sample event=%s elapsed=%.3f clip_time=%.3f/%.3f bone_mode=%s",
+            active.event, elapsed, clip_time, active.duration,
+            Unit.animation_bone_mode(active.animation_unit))
+        active.next_sample = active.next_sample + 0.2
+    end
 end
 
 local function update_first_person_weapon_pose(extension, equipment)
@@ -1907,6 +1972,17 @@ local function switch_first_person_rig(extension, inventory_extension, role)
     extension._pusfume_active_animation_unit = first_person_unit
     extension._pusfume_active_first_person_rig = rig_name
     extension._pusfume_active_skaven_role = role
+    if role ~= "gutter_runner" and extension._pusfume_assassin_manual_driver then
+        local driven_unit = extension._pusfume_assassin_clip
+                and extension._pusfume_assassin_clip.animation_unit
+            or extension._pusfume_skaven_first_person_unit
+        if driven_unit and Unit.alive(driven_unit)
+                and Unit.has_animation_state_machine(driven_unit) then
+            Unit.enable_animation_state_machine(driven_unit)
+        end
+        extension._pusfume_assassin_manual_driver = nil
+        extension._pusfume_assassin_clip = nil
+    end
     if use_skaven then
         extension._pusfume_skaven_first_person_attachment = attachment_unit
         Unit.set_flow_variable(first_person_unit, "lua_first_person_mesh_unit", attachment_unit)
@@ -2131,7 +2207,8 @@ local function install_first_person_hook(registry, config)
                 return func(weapon_extension, event)
             end)
     end
-    mod:hook_safe(PlayerUnitFirstPerson, "update", function(extension)
+    mod:hook_safe(PlayerUnitFirstPerson, "update", function(extension, unit,
+            input, dt, context, t)
         if extension._pusfume_first_person then
             -- Clear the old hand-diagnostic hide reason after hot reloads.
             restore_first_person_weapons(extension)
@@ -2169,6 +2246,7 @@ local function install_first_person_hook(registry, config)
                     and not config.first_person_direct_link then
                 update_first_person_retarget(extension)
             end
+            update_custom_first_person_clip(extension, t)
             extension._pusfume_first_person_probe_frames =
                 (extension._pusfume_first_person_probe_frames or 0) + 1
 

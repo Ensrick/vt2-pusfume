@@ -10,6 +10,20 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Prepared v0.6.65 from the rejected v0.6.64 live result. The newest log proved
+  the runtime was layering clip IDs `11` through `18` in about one second and
+  interrupting a `1.97 s` attack after roughly `0.72 s`. Janfon's Assassin
+  clips now use one authoritative manual-time driver, disable the competing
+  Skaven state machine while active, deduplicate looping poses, and compress
+  attack playback into the actual weapon-action window.
+- Replaced v0.6.64's atlas-wide neutral AO with a `64` minimum confined to the
+  `p_main` body tile. Armor, outfit, metal, ammunition, fur, and whiskers retain
+  their authored response; diffuse, normal, metallic, emission, UV, and
+  geometry data remain unchanged.
+- Extracted the real shared Skaven first-person camera-base unit and compared
+  compiled rest matrices. Its 55 shared donor nodes are identical to the mesh
+  attachment, and the shipped Janfon unit matches 99 camera-base nodes within
+  `0.00000221`, ruling out a base-versus-attachment rest mismatch.
 - Prepared v0.6.64 from the partial v0.6.63 live result. Opaque atlas AO is
   neutralized to `255`; this changes no diffuse, normal, metallic, emission,
   UV, geometry, fur, or whisker data and prevents zero-AO regions from turning

@@ -196,6 +196,16 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn("local custom_event = event_1p or event", self.native)
         self.assertIn('mod:hook(WeaponUnitExtension, "_play_end_event_1p"', self.native)
 
+    def test_assassin_clips_use_one_manual_time_driver(self):
+        self.assertIn("ASSASSIN_CLIP_TARGET_DURATION", self.native)
+        self.assertIn("Unit.disable_animation_state_machine(animation_unit)", self.native)
+        self.assertIn(
+            "Unit.crossfade_animation_set_speed(animation_unit, clip_id, 0)",
+            self.native,
+        )
+        self.assertIn("update_custom_first_person_clip(extension, t)", self.native)
+        self.assertIn("previous.event == event_name and clip.loop == true", self.native)
+
     def test_animation_guard_checks_the_active_rig_not_only_the_camera_base(self):
         guard = self.native.split(
             "local function skip_missing_first_person_event", 1
