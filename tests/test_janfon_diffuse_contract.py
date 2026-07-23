@@ -19,8 +19,16 @@ class JanfonDiffuseContractTests(unittest.TestCase):
         self.assertIn('$srgb = "false"', writer.group("body"))
         self.assertNotIn('$srgb = "true"', writer.group("body"))
 
-    def test_composed_diffuse_atlas_preserves_linear_values_under_donor_srgb_contract(self):
-        self.assertIn('Convert-LinearDiffuseToSrgb $atlasDiffusePath $atlasDiffusePath', BUILD)
+    def test_composed_diffuse_atlas_encodes_only_janfon_linear_body_tile(self):
+        self.assertIn(
+            "Convert-LinearDiffuseToSrgb "
+            "$atlasDiffusePath $atlasDiffusePath @(0, 0, 2048, 4096)",
+            BUILD,
+        )
+        self.assertNotIn(
+            "Convert-LinearDiffuseToSrgb $atlasDiffusePath $atlasDiffusePath\n",
+            BUILD,
+        )
         self.assertIn('Write-NativeTextureRecipe "pusfume_atlas_df" $true', BUILD)
 
     def test_legacy_fur_diffuse_is_not_double_encoded(self):

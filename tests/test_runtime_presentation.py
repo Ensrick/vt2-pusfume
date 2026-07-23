@@ -116,6 +116,9 @@ class RuntimePresentationTests(unittest.TestCase):
             "stop_inactive_warpfire_effect(inventory_extension, slot_name)",
             self.native,
         )
+        self.assertIn('Unit.flow_event(weapon_unit, "wind_up_start")', helper)
+        self.assertIn("Unit.set_unit_visibility(weapon_unit, false)", helper)
+        self.assertIn("units_reset=%d units=%s", helper)
 
     def test_inherited_versus_equipment_particles_are_removed_at_the_source(self):
         helper = self.native.split(

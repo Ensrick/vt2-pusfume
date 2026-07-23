@@ -27,6 +27,20 @@ class LinearDiffuseEncoderTests(unittest.TestCase):
             with Image.open(output) as image:
                 self.assertEqual((127, 120, 114, 73), image.getpixel((0, 0)))
 
+    def test_rectangle_encoding_preserves_native_tiles_byte_for_byte(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = pathlib.Path(directory) / "source.png"
+            output = pathlib.Path(directory) / "output.png"
+            image = Image.new("RGBA", (2, 1))
+            image.putdata([(54, 48, 43, 73), (91, 82, 70, 61)])
+            image.save(source)
+
+            encoder.encode_linear_diffuse(source, output, (0, 0, 1, 1))
+
+            with Image.open(output) as encoded:
+                self.assertEqual((127, 120, 114, 73), encoded.getpixel((0, 0)))
+                self.assertEqual((91, 82, 70, 61), encoded.getpixel((1, 0)))
+
 
 if __name__ == "__main__":
     unittest.main()

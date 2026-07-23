@@ -10,6 +10,18 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Accepted the v0.6.70 body, fur, metal, and hand presentation in live
+  testing. Two focused defects remain: Globadier leather straps render
+  pale/white, and an inactive Warpfire visual can leave a floating green
+  glow.
+- Prepared v0.6.71 without changing the accepted body, fur, metal, hand, or
+  Assassin assets. Diffuse conversion now encodes only Janfon's linear-authored
+  body half of the atlas; native VT2 leather and equipment tiles remain
+  byte-identical instead of being gamma-encoded a second time.
+- Matched the inactive Warpfire reset to Fatshark's own `shoot_end` flow:
+  hidden first- and third-person weapon units now receive `wind_up_start`,
+  then `cooldown_ready`, and have visibility reasserted off. The diagnostic
+  records the exact reset unit names and count for the next live test.
 - Built, locally deployed, and uploaded v0.6.70 from source commit `67e4f97`
   as friends-only Steam ManifestID `8802612420254493751` at 2026-07-23
   11:29:55 America/Chicago. All eight installed files are SHA-256-identical

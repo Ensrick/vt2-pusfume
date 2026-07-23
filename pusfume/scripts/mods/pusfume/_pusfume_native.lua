@@ -2089,6 +2089,8 @@ local function stop_inactive_warpfire_effect(inventory_extension, active_slot)
     end
 
     local stopped_state = false
+    local reset_units = 0
+    local reset_names = {}
     for _, weapon_unit in pairs({
             slot_data.right_unit_1p,
             slot_data.left_unit_1p,
@@ -2106,17 +2108,27 @@ local function stop_inactive_warpfire_effect(inventory_extension, active_slot)
             end
 
             if not state.inactive_warpfire_units[weapon_unit] then
+                -- Fatshark's own Warpfire shoot_end path sends wind_up_start.
+                -- cooldown_ready alone does not stop every unit-flow-owned idle
+                -- light, particularly while the ranged unit is spawned but
+                -- unwielded behind a melee weapon.
+                Unit.flow_event(weapon_unit, "wind_up_start")
                 Unit.flow_event(weapon_unit, "cooldown_ready")
+                Unit.set_unit_visibility(weapon_unit, false)
                 state.inactive_warpfire_units[weapon_unit] = true
+                reset_units = reset_units + 1
+                reset_names[#reset_names + 1] = Unit.debug_name(weapon_unit)
             end
         end
     end
 
-    if stopped_state or not inventory_extension._pusfume_warpfire_idle_logged then
+    if stopped_state or reset_units > 0
+            or not inventory_extension._pusfume_warpfire_idle_logged then
         inventory_extension._pusfume_warpfire_idle_logged = true
         mod:info(
-            "[pusfume] Inactive Warpfire visual state cleared slot=%s synced_state_stopped=%s",
-            tostring(active_slot), tostring(stopped_state))
+            "[pusfume] Inactive Warpfire visual state cleared slot=%s synced_state_stopped=%s units_reset=%d units=%s",
+            tostring(active_slot), tostring(stopped_state), reset_units,
+            table.concat(reset_names, ","))
     end
 end
 

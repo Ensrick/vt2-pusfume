@@ -802,13 +802,21 @@ function Convert-LinearDiffuseToSrgb {
         [Parameter(Mandatory)]
         [string]$Source,
         [Parameter(Mandatory)]
-        [string]$Output
+        [string]$Output,
+        [int[]]$Rect
     )
 
-    $result = Invoke-HiddenPython @(
+    $arguments = @(
         (Join-Path $repoRoot "tools\encode_linear_diffuse.py"),
         $Source,
         $Output)
+    if ($null -ne $Rect) {
+        if ($Rect.Count -ne 4) {
+            throw "Linear diffuse encoding rectangle must contain x, y, width, height."
+        }
+        $arguments += @("--rect") + @($Rect | ForEach-Object { "$_" })
+    }
+    $result = Invoke-HiddenPython $arguments
     Assert-HiddenToolSuccess $result "Linear diffuse encoding for $Output"
 }
 
@@ -1384,7 +1392,11 @@ Write-PusfumeAtlas "pusfume_atlas_s" "s" ([Drawing.Color]::Black)
 # metallic=0 / AO=255 / B=255 / alpha=0.
 Write-PusfumeAtlas "pusfume_atlas_ma" "s" ([Drawing.Color]::FromArgb(0, 0, 255, 255))
 $atlasDiffusePath = Join-Path $textureRoot "pusfume_atlas_df.png"
-Convert-LinearDiffuseToSrgb $atlasDiffusePath $atlasDiffusePath
+# The donor child samples an sRGB diffuse. Janfon's body source is authored as
+# linear data, but every other atlas tile comes directly from a native VT2
+# texture and is already encoded for that contract. Encoding the whole atlas
+# twice gamma-lifted the Globadier leather straps to pale white.
+Convert-LinearDiffuseToSrgb $atlasDiffusePath $atlasDiffusePath @(0, 0, 2048, 4096)
 Write-NativeTextureRecipe "pusfume_atlas_df" $true
 Write-NativeTextureRecipe "pusfume_atlas_nm" $false
 Write-NativeTextureRecipe "pusfume_atlas_s" $false
