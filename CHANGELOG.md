@@ -10,6 +10,12 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, locally deployed, hash-verified, and uploaded v0.6.68 friends-only
+  from source commit `53261d8` as Steam ManifestID
+  `8652742101147699405`. All eight installed files match staging at
+  `179,201,822` bytes; 139 tests, source preflight, Blender 5.2 handoff,
+  compiled-rest, animation, material-response, and dual-child splice gates
+  pass.
 - Prepared v0.6.68 from the rejected v0.6.67 live result. Janfon's original
   Blender material graph proves `p_main` is skin while armor, metal, Globadier
   gear, and ammunition are separate outfit surfaces. The runtime now assigns
