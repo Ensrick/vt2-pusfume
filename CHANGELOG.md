@@ -10,6 +10,15 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Prepared v0.6.67 after v0.6.66 still rendered every metallic apparatus slot
+  bright/matte and every non-fur surface dark. The regression began when
+  v0.6.62 replaced the last visually better Globadier `mtr_outfit` child with
+  `mtr_skin`; restore the shiny outfit parent while retaining raw packed-map
+  preservation and the body-only AO floor.
+- Guarded the second Assassin crash path. Vanilla `start_action` sends
+  `equip_interrupt` directly to the first-person unit before the existing
+  animation hooks; the manual driver now suppresses only that blend event via
+  the action's existing looping branch, then restores the action table.
 - Prepared v0.6.66 after the v0.6.65 live Assassin equip test reached the new
   manual-time driver, then crashed when the fallback event guard queried
   `idle` on its intentionally controllerless Skaven unit. Every first-person

@@ -206,6 +206,15 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn("update_custom_first_person_clip(extension, t)", self.native)
         self.assertIn("previous.event == event_name and clip.loop == true", self.native)
 
+    def test_assassin_start_action_suppresses_direct_equip_interrupt(self):
+        hook = self.native.split(
+            'mod:hook(WeaponUnitExtension, "start_action"', 1
+        )[1].split('mod:hook(WeaponUnitExtension, "_play_1p_anim"', 1)[0]
+        self.assertIn("_pusfume_assassin_manual_driver", hook)
+        self.assertIn('_pusfume_active_skaven_role == "gutter_runner"', hook)
+        self.assertIn("action_settings.looping_anim = true", hook)
+        self.assertIn("action_settings.looping_anim = previous_looping", hook)
+
     def test_animation_guard_checks_the_active_rig_not_only_the_camera_base(self):
         guard = self.native.split(
             "local function skip_missing_first_person_event", 1

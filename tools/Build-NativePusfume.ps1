@@ -2062,10 +2062,10 @@ if ($ParentChildMaterial) {
 
 if ($SplicedGameChild) {
     # Track D: replace our SDK-compiled child's payload with the game's own
-    # compiled mtr_skin child, texture ids patched to the atlas. Our child
+    # compiled mtr_outfit child, texture ids patched to the atlas. Our child
     # renders rigid because its shader binding was baked against the stub at
-    # compile time (live 2026-07-16 11:24); the game payload carries the real
-    # skinned-flesh binding, its parent hash (BBBF9694DA11465F), and after
+    # compile time (live 2026-07-16 11:24); the game payload carries the shiny
+    # skinned-outfit binding, its parent hash (3D25339231384C80), and after
     # patching, Pusfume's texture ids. The payload derives
     # from installed game data and never leaves .build.
     $donorGameBundle = Join-Path $GameBundleDir "7a8e617a32277fc4"
@@ -2081,34 +2081,34 @@ if ($SplicedGameChild) {
     $result = Invoke-HiddenTool -FilePath $UnpackerExe -ArgumentList @(
         "extract", $donorGameBundle, $spliceExtractDir, "--flatten")
     Assert-HiddenToolSuccess $result "Globadier donor bundle extraction"
-    $gameChildPath = Join-Path $spliceExtractDir "D18F69CCD2253779.material"
+    $gameChildPath = Join-Path $spliceExtractDir "90BDF3BAC6F81BA8.material"
     if (-not (Test-Path -LiteralPath $gameChildPath -PathType Leaf)) {
-        throw "Donor bundle extraction did not produce D18F69CCD2253779.material"
+        throw "Donor bundle extraction did not produce 90BDF3BAC6F81BA8.material"
     }
 
-    # Slot semantics were resolved from the installed mtr_skin parent's DXBC
-    # pixel shader (2026-07-22), not inferred from opaque channel names:
-    # texture_map_990e13c4 feeds base colour, texture_map_6e114674 is unpacked
-    # as the tangent-space normal, and texture_map_8f6fa466 feeds the packed
-    # surface outputs. Both skin/fur HSV tints are neutralized to RGB 1,1,1 so
-    # Janfon's baked atlas colours pass through unchanged. This deliberately
-    # replaces the old mtr_outfit contract, whose gameplay ambient response
-    # reduced the body to a near-black silhouette while inventory looked valid.
+    # v0.6.62-v0.6.66's mtr_skin experiment removed the metallic response from
+    # every outfit slot and left non-fur surfaces dark. Restore the empirically
+    # better v0.6.61 mtr_outfit parent while retaining the later raw packed-map
+    # preservation and p_main-only AO floor. Slot semantics are verified from
+    # the installed child: diffuse, normal/gloss, then metallic/AO/emission.
+    $bodyEmissiveColor = if ($EmissionProbe) {
+        "emissive_color=25,0,0"
+    } else {
+        "emissive_color=15,1,0.2"
+    }
     $splicePayload = Join-Path $generatedRoot "spliced_child_payload.bin"
     $result = Invoke-HiddenPython @(
         (Join-Path $repoRoot "tools\make_spliced_child.py"),
         "--extracted", $gameChildPath,
-        "--resource", "hash:D18F69CCD2253779", "--expect-size", "496",
-        "--expect-parent", "BBBF9694DA11465F",
-        "--map", "ED67ABE0A2542484=C263ECB79A8DCEC0",
-        "--map", "4B7F05AED3F40BDF=A4215592F6297E57",
-        "--map", "A706B01BC822A417=818C87B860407405",
-        "--set-variable", "tint_skin=0,0,1",
-        "--set-variable", "tint_fur=0,0,1",
-        "--set-variable", "tint_color_power=1",
-        "--expect-texture", "texture_map_990e13c4=C263ECB79A8DCEC0",
-        "--expect-texture", "texture_map_6e114674=A4215592F6297E57",
-        "--expect-texture", "texture_map_8f6fa466=818C87B860407405",
+        "--resource", "hash:90BDF3BAC6F81BA8", "--expect-size", "768",
+        "--expect-parent", "3D25339231384C80",
+        "--map", "DD74D8319F514D96=C263ECB79A8DCEC0",
+        "--map", "E334A8CB6BCB5E6D=A4215592F6297E57",
+        "--map", "45FFAEEF53695A86=818C87B860407405",
+        "--set-variable", $bodyEmissiveColor,
+        "--expect-texture", "texture_map_02af90f8=C263ECB79A8DCEC0",
+        "--expect-texture", "texture_map_27b67fd2=818C87B860407405",
+        "--expect-texture", "texture_map_8bf37d8e=A4215592F6297E57",
         "--out", $splicePayload)
     Assert-HiddenToolSuccess $result "Spliced child payload generation"
 
@@ -2133,7 +2133,7 @@ if ($SplicedGameChild) {
         throw "Expected the compiled child in exactly 1 bundle, spliced $($splicedInto.Count)"
     }
 
-    Write-Host "Spliced game skin child payload (496 bytes, neutral tint, atlas texture ids) into $($splicedInto[0])"
+    Write-Host "Spliced game outfit child payload (768 bytes, restored metallic response) into $($splicedInto[0])"
 
     if ($firstPersonEnabled) {
         # The native human payload preserves the correct first-person skinning

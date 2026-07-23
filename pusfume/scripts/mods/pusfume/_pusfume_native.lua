@@ -2168,6 +2168,31 @@ local function install_first_person_hook(registry, config)
         return func(extension, event)
     end)
     if WeaponUnitExtension then
+        -- start_action sends equip_interrupt directly through Unit.animation_event
+        -- before _play_1p_anim. The Assassin rig intentionally has no active
+        -- state machine while its clips are manually timed, so suppress only
+        -- that vanilla blend event by borrowing the existing looping branch.
+        mod:hook(WeaponUnitExtension, "start_action", function(func,
+                weapon_extension, action_name, sub_action_name, actions, ...)
+            local first_person_extension = weapon_extension.first_person_extension
+            local action = actions and actions[action_name]
+            local action_settings = action and action[sub_action_name]
+            local manual_assassin = first_person_extension
+                and first_person_extension._pusfume_assassin_manual_driver
+                and first_person_extension._pusfume_active_skaven_role == "gutter_runner"
+                and action_settings
+                and action_settings.looping_anim ~= true
+
+            if manual_assassin then
+                local previous_looping = action_settings.looping_anim
+                action_settings.looping_anim = true
+                func(weapon_extension, action_name, sub_action_name, actions, ...)
+                action_settings.looping_anim = previous_looping
+                return
+            end
+
+            return func(weapon_extension, action_name, sub_action_name, actions, ...)
+        end)
         -- This path calls Unit.animation_event directly and bypasses the guard
         -- above. Check Fatshark's effective event before the native call.
         mod:hook(WeaponUnitExtension, "_play_1p_anim", function(func, weapon_extension,
