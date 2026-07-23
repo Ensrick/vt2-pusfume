@@ -5,6 +5,9 @@ import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 BUILD = (ROOT / "tools" / "Build-NativePusfume.ps1").read_text(encoding="utf-8")
+NATIVE = (
+    ROOT / "pusfume" / "scripts" / "mods" / "pusfume" / "_pusfume_native.lua"
+).read_text(encoding="utf-8")
 
 
 class JanfonDiffuseContractTests(unittest.TestCase):
@@ -46,6 +49,20 @@ class JanfonDiffuseContractTests(unittest.TestCase):
         self.assertIn('"--expect-parent", "7B55B884FAFA2B12"', fur)
         self.assertIn("1916CFCA6ED85BFD=20A7120B25F414F7", fur)
         self.assertNotIn("C70B1AAD3B363E24", fur)
+
+    def test_third_person_skin_and_outfit_keep_separate_native_parents(self):
+        self.assertIn("pusfume_skin_child.material", BUILD)
+        self.assertIn('"--expect-size", "496"', BUILD)
+        self.assertIn('"--expect-parent", "BBBF9694DA11465F"', BUILD)
+        self.assertIn("pusfume_outfit_child.material", BUILD)
+        self.assertIn('"--expect-size", "768"', BUILD)
+        self.assertIn('"--expect-parent", "3D25339231384C80"', BUILD)
+        assignment = NATIVE.split(
+            "local function apply_donor_material_to_unit", 1
+        )[1].split("local function install_material_probe_command", 1)[0]
+        self.assertIn('slot_name == "p_main"', assignment)
+        self.assertIn("and config.skin_child_material", assignment)
+        self.assertIn("or config.parent_child_material", assignment)
 
     def test_legacy_gain_compensation_is_neutral(self):
         self.assertRegex(BUILD, r"\[double\]\$BodyDiffuseGain = 1\.0")

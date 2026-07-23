@@ -10,6 +10,25 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Prepared v0.6.68 from the rejected v0.6.67 live result. Janfon's original
+  Blender material graph proves `p_main` is skin while armor, metal, Globadier
+  gear, and ammunition are separate outfit surfaces. The runtime now assigns
+  the native 496-byte skin child only to `p_main` and retains the native
+  768-byte outfit child on apparatus, instead of forcing one shader family
+  across every opaque slot.
+- Corrected the Assassin clip target from Fatshark's 59-bone Skaven camera base
+  to Janfon's visible 99-bone attachment, the skeleton against which all nine
+  clips are compiled. Custom mode root-links that attachment to the camera;
+  native Packmaster, Warpfire, and Ratling roles restore per-bone links.
+- Janfon's authored NLA strip windows now define Assassin export duration,
+  excluding helper keys such as the run action's `-7..51` range from its
+  intended `1..29` gameplay clip. Export also rejects saved-pose contamination.
+- Generalized the controllerless action guard across rig teardown. The v0.6.67
+  crash occurred after role changed to Warpfire but before vanilla sent
+  `equip_interrupt`; the guard no longer depends on the previous Gutter role.
+- Rejected v0.6.67 in live testing: metallic apparatus recovered, but `p_main`
+  rendered black; Assassin actions locked the visible mesh into a static pose,
+  and switching away crashed in `weapon_unit_extension.lua:478`.
 - Built, locally deployed, hash-verified, and uploaded v0.6.67 friends-only
   from source commit `fef8240` as Steam ManifestID
   `1645135128086142298`. All eight installed files match staging at

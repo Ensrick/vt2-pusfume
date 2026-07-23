@@ -105,7 +105,11 @@ class RuntimePresentationTests(unittest.TestCase):
         switch = self.native.split(
             "local function switch_first_person_rig", 1
         )[1].split("local function prepare_first_person_rig_for_wield", 1)[0]
-        self.assertIn("extension._pusfume_active_animation_unit = first_person_unit", switch)
+        self.assertIn(
+            "extension._pusfume_active_animation_unit = custom_assassin",
+            switch,
+        )
+        self.assertIn("and attachment_unit or first_person_unit", switch)
         self.assertNotIn("extension.first_person_unit = first_person_unit", switch)
         self.assertNotIn("extension.first_person_attachment_unit = attachment_unit", switch)
         self.assertIn("World.link_unit(", self.native)
@@ -147,7 +151,7 @@ class RuntimePresentationTests(unittest.TestCase):
             self.native,
         )
         self.assertIn(
-            "inventory_extension._first_person_unit = first_person_unit",
+            "inventory_extension._first_person_unit = weapon_animation_unit",
             self.native,
         )
         self.assertIn(
@@ -205,13 +209,34 @@ class RuntimePresentationTests(unittest.TestCase):
         )
         self.assertIn("update_custom_first_person_clip(extension, t)", self.native)
         self.assertIn("previous.event == event_name and clip.loop == true", self.native)
+        self.assertIn(
+            "_pusfume_assassin_disabled_state_machine_unit", self.native
+        )
 
-    def test_assassin_start_action_suppresses_direct_equip_interrupt(self):
+    def test_assassin_clips_target_janfon_attachment_not_skaven_base(self):
+        switch = self.native.split(
+            "local function switch_first_person_rig", 1
+        )[1].split("local function prepare_first_person_rig_for_wield", 1)[0]
+        self.assertIn('role == "gutter_runner"', switch)
+        self.assertIn(
+            "custom_assassin\n        and attachment_unit or first_person_unit",
+            switch,
+        )
+        self.assertIn(
+            "extension.world, attachment_unit, 0, first_person_unit, 0",
+            switch,
+        )
+        self.assertIn(
+            "AttachmentNodeLinking.skaven_first_person_attachment", switch
+        )
+
+    def test_controllerless_pusfume_start_action_suppresses_direct_equip_interrupt(self):
         hook = self.native.split(
             'mod:hook(WeaponUnitExtension, "start_action"', 1
         )[1].split('mod:hook(WeaponUnitExtension, "_play_1p_anim"', 1)[0]
-        self.assertIn("_pusfume_assassin_manual_driver", hook)
-        self.assertIn('_pusfume_active_skaven_role == "gutter_runner"', hook)
+        self.assertIn("weapon_extension.first_person_unit", hook)
+        self.assertIn("_pusfume_first_person", hook)
+        self.assertIn("Unit.has_animation_state_machine(event_unit)", hook)
         self.assertIn("action_settings.looping_anim = true", hook)
         self.assertIn("action_settings.looping_anim = previous_looping", hook)
 

@@ -286,7 +286,7 @@ Test-Condition ($nativeText -match 'config\.versus_first_person_unit' -and `
     $nativeText -match 'spawn_dual_first_person_rig' -and `
     $nativeText -match 'SimpleInventoryExtension, "wield"' -and `
     $nativeText -match 'SKAVEN_ROLE_BY_POSE\[item_template\.pusfume_role_pose\]' -and `
-    $nativeText -match 'inventory_extension\._first_person_unit = first_person_unit' -and `
+    $nativeText -match 'inventory_extension\._first_person_unit = weapon_animation_unit' -and `
     $nativeText -match 'relink_first_person_slot' -and `
     $nativeText -match 'weapon_extension\.first_person_unit = first_person_unit' -and `
     $nativeText -notmatch '(?s)local function switch_first_person_rig.*?extension\.first_person_unit = first_person_unit.*?local function prepare_first_person_rig_for_wield' -and `
@@ -495,6 +495,7 @@ Test-Condition ($nativeConfigText -match 'parent_child_material\s*=\s*false' -an
     $nativeConfigText -match 'whisker_donor_package\s*=\s*false' -and `
     $nativeBuildText -match '\[switch\]\$ParentChildMaterial' -and `
     $nativeBuildText -match '"child_materials/pusfume/pusfume_outfit_child"' -and `
+    $nativeBuildText -match '"child_materials/pusfume/pusfume_skin_child"' -and `
     $nativeBuildText -match '"child_materials/pusfume/pusfume_whiskers_child"' -and `
     $nativeBuildText -match 'native_child\.package' -and `
     $nativeBuildText -match 'parent_material = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/mtr_outfit"' -and `
@@ -506,6 +507,8 @@ Test-Condition ($nativeConfigText -match 'parent_child_material\s*=\s*false' -an
     $nativeText -match 'Native child material package did not load through the mod handle' -and `
     $nativeText -match 'mod:unload_package\(config\.parent_child_package\)' -and `
     $nativeText -match 'Unit\.set_material\(unit, slot_name, material\)' -and `
+    $nativeText -match 'slot_name == "p_main"' -and `
+    $nativeText -match 'config\.skin_child_material' -and `
     $nativeText -match 'Unit\.set_material\(unit, WHISKER_MATERIAL_SLOT, config\.whisker_child_material\)' -and `
     $nativeBuildText -match 'whisker_donor_package = false' -and `
     $nativeText -match 'type\(config\.whisker_donor_package\) ~= "string"' -and `
@@ -560,19 +563,31 @@ Test-Condition ((Test-Path (Join-Path $repoRoot "tools\splice_bundle_resource.py
     $nativeBuildText -match '\$NoDonorTextureShadow = \$true' -and `
     $nativeBuildText -match 'make_spliced_child\.py' -and `
     $nativeBuildText -match '"--expect-size", "768"' -and `
+    $nativeBuildText -match '"--expect-size", "496"' -and `
     $nativeBuildText -match '"--expect-size", "96"' -and `
     $nativeBuildText -match '"--expect-size", "128"' -and `
     $nativeBuildText -match '"--expect-parent", "3D25339231384C80"' -and `
+    $nativeBuildText -match '"--expect-parent", "BBBF9694DA11465F"' -and `
     $nativeBuildText -match '"--expect-parent", "D97596A091982F4B"' -and `
     $nativeBuildText -match '"--expect-parent", "F85B289742D5D69A"' -and `
     $nativeBuildText -match 'hash:F72D636600F7F598' -and `
     $nativeBuildText -match 'hash:90BDF3BAC6F81BA8' -and `
+    $nativeBuildText -match 'hash:D18F69CCD2253779' -and `
     $nativeBuildText -match 'DD74D8319F514D96=C263ECB79A8DCEC0' -and `
     $nativeBuildText -match 'E334A8CB6BCB5E6D=A4215592F6297E57' -and `
     $nativeBuildText -match '45FFAEEF53695A86=818C87B860407405' -and `
     $nativeBuildText -match 'texture_map_02af90f8=C263ECB79A8DCEC0' -and `
     $nativeBuildText -match 'texture_map_27b67fd2=818C87B860407405' -and `
     $nativeBuildText -match 'texture_map_8bf37d8e=A4215592F6297E57' -and `
+    $nativeBuildText -match 'ED67ABE0A2542484=C263ECB79A8DCEC0' -and `
+    $nativeBuildText -match '4B7F05AED3F40BDF=A4215592F6297E57' -and `
+    $nativeBuildText -match 'A706B01BC822A417=818C87B860407405' -and `
+    $nativeBuildText -match 'tint_skin=0,0,1' -and `
+    $nativeBuildText -match 'tint_fur=0,0,1' -and `
+    $nativeBuildText -match 'tint_color_power=1' -and `
+    $nativeBuildText -match 'texture_map_990e13c4=C263ECB79A8DCEC0' -and `
+    $nativeBuildText -match 'texture_map_6e114674=A4215592F6297E57' -and `
+    $nativeBuildText -match 'texture_map_8f6fa466=818C87B860407405' -and `
     $nativeBuildText -match '86FFDEB90C40C597=E0C4E09D80AE735B' -and `
     $nativeBuildText -match '258E4E4AEA37B1B8=3B3F6545AF6782F5' -and `
     $nativeBuildText -match 'E04C4FD132004376=DF5A1D6679E28376' -and `

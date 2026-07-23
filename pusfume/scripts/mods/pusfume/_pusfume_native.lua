@@ -200,9 +200,12 @@ local function play_custom_first_person_clip(extension, event_name)
         return true
     end
 
-    if Unit.has_animation_state_machine(animation_unit)
-            and not extension._pusfume_assassin_manual_driver then
-        Unit.disable_animation_state_machine(animation_unit)
+    if not extension._pusfume_assassin_manual_driver then
+        if Unit.has_animation_state_machine(animation_unit) then
+            Unit.disable_animation_state_machine(animation_unit)
+            extension._pusfume_assassin_disabled_state_machine_unit =
+                animation_unit
+        end
         extension._pusfume_assassin_manual_driver = true
         mod:info("[pusfume] Janfon assassin manual-time driver enabled")
     end
@@ -634,16 +637,22 @@ local function apply_donor_material_to_unit(unit, config)
             mod:error("[pusfume] Material probe mode %s requires a parent-child test build", mode)
             return false
         end
+        if type(config.skin_child_material) ~= "string" then
+            mod:error("[pusfume] Material probe mode %s requires the p_main skin child", mode)
+            return false
+        end
 
         if not ensure_child_package(config) then
             return false
         end
 
-        if not can_get("material", config.parent_child_material) then
+        if not can_get("material", config.parent_child_material)
+                or not can_get("material", config.skin_child_material) then
             if not state.donor_material_error_logged then
                 state.donor_material_error_logged = true
-                mod:error("[pusfume] Compiled child material is unavailable: %s",
-                    config.parent_child_material)
+                mod:error(
+                    "[pusfume] Compiled child materials are unavailable: outfit=%s skin=%s",
+                    config.parent_child_material, config.skin_child_material)
             end
 
             return false
@@ -652,14 +661,17 @@ local function apply_donor_material_to_unit(unit, config)
         local assignments = {}
 
         for slot_index, slot_name in ipairs(DONOR_MATERIAL_SLOTS) do
-            local material = mode == "split" and slot_index % 2 == 0
-                    and config.donor_material
-                or config.parent_child_material
+            local material = slot_name == "p_main"
+                    and config.skin_child_material
+                or (mode == "split" and slot_index % 2 == 0
+                    and config.donor_material or config.parent_child_material)
 
             Unit.set_material(unit, slot_name, material)
             material_slots = material_slots + 1
             assignments[#assignments + 1] = string.format(
-                "%s=%s", slot_name, material == config.donor_material and "donor" or "child")
+                "%s=%s", slot_name,
+                material == config.skin_child_material and "skin"
+                    or (material == config.donor_material and "donor" or "outfit"))
         end
 
         if type(config.whisker_child_material) == "string" then
@@ -1973,20 +1985,49 @@ local function switch_first_person_rig(extension, inventory_extension, role)
         extension._pusfume_first_person_probe_frames = 0
     end
 
+    local custom_assassin = role == "gutter_runner"
+        and type(installed_config and installed_config.assassin_first_person_clips)
+            == "table"
+
+    if use_skaven then
+        AttachmentUtils.unlink(extension.world, attachment_unit)
+        if custom_assassin then
+            -- The custom clips are compiled against Janfon's 99-bone unit, not
+            -- Fatshark's 59-bone Skaven camera base. Link only the root so the
+            -- attachment keeps camera authority while its own clip drives all
+            -- remaining bones.
+            World.link_unit(
+                extension.world, attachment_unit, 0, first_person_unit, 0)
+            Unit.set_local_position(attachment_unit, 0, Vector3.zero())
+            Unit.set_local_rotation(
+                attachment_unit, 0, Quaternion.identity())
+        elseif not link_shared_first_person_nodes(
+                extension.world,
+                first_person_unit,
+                attachment_unit,
+                AttachmentNodeLinking.skaven_first_person_attachment,
+                "Janfon-99-native-role") then
+            mod:error(
+                "[pusfume] Failed to restore native Skaven attachment links role=%s",
+                tostring(role))
+            return false
+        end
+    end
+
     -- Do not assign extension.first_person_unit here. The viewport, camera,
     -- look state and hero locomotion all cache the unit created by init.
-    extension._pusfume_active_animation_unit = first_person_unit
+    extension._pusfume_active_animation_unit = custom_assassin
+        and attachment_unit or first_person_unit
     extension._pusfume_active_first_person_rig = rig_name
     extension._pusfume_active_skaven_role = role
     if role ~= "gutter_runner" and extension._pusfume_assassin_manual_driver then
-        local driven_unit = extension._pusfume_assassin_clip
-                and extension._pusfume_assassin_clip.animation_unit
-            or extension._pusfume_skaven_first_person_unit
-        if driven_unit and Unit.alive(driven_unit)
-                and Unit.has_animation_state_machine(driven_unit) then
-            Unit.enable_animation_state_machine(driven_unit)
+        local disabled_unit =
+            extension._pusfume_assassin_disabled_state_machine_unit
+        if disabled_unit and Unit.alive(disabled_unit) then
+            Unit.enable_animation_state_machine(disabled_unit)
         end
         extension._pusfume_assassin_manual_driver = nil
+        extension._pusfume_assassin_disabled_state_machine_unit = nil
         extension._pusfume_assassin_clip = nil
     end
     if use_skaven then
@@ -1995,8 +2036,10 @@ local function switch_first_person_rig(extension, inventory_extension, role)
     end
     extension._pusfume_weapon_pose_slot = nil
 
-    inventory_extension._first_person_unit = first_person_unit
-    Unit.set_data(first_person_unit, "equipment", inventory_extension._equipment)
+    local weapon_animation_unit = extension._pusfume_active_animation_unit
+    inventory_extension._first_person_unit = weapon_animation_unit
+    Unit.set_data(
+        weapon_animation_unit, "equipment", inventory_extension._equipment)
 
     local visible = extension.first_person_mode
         and extension._show_first_person_units
@@ -2177,13 +2220,19 @@ local function install_first_person_hook(registry, config)
             local first_person_extension = weapon_extension.first_person_extension
             local action = actions and actions[action_name]
             local action_settings = action and action[sub_action_name]
-            local manual_assassin = first_person_extension
-                and first_person_extension._pusfume_assassin_manual_driver
-                and first_person_extension._pusfume_active_skaven_role == "gutter_runner"
+            -- Vanilla sends equip_interrupt to this exact cached unit. During
+            -- a rig switch it can still be the old controllerless Assassin
+            -- attachment even after the extension's active role has changed.
+            local event_unit = weapon_extension.first_person_unit
+            local controllerless_pusfume = first_person_extension
+                and first_person_extension._pusfume_first_person
+                and event_unit
+                and Unit.alive(event_unit)
+                and not Unit.has_animation_state_machine(event_unit)
                 and action_settings
                 and action_settings.looping_anim ~= true
 
-            if manual_assassin then
+            if controllerless_pusfume then
                 local previous_looping = action_settings.looping_anim
                 action_settings.looping_anim = true
                 func(weapon_extension, action_name, sub_action_name, actions, ...)

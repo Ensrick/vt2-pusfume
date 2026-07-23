@@ -1550,6 +1550,18 @@ textures = {
 }
 '@ | Set-Content -LiteralPath (Join-Path $childMaterialRoot "pusfume_outfit_child.material") -Encoding utf8
 
+    @'
+parent_material = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/mtr_skin"
+material_contexts = {
+	surface_material = ""
+}
+textures = {
+	texture_map_990e13c4 = "textures/pusfume/pusfume_atlas_df"
+	texture_map_6e114674 = "textures/pusfume/pusfume_atlas_nm"
+	texture_map_8f6fa466 = "textures/pusfume/pusfume_atlas_s"
+}
+'@ | Set-Content -LiteralPath (Join-Path $childMaterialRoot "pusfume_skin_child.material") -Encoding utf8
+
     # This source is only a compiler placeholder. -SplicedGameChild replaces
     # its payload with the installed game's Laurel feather child, patched to
     # Janfon's whisker textures, so the shipped binding retains skinning and
@@ -1631,6 +1643,7 @@ $($firstPersonChildEntries -join "`n")
 
     $nativeChildMaterialEntries = @(
         '    "child_materials/pusfume/pusfume_outfit_child"',
+        '    "child_materials/pusfume/pusfume_skin_child"',
         '    "child_materials/pusfume/pusfume_whiskers_child"'
     )
     if ($furEnabled) {
@@ -1737,6 +1750,11 @@ $heroPreviewEnabled = if ($HeroPreview) { "true" } else { "false" }
 # child material opt-in until the stub can be stripped from the built bundle.
 $parentChildMaterialValue = if ($ParentChildMaterial) {
     '"child_materials/pusfume/pusfume_outfit_child"'
+} else {
+    "false"
+}
+$skinChildMaterialValue = if ($SplicedGameChild) {
+    '"child_materials/pusfume/pusfume_skin_child"'
 } else {
     "false"
 }
@@ -1850,6 +1868,7 @@ return {
     hide_donor_weapons = false,
     locomotion_events_enabled = true,
     parent_child_material = $parentChildMaterialValue,
+    skin_child_material = $skinChildMaterialValue,
     parent_child_package = $parentChildPackageValue,
     fur_child_material = $furChildMaterialValue,
     whisker_child_material = $whiskerChildMaterialValue,
@@ -2061,13 +2080,11 @@ if ($ParentChildMaterial) {
 }
 
 if ($SplicedGameChild) {
-    # Track D: replace our SDK-compiled child's payload with the game's own
-    # compiled mtr_outfit child, texture ids patched to the atlas. Our child
-    # renders rigid because its shader binding was baked against the stub at
-    # compile time (live 2026-07-16 11:24); the game payload carries the shiny
-    # skinned-outfit binding, its parent hash (3D25339231384C80), and after
-    # patching, Pusfume's texture ids. The payload derives
-    # from installed game data and never leaves .build.
+    # Preserve Janfon's authored material families. p_main uses the native
+    # Globadier skin response; equipment and armor use the native outfit
+    # response. Applying either parent to every opaque slot was rejected by
+    # live tests: skin-everywhere erased metal, outfit-everywhere blackened
+    # flesh. Both payloads derive from installed data and never leave .build.
     $donorGameBundle = Join-Path $GameBundleDir "7a8e617a32277fc4"
     if (-not (Test-Path -LiteralPath $donorGameBundle -PathType Leaf)) {
         throw "Installed donor game bundle not found: $donorGameBundle"
@@ -2134,6 +2151,51 @@ if ($SplicedGameChild) {
     }
 
     Write-Host "Spliced game outfit child payload (768 bytes, restored metallic response) into $($splicedInto[0])"
+
+    $gameSkinChildPath = Join-Path $spliceExtractDir "D18F69CCD2253779.material"
+    if (-not (Test-Path -LiteralPath $gameSkinChildPath -PathType Leaf)) {
+        throw "Donor bundle extraction did not produce D18F69CCD2253779.material"
+    }
+    $skinSplicePayload = Join-Path $generatedRoot "spliced_skin_child_payload.bin"
+    $result = Invoke-HiddenPython @(
+        (Join-Path $repoRoot "tools\make_spliced_child.py"),
+        "--extracted", $gameSkinChildPath,
+        "--resource", "hash:D18F69CCD2253779", "--expect-size", "496",
+        "--expect-parent", "BBBF9694DA11465F",
+        "--map", "ED67ABE0A2542484=C263ECB79A8DCEC0",
+        "--map", "4B7F05AED3F40BDF=A4215592F6297E57",
+        "--map", "A706B01BC822A417=818C87B860407405",
+        "--set-variable", "tint_skin=0,0,1",
+        "--set-variable", "tint_fur=0,0,1",
+        "--set-variable", "tint_color_power=1",
+        "--expect-texture", "texture_map_990e13c4=C263ECB79A8DCEC0",
+        "--expect-texture", "texture_map_6e114674=A4215592F6297E57",
+        "--expect-texture", "texture_map_8f6fa466=818C87B860407405",
+        "--out", $skinSplicePayload)
+    Assert-HiddenToolSuccess $result "Spliced skin child payload generation"
+
+    $skinSplicedInto = @()
+    foreach ($bundleFile in (Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)) {
+        $result = Invoke-HiddenPython @(
+            $spliceTool, $bundleFile.FullName, "--type", "material",
+            "--name", "child_materials/pusfume/pusfume_skin_child",
+            "--payload", $skinSplicePayload, "--dry-run")
+        if ($result.ExitCode -eq 0) {
+            $result = Invoke-HiddenPython @(
+                $spliceTool, $bundleFile.FullName, "--type", "material",
+                "--name", "child_materials/pusfume/pusfume_skin_child",
+                "--payload", $skinSplicePayload)
+            Assert-HiddenToolSuccess $result `
+                "Skin material splice on $($bundleFile.Name)"
+            $skinSplicedInto += $bundleFile.Name
+        }
+    }
+
+    if ($skinSplicedInto.Count -ne 1) {
+        throw "Expected the skin child in exactly 1 bundle, spliced $($skinSplicedInto.Count)"
+    }
+
+    Write-Host "Spliced game skin child payload (496 bytes, neutral tint) into $($skinSplicedInto[0])"
 
     if ($firstPersonEnabled) {
         # The native human payload preserves the correct first-person skinning
@@ -2443,7 +2505,7 @@ $nativeSource = if ($useFbxDcc) { $animatedModelFbxPath } else { $inputPath }
 $nativeSourceKind = if ($useFbxDcc) { "FBX/DCC" } else { "BSI fallback" }
 $nativeSourceSize = (Get-Item -LiteralPath $nativeSource).Length
 $bundles = @(Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)
-$materialCount = if ($furEnabled) { 8 } else { 7 }
+$materialCount = if ($furEnabled) { 9 } else { 8 }
 Write-Host "Native Pusfume build passed: source=$nativeSourceKind bytes=$nativeSourceSize bundles=$($bundles.Count)"
 Write-Host "Native Pusfume materials passed: textures=$($textureNames.Count) materials=$materialCount"
 Write-Host "Native Pusfume animation package passed: controller=pusfume_3p clips=pusfume_3p_idle,pusfume_3p_walk"

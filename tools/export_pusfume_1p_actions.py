@@ -57,6 +57,20 @@ def duplicate_source_armature(armature):
     source.name = "pusfume_1p_source_animation_rig"
     bpy.context.scene.collection.objects.link(source)
     source.animation_data_clear()
+    source.data.pose_position = "POSE"
+    for pose_bone in source.pose.bones:
+        pose_bone.matrix_basis = Matrix.Identity(4)
+    bpy.context.view_layer.update()
+    contaminated = [
+        pose_bone.name
+        for pose_bone in source.pose.bones
+        if not pose_bone.matrix_basis.is_identity
+    ]
+    if contaminated:
+        raise RuntimeError(
+            "Duplicated Assassin source retained a saved pose: %s"
+            % contaminated[:12]
+        )
     return source
 
 
@@ -77,6 +91,33 @@ def action_fcurves(action):
             for curve in channelbag.fcurves
         ]
     return list(action.fcurves)
+
+
+def nla_action_ranges(armature):
+    animation_data = armature.animation_data
+    ranges = {}
+    for track in animation_data.nla_tracks if animation_data else ():
+        for strip in track.strips:
+            if strip.action is None or strip.action.name not in ACTION_NAMES:
+                continue
+            action_name = strip.action.name
+            frame_range = (
+                int(round(strip.action_frame_start)),
+                int(round(strip.action_frame_end)),
+            )
+            if action_name in ranges and ranges[action_name] != frame_range:
+                raise RuntimeError(
+                    "Action %s has conflicting NLA windows: %s and %s"
+                    % (action_name, ranges[action_name], frame_range)
+                )
+            ranges[action_name] = frame_range
+
+    missing = sorted(set(ACTION_NAMES) - set(ranges))
+    if missing:
+        raise RuntimeError(
+            "Janfon claw handoff is missing authored NLA windows: %s" % missing
+        )
+    return ranges
 
 
 def sanitize_pose_transforms(armature, action):
@@ -131,16 +172,20 @@ def local_rest_matrix(bone):
     return bone.parent.matrix_local.inverted() @ bone.matrix_local
 
 
-def retarget_action(source, target, mesh, action, rest_points):
+def retarget_action(source, target, mesh, action, rest_points, authored_range):
     assign_action(source, action)
     transform_audit = sanitize_pose_transforms(source, action)
     keyed_start, keyed_end = (int(round(value)) for value in action.frame_range)
-    # Janfon retained negative helper keys on the looping clips. Gameplay clips
-    # begin at frame 1; trimming the lead-in avoids a negative Stingray timeline.
-    frame_start = max(1, keyed_start)
-    frame_end = keyed_end
+    # NLA strips are Janfon's authored gameplay windows. Several looping
+    # actions intentionally retain helper keys outside them.
+    frame_start, frame_end = authored_range
     if frame_end <= frame_start:
         raise RuntimeError("Action %s has no usable duration" % action.name)
+    if frame_start < keyed_start or frame_end > keyed_end:
+        raise RuntimeError(
+            "Action %s NLA window %s leaves keyed range %s"
+            % (action.name, authored_range, (keyed_start, keyed_end))
+        )
 
     bpy.context.scene.render.fps = FPS
     bpy.context.scene.frame_start = frame_start
@@ -241,9 +286,13 @@ def retarget_action(source, target, mesh, action, rest_points):
     }, frame_start, frame_end, keyed_start
 
 
-def export_action(source, target, mesh, action, rest_points, output_dir):
+def export_action(
+    source, target, mesh, action, rest_points, authored_range, output_dir
+):
     target_action, retarget_audit, frame_start, frame_end, keyed_start = (
-        retarget_action(source, target, mesh, action, rest_points)
+        retarget_action(
+            source, target, mesh, action, rest_points, authored_range
+        )
     )
 
     output_path = os.path.join(output_dir, action.name + ".fbx")
@@ -271,6 +320,7 @@ def export_action(source, target, mesh, action, rest_points, output_dir):
         "duration": (frame_end - frame_start) / FPS,
         "frame_end": frame_end,
         "frame_start": frame_start,
+        "nla_frame_range": list(authored_range),
         "keyed_frame_start": keyed_start,
         "maximum_pose_delta": retarget_audit["maximum_pose_delta"],
         "output": output_path,
@@ -284,6 +334,7 @@ def main(input_path, donor_unit_path, output_dir):
     bpy.ops.wm.open_mainfile(filepath=input_path, load_ui=False)
     mesh, target = preparation.find_arms_and_rig()
     validate_armature(target)
+    authored_ranges = nla_action_ranges(target)
     source = duplicate_source_armature(target)
     actions = {action.name: action for action in bpy.data.actions}
     missing = sorted(set(ACTION_NAMES) - set(actions))
@@ -311,7 +362,13 @@ def main(input_path, donor_unit_path, output_dir):
     os.makedirs(output_dir, exist_ok=True)
     exported = [
         export_action(
-            source, target, mesh, actions[action_name], rest_points, output_dir
+            source,
+            target,
+            mesh,
+            actions[action_name],
+            rest_points,
+            authored_ranges[action_name],
+            output_dir,
         )
         for action_name in ACTION_NAMES
     ]
