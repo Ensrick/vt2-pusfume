@@ -10,6 +10,11 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, locally deployed, and uploaded v0.6.70 from source commit `67e4f97`
+  as friends-only Steam ManifestID `8802612420254493751` at 2026-07-23
+  11:29:55 America/Chicago. All eight installed files are SHA-256-identical
+  to staging at `177,790,078` bytes; 144 tests and source preflight pass.
+  Live visual acceptance remains pending.
 - Prepared v0.6.70 from the rejected v0.6.69 live result. The Slave Rat
   `mtr_skin` child and body-only AO floor are removed; all opaque third-person
   slots again use the last coherent Globadier `mtr_outfit` shader while
