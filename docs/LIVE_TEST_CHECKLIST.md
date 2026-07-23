@@ -105,6 +105,9 @@ idle without a rigid mesh remaining on camera; then test a full light chain and
 block. Compare the body in inventory, sunlight, and deep shadow: material depth
 must return without any surface becoming a black silhouette. Fur and both hand
 materials are unchanged from the accepted v0.6.64 result.
+Test source commit `c044569`, friends-only Workshop ManifestID
+`8566173679127636529`; all eight installed files are SHA-256-identical to
+staging at `179,162,189` bytes.
 
 The v0.6.44 candidate replaces the native Skaven first-person fallback with
 Janfon's human-rigged arms and opens all five heroes' melee and ranged weapons

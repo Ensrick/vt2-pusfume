@@ -11,13 +11,18 @@ architecture and reproduction contract are in
 
 ## Latest shipment
 
-- 2026-07-22 local: v0.6.64 LIVE RESULT / v0.6.65 CANDIDATE `[unverified]` -
+- 2026-07-22 local: v0.6.64 LIVE RESULT / v0.6.65 SHIPPED `[unverified]` -
   a single Assassin attack still left a rigid mesh over the camera and the
   atlas-wide neutral AO made the third-person body bright/matte. The log showed
   clip IDs `11` through `18` overlapping and a `1.97 s` attack replaced after
   about `0.72 s`. v0.6.65 uses the proven manual-time API with one clip owner
   and action-window playback. AO `255` is reverted everywhere; only `p_main`
   receives a floor of `64`. Fur and first-person hand materials are unchanged.
+  Source commit `c044569`; Steam friends-only ManifestID
+  `8566173679127636529`; all eight installed files are SHA-256-identical to
+  staging at `179,162,189` bytes. The material gate corrected 16,571 body
+  samples with zero packed-channel mismatches and mean AO `151.39`; 134 tests
+  and source preflight pass. Live visual verification remains open.
 - 2026-07-22 local: v0.6.63 LIVE RESULT / v0.6.64 SHIPPED `[unverified]` -
   packed-response preservation improved some third-person surfaces, but areas
   using zero donor AO remained black. The Assassin mesh still locked across

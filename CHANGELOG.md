@@ -24,6 +24,12 @@ request rather than in release notes.
   compiled rest matrices. Its 55 shared donor nodes are identical to the mesh
   attachment, and the shipped Janfon unit matches 99 camera-base nodes within
   `0.00000221`, ruling out a base-versus-attachment rest mismatch.
+- Built, locally deployed, hash-verified, and uploaded v0.6.65 friends-only
+  from source commit `c044569` as Steam ManifestID `8566173679127636529`.
+  All eight installed files match staging at `179,162,189` bytes; 134 tests,
+  source preflight, native compilation, skeleton, and material gates pass.
+  The body-only AO gate corrected 16,571 samples to a floor of `64` with zero
+  packed-channel mismatches and mean AO `151.39`.
 - Prepared v0.6.64 from the partial v0.6.63 live result. Opaque atlas AO is
   neutralized to `255`; this changes no diffuse, normal, metallic, emission,
   UV, geometry, fur, or whisker data and prevents zero-AO regions from turning

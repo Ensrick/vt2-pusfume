@@ -134,6 +134,10 @@ matte. The runtime log proved overlapping, prematurely interrupted clip IDs;
 v0.6.65 gives Janfon's clips one manual-time owner and matches them to the
 weapon action window. It also restores authored AO outside `p_main` and applies
 only a low body-tile floor.
+The deployed v0.6.65 candidate is source commit `c044569`, friends-only
+Workshop ManifestID `8566173679127636529`; all eight installed files are
+SHA-256-identical to staging at `179,162,189` bytes. Live verification remains
+open for both the Assassin clip driver and third-person material response.
 Exact Packmaster dragging remains a larger career-state feature. The localized
 chest UV/material seam is tracked separately in issue #28.
 The v0.6.26 live test proved Adventure did not make the Skaven first-person
