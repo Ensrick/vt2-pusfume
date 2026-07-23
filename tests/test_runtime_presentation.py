@@ -89,6 +89,47 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn("recovered_hidden=%s", helper)
         self.assertIn("restore_first_person_weapons(extension)", self.native)
 
+    def test_assassin_prototype_keeps_action_units_but_hides_claw_geometry(self):
+        helper = self.native.split("local function restore_first_person_weapons", 1)[1].split(
+            "local DONOR_PACKAGE_REFERENCE", 1
+        )[0]
+        self.assertIn(
+            "extension._pusfume_active_skaven_role == ASSASSIN_ROLE", helper
+        )
+        self.assertIn("Unit.set_unit_visibility(right_weapon_unit, false)", helper)
+        self.assertIn("Unit.set_unit_visibility(left_weapon_unit, false)", helper)
+        self.assertIn("Assassin hands-only prototype active", helper)
+        self.assertIn("local function hide_assassin_third_person_weapons", self.native)
+        self.assertIn("equipment.right_hand_wielded_unit_3p", self.native)
+        self.assertIn("equipment.left_hand_wielded_unit_3p", self.native)
+
+    def test_switching_away_from_warpfire_clears_its_linked_visual_state(self):
+        helper = self.native.split(
+            "local function stop_inactive_warpfire_effect", 1
+        )[1].split("local function switch_first_person_rig", 1)[0]
+        self.assertIn('active_slot == "slot_ranged"', helper)
+        self.assertIn("item_key ~= WARPFIRE_ITEM_KEY", helper)
+        self.assertIn("weapon_extension:current_synced_state()", helper)
+        self.assertIn("weapon_extension:change_synced_state(nil)", helper)
+        self.assertIn('Unit.flow_event(weapon_unit, "cooldown_ready")', helper)
+        self.assertIn(
+            "stop_inactive_warpfire_effect(inventory_extension, slot_name)",
+            self.native,
+        )
+
+    def test_inherited_versus_equipment_particles_are_removed_at_the_source(self):
+        helper = self.native.split(
+            "local function suppress_inherited_equipment_particles", 1
+        )[1].split("local function hide_assassin_third_person_weapons", 1)[0]
+        self.assertIn('Unit.has_data(weapon_unit, "particles")', helper)
+        self.assertIn("pcall(World.destroy_particles", helper)
+        self.assertIn('"particles", "node_part_pairs", 0', helper)
+        self.assertIn('Unit.set_data(weapon_unit, "has_linked_particles", nil)', helper)
+        self.assertIn(
+            "suppress_inherited_equipment_particles(extension, unit)",
+            self.native,
+        )
+
     def test_weapon_baseline_uses_native_skaven_first_person_contract(self):
         self.assertIn("SKAVEN_FIRST_PERSON_BASE", self.native)
         self.assertIn("PACKMASTER_FIRST_PERSON_ARMS", self.native)

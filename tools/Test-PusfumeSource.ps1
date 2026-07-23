@@ -495,27 +495,24 @@ Test-Condition ($nativeConfigText -match 'parent_child_material\s*=\s*false' -an
     $nativeConfigText -match 'whisker_donor_package\s*=\s*false' -and `
     $nativeBuildText -match '\[switch\]\$ParentChildMaterial' -and `
     $nativeBuildText -match '"child_materials/pusfume/pusfume_outfit_child"' -and `
-    $nativeBuildText -match '"child_materials/pusfume/pusfume_skin_child"' -and `
+    $nativeBuildText -notmatch '"child_materials/pusfume/pusfume_skin_child"' -and `
     $nativeBuildText -match '"child_materials/pusfume/pusfume_whiskers_child"' -and `
     $nativeBuildText -match 'native_child\.package' -and `
     $nativeBuildText -match 'parent_material = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/mtr_outfit"' -and `
     $nativeText -match 'function ensure_child_package' -and `
-    $nativeText -match 'not state\.donor_package_loaded or not state\.skin_donor_package_loaded' -and `
-    $nativeText -match 'or not state\.whisker_donor_package_loaded' -and `
+    $nativeText -match 'not state\.donor_package_loaded or not state\.whisker_donor_package_loaded' -and `
     $nativeText -notmatch 'can_get\("package", config\.parent_child_package\)' -and `
     $nativeText -match 'mod:load_package\(config\.parent_child_package, nil, true\)' -and `
     $nativeText -match 'mod:package_status\(config\.parent_child_package\) == "loaded"' -and `
     $nativeText -match 'Native child material package did not load through the mod handle' -and `
     $nativeText -match 'mod:unload_package\(config\.parent_child_package\)' -and `
     $nativeText -match 'Unit\.set_material\(unit, slot_name, material\)' -and `
-    $nativeText -match 'slot_name == "p_main"' -and `
-    $nativeText -match 'config\.skin_child_material' -and `
+    $nativeText -notmatch 'config\.skin_child_material' -and `
     $nativeText -match 'Unit\.set_material\(unit, WHISKER_MATERIAL_SLOT, config\.whisker_child_material\)' -and `
     $nativeBuildText -match 'whisker_donor_package = false' -and `
     $nativeText -match 'type\(config\.whisker_donor_package\) ~= "string"' -and `
     $nativeText -match 'state\.whisker_donor_package_loaded = true' -and `
-    $nativeText -match 'Managers\.package:load\(config\.skin_donor_package, SKIN_DONOR_PACKAGE_REFERENCE\)' -and `
-    $nativeText -match 'Managers\.package:unload\(\s*config\.skin_donor_package, SKIN_DONOR_PACKAGE_REFERENCE\)' -and `
+    $nativeText -notmatch 'SKIN_DONOR_PACKAGE_REFERENCE' -and `
     $nativeText -match 'Managers\.package:load\(config\.whisker_donor_package, WHISKER_DONOR_PACKAGE_REFERENCE\)' -and `
     $nativeText -match 'Managers\.package:unload\(config\.whisker_donor_package, WHISKER_DONOR_PACKAGE_REFERENCE\)') `
     "parent-child material" "VMF resolves embedded opaque and skinned-alpha children through one ordered mod package"
@@ -566,34 +563,23 @@ Test-Condition ((Test-Path (Join-Path $repoRoot "tools\splice_bundle_resource.py
     $nativeBuildText -match '\$NoDonorTextureShadow = \$true' -and `
     $nativeBuildText -match 'make_spliced_child\.py' -and `
     $nativeBuildText -match '"--expect-size", "768"' -and `
-    $nativeBuildText -match '"--expect-size", "608"' -and `
     $nativeBuildText -match '"--expect-size", "96"' -and `
     $nativeBuildText -match '"--expect-size", "128"' -and `
     $nativeBuildText -match '"--expect-parent", "3D25339231384C80"' -and `
-    $nativeBuildText -match '"--expect-parent", "D52A11EFCDA93CF6"' -and `
     $nativeBuildText -match '"--expect-parent", "D97596A091982F4B"' -and `
     $nativeBuildText -match '"--expect-parent", "F85B289742D5D69A"' -and `
     $nativeBuildText -match 'hash:F72D636600F7F598' -and `
     $nativeBuildText -match 'hash:90BDF3BAC6F81BA8' -and `
-    $nativeBuildText -match 'hash:FA4FAC2D0B40B919' -and `
     $nativeBuildText -match 'DD74D8319F514D96=C263ECB79A8DCEC0' -and `
     $nativeBuildText -match 'E334A8CB6BCB5E6D=A4215592F6297E57' -and `
     $nativeBuildText -match '45FFAEEF53695A86=818C87B860407405' -and `
     $nativeBuildText -match 'texture_map_02af90f8=C263ECB79A8DCEC0' -and `
     $nativeBuildText -match 'texture_map_27b67fd2=818C87B860407405' -and `
     $nativeBuildText -match 'texture_map_8bf37d8e=A4215592F6297E57' -and `
-    $nativeBuildText -match 'F2FA955A20178C73=C263ECB79A8DCEC0' -and `
-    $nativeBuildText -match 'AE33E2E908F44F02=A4215592F6297E57' -and `
-    $nativeBuildText -match '0802C219C1AD7262=818C87B860407405' -and `
-    $nativeBuildText -match 'E5904D9D75311D53=A4215592F6297E57' -and `
-    $nativeBuildText -match 'tint_color_variation=32' -and `
-    $nativeBuildText -match 'dirt_threshold=1' -and `
-    $nativeBuildText -match 'texture_map_990e13c4=C263ECB79A8DCEC0' -and `
-    $nativeBuildText -match 'texture_map_6e114674=A4215592F6297E57' -and `
-    $nativeBuildText -match 'texture_map_8f6fa466=818C87B860407405' -and `
-    $nativeBuildText -match 'texture_map_c6238fdf=A4215592F6297E57' -and `
-    $nativeBuildText -match 'resource_packages/breeds/skaven_slave' -and `
-    $nativeText -match 'ensure_skin_donor_package\(config\)' -and `
+    $nativeBuildText -match '"emissive_color=0,0,0"' -and `
+    $nativeBuildText -notmatch '"emissive_color=15,1,0\.2"' -and `
+    $nativeBuildText -notmatch 'resource_packages/breeds/skaven_slave' -and `
+    $nativeText -notmatch 'ensure_skin_donor_package\(config\)' -and `
     $nativeBuildText -match '86FFDEB90C40C597=E0C4E09D80AE735B' -and `
     $nativeBuildText -match '258E4E4AEA37B1B8=3B3F6545AF6782F5' -and `
     $nativeBuildText -match 'E04C4FD132004376=DF5A1D6679E28376' -and `
@@ -609,6 +595,11 @@ Test-Condition ((Test-Path (Join-Path $repoRoot "tools\splice_bundle_resource.py
     $nativeBuildText -match '\$whiskerSplicedInto\.Count -ne 1' -and `
     $nativeBuildText -notmatch 'spliced_child_payload\.bin"? *-Destination') `
     "spliced game children" "body and Laurel whisker bindings are validated from local game data and embedded only in generated output"
+Test-Condition ($nativeText -match 'suppress_inherited_equipment_particles' -and `
+    $nativeText -match 'World\.destroy_particles' -and `
+    $nativeText -match '"particles", "node_part_pairs", 0' -and `
+    $nativeText -match '"has_linked_particles", nil') `
+    "Versus particle decontamination" "Pusfume clears inherited linked effects and prevents their equipment metadata from recreating the green orb"
 Test-Condition ($nativeText -match 'pusfume_tint' -and `
     $nativeText -match 'Material\.set_scalar\(material, "gradient_variation", variation\)' -and `
     $nativeText -match 'Material\.set_scalar\(material, "tint_columns_pair", columns_pair\)') `

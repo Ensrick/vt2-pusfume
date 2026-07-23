@@ -50,33 +50,31 @@ class JanfonDiffuseContractTests(unittest.TestCase):
         self.assertIn("1916CFCA6ED85BFD=20A7120B25F414F7", fur)
         self.assertNotIn("C70B1AAD3B363E24", fur)
 
-    def test_third_person_skin_and_outfit_keep_separate_native_parents(self):
-        self.assertIn("pusfume_skin_child.material", BUILD)
-        self.assertIn("FA4FAC2D0B40B919.material", BUILD)
-        self.assertIn('"--expect-size", "608"', BUILD)
-        self.assertIn('"--expect-parent", "D52A11EFCDA93CF6"', BUILD)
-        self.assertIn(
-            '"--set-variable", "tint_color_variation=32"',
-            BUILD,
-        )
-        self.assertIn('"--set-variable", "dirt_threshold=1"', BUILD)
-        self.assertIn(
-            '"--expect-texture", "texture_map_c6238fdf=A4215592F6297E57"',
-            BUILD,
-        )
-        self.assertIn(
-            'skin_donor_package = "resource_packages/breeds/skaven_slave"',
-            BUILD,
-        )
+    def test_third_person_opaque_slots_share_last_coherent_outfit_parent(self):
         self.assertIn("pusfume_outfit_child.material", BUILD)
         self.assertIn('"--expect-size", "768"', BUILD)
         self.assertIn('"--expect-parent", "3D25339231384C80"', BUILD)
+        self.assertNotIn("pusfume_skin_child.material", BUILD)
+        self.assertNotIn("FA4FAC2D0B40B919.material", BUILD)
+        self.assertNotIn("resource_packages/breeds/skaven_slave", BUILD)
+        self.assertNotIn("skin_child_material", NATIVE)
         assignment = NATIVE.split(
             "local function apply_donor_material_to_unit", 1
         )[1].split("local function install_material_probe_command", 1)[0]
-        self.assertIn('slot_name == "p_main"', assignment)
-        self.assertIn("and config.skin_child_material", assignment)
         self.assertIn("or config.parent_child_material", assignment)
+        self.assertNotIn('slot_name == "p_main"', assignment)
+
+    def test_third_person_response_neutralizes_only_misread_body_roughness(self):
+        self.assertIn("function Assert-PusfumeBodyResponse", BUILD)
+        self.assertIn("p_main_ao_neutral=true", BUILD)
+        self.assertIn("if ($NeutralizeBodyAo)", BUILD)
+        self.assertIn("$expectedAo = 255", BUILD)
+        self.assertNotIn("Set-PackedChannelFloor", BUILD)
+        self.assertNotIn("-AoFloor", BUILD)
+
+    def test_third_person_emission_is_fully_neutralized(self):
+        self.assertIn('"emissive_color=0,0,0"', BUILD)
+        self.assertNotIn('"emissive_color=15,1,0.2"', BUILD)
 
     def test_legacy_gain_compensation_is_neutral(self):
         self.assertRegex(BUILD, r"\[double\]\$BodyDiffuseGain = 1\.0")

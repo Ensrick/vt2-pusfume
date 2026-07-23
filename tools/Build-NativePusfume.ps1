@@ -1153,11 +1153,11 @@ function Set-PusfumeEmissionMask {
         [Parameter(Mandatory)][string]$AtlasPath,
         [Parameter(Mandatory)][ValidateSet("blue", "alpha")][string]$Channel,
         [switch]$StampEye,
-        [ValidateRange(0, 255)][int]$AoFloor = 0,
-        [int]$AoOriginX,
-        [int]$AoOriginY,
-        [int]$AoWidth,
-        [int]$AoHeight,
+        [switch]$NeutralizeBodyAo,
+        [int]$BodyOriginX,
+        [int]$BodyOriginY,
+        [int]$BodyWidth,
+        [int]$BodyHeight,
         [string]$EyeMaskPath,
         [int]$AtlasSize,
         [int]$EyeOriginX,
@@ -1212,51 +1212,19 @@ function Set-PusfumeEmissionMask {
             }
         }
 
-        function Set-PackedChannelFloor {
-            param(
-                [Drawing.Bitmap]$Bitmap,
-                [int]$ByteOffset,
-                [byte]$Minimum,
-                [Drawing.Rectangle]$Region
-            )
-
-            $data = $Bitmap.LockBits(
-                $full,
-                [Drawing.Imaging.ImageLockMode]::ReadWrite,
-                [Drawing.Imaging.PixelFormat]::Format32bppArgb)
-            try {
-                $stride = [Math]::Abs($data.Stride)
-                $bytes = New-Object byte[] ($stride * $height)
-                [Runtime.InteropServices.Marshal]::Copy(
-                    $data.Scan0, $bytes, 0, $bytes.Length)
-                foreach ($row in $Region.Top..($Region.Bottom - 1)) {
-                    $rowOffset = $row * $stride
-                    foreach ($column in $Region.Left..($Region.Right - 1)) {
-                        $offset = $rowOffset + $column * 4 + $ByteOffset
-                        if ($bytes[$offset] -lt $Minimum) {
-                            $bytes[$offset] = $Minimum
-                        }
-                    }
-                }
-                [Runtime.InteropServices.Marshal]::Copy(
-                    $bytes, 0, $data.Scan0, $bytes.Length)
-            } finally {
-                $Bitmap.UnlockBits($data)
-            }
-        }
-
         # ColorMatrix writes premultiply RGB when alpha becomes zero. These are
         # packed data textures, not composited color images, so edit the BGRA
         # bytes directly and retain metallic/AO/normal data verbatim.
         $channelOffset = if ($Channel -eq "blue") { 0 } else { 3 }
         Set-PackedChannel $output @($channelOffset) @([byte]0) $full
-        if ($AoFloor -gt 0) {
-            # v0.6.64 proved that neutralizing the whole atlas destroys valid
-            # armor/outfit AO and produces a bright matte model. Clamp only the
-            # p_main body tile enough to prevent a zero ambient response.
-            $aoRegion = New-Object Drawing.Rectangle(
-                $AoOriginX, $AoOriginY, $AoWidth, $AoHeight)
-            Set-PackedChannelFloor $output 1 ([byte]$AoFloor) $aoRegion
+        if ($NeutralizeBodyAo) {
+            # Janfon's Blender graph authors skaven_body_s.G as roughness, but
+            # this borrowed Globadier child reads it as ambient occlusion.
+            # Neutralize only p_main; every other atlas material family keeps
+            # its authored response.
+            $bodyRegion = New-Object Drawing.Rectangle(
+                $BodyOriginX, $BodyOriginY, $BodyWidth, $BodyHeight)
+            Set-PackedChannel $output @(1) @([byte]255) $bodyRegion
         }
 
         # 2) Optional eye stamp: route the mask luminance (source red) into the
@@ -1360,7 +1328,6 @@ function Assert-PusfumeBodyResponse {
 
             $samples = 0
             $mismatches = 0
-            $corrected = 0
             [long]$aoTotal = 0
             # p_main occupies the left 2048x4096 body tile. Sampling every 16
             # pixels is deterministic and catches channel-wide packing loss.
@@ -1374,25 +1341,22 @@ function Assert-PusfumeBodyResponse {
                             $mismatches++
                         }
                     }
-                    $expectedAo = [Math]::Max(64, $referenceBytes[$referenceOffset + 1])
+                    $expectedAo = 255
                     if ($packedBytes[$packedOffset + 1] -ne $expectedAo) {
                         $mismatches++
-                    }
-                    if ($expectedAo -ne $referenceBytes[$referenceOffset + 1]) {
-                        $corrected++
                     }
                     $aoTotal += $packedBytes[$packedOffset + 1]
                     $samples++
                 }
             }
             $meanAo = $aoTotal / $samples
-            if ($mismatches -ne 0 -or $corrected -eq 0) {
+            if ($mismatches -ne 0) {
                 throw ("Packed Pusfume body response failed: samples=$samples " +
-                    "response_mismatches=$mismatches corrected=$corrected " +
+                    "response_mismatches=$mismatches " +
                     "mean_ao=$([Math]::Round($meanAo, 2))")
             }
             Write-Host ("Packed Pusfume body response preserved: samples=$samples " +
-                "response_mismatches=0 corrected=$corrected floor=64 " +
+                "response_mismatches=0 p_main_ao_neutral=true " +
                 "mean_ao=$([Math]::Round($meanAo, 2))")
         } finally {
             $reference.UnlockBits($referenceData)
@@ -1454,11 +1418,13 @@ if ($EmissionProbe) {
         "tools\pusfume_atlas_layout.json") -Raw | ConvertFrom-Json
     $eyeTile = $eyeLayout.tiles.eye
     $bodyTile = $eyeLayout.tiles.body
+    $bodyTop = [int]$eyeLayout.atlas_size - [int]$bodyTile.origin[1] `
+        - [int]$bodyTile.size[1]
     Set-PusfumeEmissionMask `
         -AtlasPath (Join-Path $textureRoot "pusfume_atlas_ma.png") -Channel "alpha" `
-        -StampEye -AoFloor 64 `
-        -AoOriginX ([int]$bodyTile.origin[0]) -AoOriginY ([int]$bodyTile.origin[1]) `
-        -AoWidth ([int]$bodyTile.size[0]) -AoHeight ([int]$bodyTile.size[1]) `
+        -StampEye -NeutralizeBodyAo `
+        -BodyOriginX ([int]$bodyTile.origin[0]) -BodyOriginY $bodyTop `
+        -BodyWidth ([int]$bodyTile.size[0]) -BodyHeight ([int]$bodyTile.size[1]) `
         -EyeMaskPath (Join-Path $textureSourcePath "skaven_eyemask.png") `
         -AtlasSize ([int]$eyeLayout.atlas_size) `
         -EyeOriginX ([int]$eyeTile.origin[0]) -EyeOriginY ([int]$eyeTile.origin[1]) `
@@ -1550,20 +1516,6 @@ textures = {
 }
 '@ | Set-Content -LiteralPath (Join-Path $childMaterialRoot "pusfume_outfit_child.material") -Encoding utf8
 
-    @'
-// Compiler placeholder only: the SDK cannot resolve enemy mtr_skin source data.
-// Post-compile splicing replaces this payload with the native Slave Rat child.
-parent_material = "units/beings/player/dark_pact_skins/skaven_wind_globadier/skin_1001/third_person/mtr_outfit"
-material_contexts = {
-	surface_material = ""
-}
-textures = {
-	texture_map_990e13c4 = "textures/pusfume/pusfume_atlas_df"
-	texture_map_6e114674 = "textures/pusfume/pusfume_atlas_nm"
-	texture_map_8f6fa466 = "textures/pusfume/pusfume_atlas_s"
-}
-'@ | Set-Content -LiteralPath (Join-Path $childMaterialRoot "pusfume_skin_child.material") -Encoding utf8
-
     # This source is only a compiler placeholder. -SplicedGameChild replaces
     # its payload with the installed game's Laurel feather child, patched to
     # Janfon's whisker textures, so the shipped binding retains skinning and
@@ -1645,7 +1597,6 @@ $($firstPersonChildEntries -join "`n")
 
     $nativeChildMaterialEntries = @(
         '    "child_materials/pusfume/pusfume_outfit_child"',
-        '    "child_materials/pusfume/pusfume_skin_child"',
         '    "child_materials/pusfume/pusfume_whiskers_child"'
     )
     if ($furEnabled) {
@@ -1752,11 +1703,6 @@ $heroPreviewEnabled = if ($HeroPreview) { "true" } else { "false" }
 # child material opt-in until the stub can be stripped from the built bundle.
 $parentChildMaterialValue = if ($ParentChildMaterial) {
     '"child_materials/pusfume/pusfume_outfit_child"'
-} else {
-    "false"
-}
-$skinChildMaterialValue = if ($SplicedGameChild) {
-    '"child_materials/pusfume/pusfume_skin_child"'
 } else {
     "false"
 }
@@ -1870,7 +1816,6 @@ return {
     hide_donor_weapons = false,
     locomotion_events_enabled = true,
     parent_child_material = $parentChildMaterialValue,
-    skin_child_material = $skinChildMaterialValue,
     parent_child_package = $parentChildPackageValue,
     fur_child_material = $furChildMaterialValue,
     whisker_child_material = $whiskerChildMaterialValue,
@@ -1881,7 +1826,6 @@ return {
     manual_skin_probe = false,
     root_animation_isolation = true,
     skin_name = "pusfume_skin",
-    skin_donor_package = "resource_packages/breeds/skaven_slave",
     third_person_unit = "units/pusfume/pusfume_3p",
 }
 "@ | Set-Content -LiteralPath (Join-Path $stageMod `
@@ -2083,11 +2027,9 @@ if ($ParentChildMaterial) {
 }
 
 if ($SplicedGameChild) {
-    # Preserve Janfon's authored material families. p_main uses the native
-    # Slave Rat skin response; equipment and armor use the native Globadier outfit
-    # response. Applying either parent to every opaque slot was rejected by
-    # live tests: skin-everywhere erased metal, outfit-everywhere blackened
-    # flesh. Both payloads derive from installed data and never leave .build.
+    # Restore the last empirically coherent body contract: every opaque slot
+    # uses the Globadier outfit child, Janfon's authored atlas remains
+    # authoritative, and no post-process alters its packed AO response.
     $donorGameBundle = Join-Path $GameBundleDir "7a8e617a32277fc4"
     if (-not (Test-Path -LiteralPath $donorGameBundle -PathType Leaf)) {
         throw "Installed donor game bundle not found: $donorGameBundle"
@@ -2106,15 +2048,13 @@ if ($SplicedGameChild) {
         throw "Donor bundle extraction did not produce 90BDF3BAC6F81BA8.material"
     }
 
-    # v0.6.62-v0.6.66's mtr_skin experiment removed the metallic response from
-    # every outfit slot and left non-fur surfaces dark. Restore the empirically
-    # better v0.6.61 mtr_outfit parent while retaining the later raw packed-map
-    # preservation and p_main-only AO floor. Slot semantics are verified from
-    # the installed child: diffuse, normal/gloss, then metallic/AO/emission.
+    # Slot semantics are verified from the installed child: diffuse,
+    # normal/gloss, then metallic/AO/emission. The rejected Slave Rat skin
+    # child and v0.6.65 AO floor are deliberately absent.
     $bodyEmissiveColor = if ($EmissionProbe) {
         "emissive_color=25,0,0"
     } else {
-        "emissive_color=15,1,0.2"
+        "emissive_color=0,0,0"
     }
     $splicePayload = Join-Path $generatedRoot "spliced_child_payload.bin"
     $result = Invoke-HiddenPython @(
@@ -2154,62 +2094,6 @@ if ($SplicedGameChild) {
     }
 
     Write-Host "Spliced game outfit child payload (768 bytes, restored metallic response) into $($splicedInto[0])"
-
-    $slaveGameBundle = Join-Path $GameBundleDir "f335e2e561364cb6"
-    if (-not (Test-Path -LiteralPath $slaveGameBundle -PathType Leaf)) {
-        throw "Installed Slave Rat game bundle not found: $slaveGameBundle"
-    }
-    $slaveExtractDir = Join-Path $generatedRoot "slave-rat-bundle-extract"
-    New-Item -ItemType Directory -Path $slaveExtractDir -Force | Out-Null
-    $result = Invoke-HiddenTool -FilePath $UnpackerExe -ArgumentList @(
-        "extract", $slaveGameBundle, $slaveExtractDir, "--flatten")
-    Assert-HiddenToolSuccess $result "Slave Rat donor bundle extraction"
-
-    $gameSkinChildPath = Join-Path $slaveExtractDir "FA4FAC2D0B40B919.material"
-    if (-not (Test-Path -LiteralPath $gameSkinChildPath -PathType Leaf)) {
-        throw "Slave Rat bundle extraction did not produce FA4FAC2D0B40B919.material"
-    }
-    $skinSplicePayload = Join-Path $generatedRoot "spliced_skin_child_payload.bin"
-    $result = Invoke-HiddenPython @(
-        (Join-Path $repoRoot "tools\make_spliced_child.py"),
-        "--extracted", $gameSkinChildPath,
-        "--resource", "hash:FA4FAC2D0B40B919", "--expect-size", "608",
-        "--expect-parent", "D52A11EFCDA93CF6",
-        "--map", "F2FA955A20178C73=C263ECB79A8DCEC0",
-        "--map", "AE33E2E908F44F02=A4215592F6297E57",
-        "--map", "0802C219C1AD7262=818C87B860407405",
-        "--map", "E5904D9D75311D53=A4215592F6297E57",
-        "--set-variable", "tint_color_variation=32",
-        "--set-variable", "dirt_threshold=1",
-        "--expect-texture", "texture_map_990e13c4=C263ECB79A8DCEC0",
-        "--expect-texture", "texture_map_6e114674=A4215592F6297E57",
-        "--expect-texture", "texture_map_8f6fa466=818C87B860407405",
-        "--expect-texture", "texture_map_c6238fdf=A4215592F6297E57",
-        "--out", $skinSplicePayload)
-    Assert-HiddenToolSuccess $result "Spliced Slave Rat skin child payload generation"
-
-    $skinSplicedInto = @()
-    foreach ($bundleFile in (Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)) {
-        $result = Invoke-HiddenPython @(
-            $spliceTool, $bundleFile.FullName, "--type", "material",
-            "--name", "child_materials/pusfume/pusfume_skin_child",
-            "--payload", $skinSplicePayload, "--dry-run")
-        if ($result.ExitCode -eq 0) {
-            $result = Invoke-HiddenPython @(
-                $spliceTool, $bundleFile.FullName, "--type", "material",
-                "--name", "child_materials/pusfume/pusfume_skin_child",
-                "--payload", $skinSplicePayload)
-            Assert-HiddenToolSuccess $result `
-                "Skin material splice on $($bundleFile.Name)"
-            $skinSplicedInto += $bundleFile.Name
-        }
-    }
-
-    if ($skinSplicedInto.Count -ne 1) {
-        throw "Expected the skin child in exactly 1 bundle, spliced $($skinSplicedInto.Count)"
-    }
-
-    Write-Host "Spliced Slave Rat skin child payload (608 bytes, neutral tint/dirt) into $($skinSplicedInto[0])"
 
     if ($firstPersonEnabled) {
         # The native human payload preserves the correct first-person skinning
@@ -2519,7 +2403,7 @@ $nativeSource = if ($useFbxDcc) { $animatedModelFbxPath } else { $inputPath }
 $nativeSourceKind = if ($useFbxDcc) { "FBX/DCC" } else { "BSI fallback" }
 $nativeSourceSize = (Get-Item -LiteralPath $nativeSource).Length
 $bundles = @(Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)
-$materialCount = if ($furEnabled) { 9 } else { 8 }
+$materialCount = if ($furEnabled) { 8 } else { 7 }
 Write-Host "Native Pusfume build passed: source=$nativeSourceKind bytes=$nativeSourceSize bundles=$($bundles.Count)"
 Write-Host "Native Pusfume materials passed: textures=$($textureNames.Count) materials=$materialCount"
 Write-Host "Native Pusfume animation package passed: controller=pusfume_3p clips=pusfume_3p_idle,pusfume_3p_walk"

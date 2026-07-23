@@ -72,10 +72,13 @@ class PusfumeAtlasLayoutTests(unittest.TestCase):
         self.assertIn("LockBits", build)
         self.assertIn("function Assert-PusfumeBodyResponse", build)
         self.assertIn("response_mismatches", build)
-        self.assertIn("function Set-PackedChannelFloor", build)
-        self.assertIn("-StampEye -AoFloor 64", build)
+        self.assertIn("p_main_ao_neutral=true", build)
+        self.assertIn("if ($NeutralizeBodyAo)", build)
+        self.assertIn("$expectedAo = 255", build)
+        self.assertNotIn("function Set-PackedChannelFloor", build)
+        self.assertNotIn("-AoFloor", build)
         self.assertIn("$bodyTile = $eyeLayout.tiles.body", build)
-        self.assertIn("[Math]::Max(64, $referenceBytes", build)
+        self.assertNotIn("[Math]::Max(64, $referenceBytes", build)
         self.assertNotIn("$zeroMatrix.Matrix33 = 0", build)
 
 

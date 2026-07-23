@@ -81,6 +81,8 @@ local state = {
     dialogue_voice_hook_installed = false,
     donor_texture_errors = {},
     donor_weapons_hidden = false,
+    inactive_warpfire_units = setmetatable({}, { __mode = "k" }),
+    particle_suppressed_units = setmetatable({}, { __mode = "k" }),
     locomotion_events_available = false,
 }
 
@@ -88,6 +90,8 @@ local WALK_ENTER_SPEED = 0.5
 local IDLE_ENTER_SPEED = 0.2
 local FIRST_PERSON_WEAPON_HIDE_REASON = "pusfume_hands_diagnostic"
 local PACKMASTER_WEAPON_HIDE_REASON = "catapulted"
+local ASSASSIN_ROLE = "gutter_runner"
+local WARPFIRE_ITEM_KEY = "pusfume_warpfire_thrower"
 local PUSFUME_CHARACTER_VO = "vs_poison_wind_globadier"
 local PUSFUME_SOUND_CHARACTER = "dwarf_slayer"
 
@@ -314,6 +318,27 @@ local function restore_first_person_weapons(extension)
         return false
     end
 
+    if extension._pusfume_active_skaven_role == ASSASSIN_ROLE then
+        if right_weapon_unit and Unit.alive(right_weapon_unit) then
+            Unit.set_unit_visibility(right_weapon_unit, false)
+        end
+        if left_weapon_unit and Unit.alive(left_weapon_unit) then
+            Unit.set_unit_visibility(left_weapon_unit, false)
+        end
+
+        extension._pusfume_weapon_presentation_ready = true
+        extension._pusfume_presented_right_weapon_unit = right_weapon_unit
+        extension._pusfume_presented_left_weapon_unit = left_weapon_unit
+        if not extension._pusfume_assassin_hands_only_logged then
+            extension._pusfume_assassin_hands_only_logged = true
+            mod:info(
+                "[pusfume] Assassin hands-only prototype active; action units retained and claw geometry hidden")
+        end
+
+        return true
+    end
+
+    extension._pusfume_assassin_hands_only_logged = nil
     extension:unhide_weapons(PACKMASTER_WEAPON_HIDE_REASON)
 
     -- v0.6.19-v0.6.29 used this mod-owned reason while diagnosing Janfon's
@@ -374,7 +399,6 @@ local function restore_first_person_weapons(extension)
 end
 
 local DONOR_PACKAGE_REFERENCE = "pusfume_globadier_material"
-local SKIN_DONOR_PACKAGE_REFERENCE = "pusfume_slave_skin_material"
 local WHISKER_DONOR_PACKAGE_REFERENCE = "pusfume_laurel_material"
 local DONOR_TEXTURE_CHANNELS = {
     color = "texture_map_02af90f8",
@@ -490,40 +514,6 @@ local function ensure_whisker_donor_package(config)
     return state.whisker_donor_package_loaded
 end
 
-local function ensure_skin_donor_package(config)
-    if type(config.skin_donor_package) ~= "string" then
-        state.skin_donor_package_loaded = true
-        return true
-    end
-
-    if state.skin_donor_package_loaded then
-        return true
-    end
-
-    if not Managers.package or not can_get("package", config.skin_donor_package) then
-        if not state.skin_donor_package_error_logged then
-            state.skin_donor_package_error_logged = true
-            mod:error("[pusfume] Slave Rat skin donor package is unavailable: %s",
-                tostring(config.skin_donor_package))
-        end
-
-        return false
-    end
-
-    if not state.skin_donor_package_requested then
-        state.skin_donor_package_requested = true
-        Managers.package:load(config.skin_donor_package, SKIN_DONOR_PACKAGE_REFERENCE)
-        mod:info("[pusfume] Requested Slave Rat skin donor package: %s",
-            config.skin_donor_package)
-    end
-
-    state.skin_donor_package_loaded = Managers.package:has_loaded(
-        config.skin_donor_package,
-        SKIN_DONOR_PACKAGE_REFERENCE)
-
-    return state.skin_donor_package_loaded
-end
-
 local function ensure_first_person_material_package(config)
     if type(config.first_person_material_package) ~= "string" then
         return false
@@ -567,8 +557,7 @@ local function ensure_child_package(config)
         return true
     end
 
-    if not state.donor_package_loaded or not state.skin_donor_package_loaded
-            or not state.whisker_donor_package_loaded
+    if not state.donor_package_loaded or not state.whisker_donor_package_loaded
             or not mod.load_package or not mod.package_status then
         return false
     end
@@ -657,7 +646,6 @@ local function apply_donor_material_to_unit(unit, config)
     -- is the shared validity check for both preview-world and gameplay units.
     if not config.donor_material_enabled or not unit or not Unit.alive(unit)
             or not ensure_donor_package(config)
-            or not ensure_skin_donor_package(config)
             or not ensure_whisker_donor_package(config) then
         return false
     end
@@ -687,22 +675,15 @@ local function apply_donor_material_to_unit(unit, config)
             mod:error("[pusfume] Material probe mode %s requires a parent-child test build", mode)
             return false
         end
-        if type(config.skin_child_material) ~= "string" then
-            mod:error("[pusfume] Material probe mode %s requires the p_main skin child", mode)
-            return false
-        end
-
         if not ensure_child_package(config) then
             return false
         end
 
-        if not can_get("material", config.parent_child_material)
-                or not can_get("material", config.skin_child_material) then
+        if not can_get("material", config.parent_child_material) then
             if not state.donor_material_error_logged then
                 state.donor_material_error_logged = true
-                mod:error(
-                    "[pusfume] Compiled child materials are unavailable: outfit=%s skin=%s",
-                    config.parent_child_material, config.skin_child_material)
+                mod:error("[pusfume] Compiled child material is unavailable: %s",
+                    config.parent_child_material)
             end
 
             return false
@@ -711,17 +692,15 @@ local function apply_donor_material_to_unit(unit, config)
         local assignments = {}
 
         for slot_index, slot_name in ipairs(DONOR_MATERIAL_SLOTS) do
-            local material = slot_name == "p_main"
-                    and config.skin_child_material
-                or (mode == "split" and slot_index % 2 == 0
-                    and config.donor_material or config.parent_child_material)
+            local material = mode == "split" and slot_index % 2 == 0
+                    and config.donor_material
+                or config.parent_child_material
 
             Unit.set_material(unit, slot_name, material)
             material_slots = material_slots + 1
             assignments[#assignments + 1] = string.format(
                 "%s=%s", slot_name,
-                material == config.skin_child_material and "skin"
-                    or (material == config.donor_material and "donor" or "outfit"))
+                material == config.donor_material and "donor" or "outfit")
         end
 
         if type(config.whisker_child_material) == "string" then
@@ -960,6 +939,101 @@ local function hide_donor_weapons(extension, unit, config)
     if not state.donor_weapons_hidden then
         state.donor_weapons_hidden = true
         mod:info("[pusfume] Donor third-person weapon units hidden")
+    end
+end
+
+local function suppress_inherited_equipment_particles(extension, unit)
+    if not ALIVE[unit] or not extension.world then
+        return
+    end
+
+    local inventory = ScriptUnit.has_extension(unit, "inventory_system")
+    local equipment = inventory and inventory:equipment()
+    local slots = equipment and equipment.slots
+
+    if not slots then
+        return
+    end
+
+    local suppressed = 0
+    for _, slot_data in pairs(slots) do
+        if type(slot_data) == "table" then
+            for _, weapon_unit in pairs({
+                    slot_data.right_unit_1p,
+                    slot_data.left_unit_1p,
+                    slot_data.right_unit_3p,
+                    slot_data.left_unit_3p,
+                    slot_data.right_ammo_unit_1p,
+                    slot_data.left_ammo_unit_1p,
+                    slot_data.right_ammo_unit_3p,
+                    slot_data.left_ammo_unit_3p,
+                }) do
+                if weapon_unit and Unit.alive(weapon_unit)
+                        and not state.particle_suppressed_units[weapon_unit]
+                        and (Unit.has_data(weapon_unit, "particles")
+                            or Unit.has_data(weapon_unit, "has_linked_particles")) then
+                    local particle_id = Unit.has_data(
+                            weapon_unit, "has_linked_particles")
+                        and Unit.get_data(weapon_unit, "has_linked_particles")
+
+                    if particle_id then
+                        pcall(World.destroy_particles, extension.world, particle_id)
+                    end
+
+                    -- Material-Hijack reads this native Versus metadata whenever
+                    -- equipment spawns or visibility returns. Clear the source
+                    -- count as well as the already-linked particle so it cannot
+                    -- recreate the Globadier/Warpfire idle glow.
+                    if Unit.has_data(weapon_unit, "particles") then
+                        Unit.set_data(
+                            weapon_unit, "particles", "node_part_pairs", 0)
+                    end
+                    Unit.set_data(weapon_unit, "has_linked_particles", nil)
+                    Unit.set_data(weapon_unit, "inactive_particles", false)
+                    state.particle_suppressed_units[weapon_unit] = true
+                    suppressed = suppressed + 1
+                end
+            end
+        end
+    end
+
+    if suppressed > 0 then
+        mod:info(
+            "[pusfume] Suppressed inherited Versus equipment particles units=%d",
+            suppressed)
+    end
+end
+
+local function hide_assassin_third_person_weapons(unit)
+    if not ALIVE[unit] then
+        return
+    end
+
+    local inventory = ScriptUnit.has_extension(unit, "inventory_system")
+    local item_template = inventory
+        and type(inventory.get_wielded_slot_item_template) == "function"
+        and inventory:get_wielded_slot_item_template()
+
+    if not item_template or item_template.pusfume_role_pose ~= "to_gutter_runner" then
+        return
+    end
+
+    local equipment = inventory:equipment()
+    local hidden = 0
+    for _, weapon_unit in pairs({
+            equipment.right_hand_wielded_unit_3p,
+            equipment.left_hand_wielded_unit_3p,
+        }) do
+        if weapon_unit and ALIVE[weapon_unit] then
+            Unit.set_unit_visibility(weapon_unit, false)
+            hidden = hidden + 1
+        end
+    end
+
+    if hidden > 0 and not inventory._pusfume_assassin_3p_hands_only_logged then
+        inventory._pusfume_assassin_3p_hands_only_logged = true
+        mod:info(
+            "[pusfume] Assassin third-person claw geometry hidden; Janfon hand animation remains active")
     end
 end
 
@@ -1999,6 +2073,53 @@ local function relink_first_person_slot(inventory_extension, slot_data,
         tostring(slot_data.id), rig_name, rebound)
 end
 
+local function stop_inactive_warpfire_effect(inventory_extension, active_slot)
+    if active_slot == "slot_ranged" then
+        return
+    end
+
+    local equipment = inventory_extension._equipment
+    local slot_data = equipment and equipment.slots
+        and equipment.slots.slot_ranged
+    local item_key = slot_data and slot_data.item_data
+        and slot_data.item_data.key
+
+    if item_key ~= WARPFIRE_ITEM_KEY then
+        return
+    end
+
+    local stopped_state = false
+    for _, weapon_unit in pairs({
+            slot_data.right_unit_1p,
+            slot_data.left_unit_1p,
+            slot_data.right_unit_3p,
+            slot_data.left_unit_3p,
+        }) do
+        if weapon_unit and Unit.alive(weapon_unit) then
+            local weapon_extension =
+                ScriptUnit.has_extension(weapon_unit, "weapon_system")
+            if weapon_extension
+                    and type(weapon_extension.current_synced_state) == "function"
+                    and weapon_extension:current_synced_state() then
+                weapon_extension:change_synced_state(nil)
+                stopped_state = true
+            end
+
+            if not state.inactive_warpfire_units[weapon_unit] then
+                Unit.flow_event(weapon_unit, "cooldown_ready")
+                state.inactive_warpfire_units[weapon_unit] = true
+            end
+        end
+    end
+
+    if stopped_state or not inventory_extension._pusfume_warpfire_idle_logged then
+        inventory_extension._pusfume_warpfire_idle_logged = true
+        mod:info(
+            "[pusfume] Inactive Warpfire visual state cleared slot=%s synced_state_stopped=%s",
+            tostring(active_slot), tostring(stopped_state))
+    end
+end
+
 local function switch_first_person_rig(extension, inventory_extension, role)
     if not extension._pusfume_skaven_first_person_unit then
         return false
@@ -2112,6 +2233,8 @@ local function prepare_first_person_rig_for_wield(inventory_extension, slot_name
     if not extension or not extension._pusfume_first_person or not slot_data then
         return
     end
+
+    stop_inactive_warpfire_effect(inventory_extension, slot_name)
 
     local item_template = BackendUtils.get_item_template(slot_data.item_data)
     local role = item_template
@@ -2456,7 +2579,9 @@ local function install_probe_hook()
     mod:hook_safe(PlayerUnitCosmeticExtension, "update", function(extension, unit, dummy_input, dt, context, t)
         if extension._pusfume_native_config then
             apply_donor_material(extension, extension._pusfume_native_config)
+            suppress_inherited_equipment_particles(extension, unit)
             hide_donor_weapons(extension, unit, extension._pusfume_native_config)
+            hide_assassin_third_person_weapons(unit)
         end
 
         apply_manual_clip_probe(extension, t)
@@ -2676,15 +2801,6 @@ function M.shutdown(config)
         state.whisker_donor_package_loaded = false
         state.whisker_donor_package_error_logged = false
         mod:info("[pusfume] Released Laurel whisker donor package")
-    end
-
-    if state.skin_donor_package_requested and Managers.package then
-        Managers.package:unload(
-            config.skin_donor_package, SKIN_DONOR_PACKAGE_REFERENCE)
-        state.skin_donor_package_requested = false
-        state.skin_donor_package_loaded = false
-        state.skin_donor_package_error_logged = false
-        mod:info("[pusfume] Released Slave Rat skin donor package")
     end
 
     if state.donor_package_requested and Managers.package then

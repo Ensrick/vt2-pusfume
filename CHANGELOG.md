@@ -10,6 +10,31 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Prepared v0.6.70 from the rejected v0.6.69 live result. The Slave Rat
+  `mtr_skin` child and body-only AO floor are removed; all opaque third-person
+  slots again use the last coherent Globadier `mtr_outfit` shader while
+  preserving Janfon's authored diffuse, normal, metallic, and UV data.
+- Corrected the remaining `p_main` response mismatch without changing any
+  other surface. Janfon's Blender graph authors `skaven_body_s.G` as roughness,
+  but the borrowed outfit child reads it as ambient occlusion; only the body
+  tile now receives neutral AO. Metal, apparatus, leather/outfit slots, fur,
+  whiskers, and their response pixels remain unchanged.
+- Converted the Assassin prototype to an explicit hands-only validation mode.
+  Janfon's 99-bone attachment and all nine custom clips remain active, while
+  the separate native Gutter Runner blade units stay alive for weapon actions
+  but are hidden in first and third person.
+- Added an inactive-Warpfire cleanup at the wield boundary. Switching to melee
+  ends any synchronized Warpfire state and sends the native `cooldown_ready`
+  flow event to its slot units, targeting the orphaned green glow without
+  altering Pusfume's body, eye, or fur materials.
+- Disabled the Globadier child emission vector and removed inherited Versus
+  equipment particles from both first- and third-person slot units after
+  spawn. This addresses both possible owners of the floating green orb:
+  character-material emission and Material-Hijack's linked unit particles.
+- Rejected v0.6.69 in live testing: Assassin clips and Janfon's hands advanced,
+  but native claw geometry remained invisible; the Slave Rat body child
+  produced white/matte skin and broken leather, and the green floating glow
+  persisted in first and third person.
 - Built, locally deployed, hash-verified, and uploaded v0.6.69 friends-only
   from source commit `c1a31e5` as Steam ManifestID
   `6993854942758947216`. All eight installed files match staging at
