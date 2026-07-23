@@ -79,8 +79,6 @@ local state = {
     whisker_material_applied = false,
     fur_material_applied = false,
     dialogue_voice_hook_installed = false,
-    owner_particle_guard_installed = false,
-    owner_particle_guard_logged = false,
     donor_texture_errors = {},
     donor_weapons_hidden = false,
     inactive_warpfire_units = setmetatable({}, { __mode = "k" }),
@@ -980,15 +978,6 @@ local function suppress_inherited_equipment_particles(extension, unit)
     end
 
     local suppressed = 0
-    for _, owner_unit in pairs({
-            unit,
-            extension._tp_unit_mesh,
-        }) do
-        if clear_linked_particle_metadata(extension.world, owner_unit) then
-            suppressed = suppressed + 1
-        end
-    end
-
     for _, slot_data in pairs(slots) do
         if type(slot_data) == "table" then
             for _, weapon_unit in pairs({
@@ -1022,52 +1011,6 @@ local function suppress_inherited_equipment_particles(extension, unit)
             "[pusfume] Suppressed inherited Versus equipment particles units=%d",
             suppressed)
     end
-end
-
-local function install_owner_particle_guard(registry)
-    if state.owner_particle_guard_installed or not GearUtils then
-        return state.owner_particle_guard_installed
-    end
-
-    mod:hook(GearUtils, "create_equipment", function(func, world, slot_name,
-            item_data, unit_1p, unit_3p, is_bot, unit_template,
-            extra_extension_data, ammo_percent, override_item_template,
-            override_item_units, career_name)
-        local career_extension = unit_3p and Unit.alive(unit_3p)
-            and ScriptUnit.has_extension(unit_3p, "career_system")
-        local is_pusfume = career_name == registry.CAREER_NAME
-            or career_extension
-                and type(career_extension.career_name) == "function"
-                and career_extension:career_name() == registry.CAREER_NAME
-
-        if is_pusfume then
-            local guarded = 0
-            local metadata_cleared = 0
-            for _, owner_unit in pairs({ unit_1p, unit_3p }) do
-                if owner_unit and Unit.alive(owner_unit) then
-                    guarded = guarded + 1
-                    if clear_linked_particle_metadata(world, owner_unit) then
-                        metadata_cleared = metadata_cleared + 1
-                    end
-                end
-            end
-
-            if not state.owner_particle_guard_logged then
-                state.owner_particle_guard_logged = true
-                mod:info(
-                    "[pusfume] Owner particle creation blocked before equipment spawn units_guarded=%d metadata_cleared=%d slot=%s",
-                    guarded, metadata_cleared, tostring(slot_name))
-            end
-        end
-
-        return func(world, slot_name, item_data, unit_1p, unit_3p, is_bot,
-            unit_template, extra_extension_data, ammo_percent,
-            override_item_template, override_item_units, career_name)
-    end)
-
-    state.owner_particle_guard_installed = true
-
-    return true
 end
 
 local function hide_assassin_third_person_weapons(unit)
@@ -2156,6 +2099,7 @@ local function stop_inactive_warpfire_effect(inventory_extension, active_slot)
 
     local stopped_state = false
     local reset_units = 0
+    local disabled_lights = 0
     local reset_names = {}
     for _, weapon_unit in pairs({
             slot_data.right_unit_1p,
@@ -2173,13 +2117,17 @@ local function stop_inactive_warpfire_effect(inventory_extension, active_slot)
                 stopped_state = true
             end
 
+            local light_count = Unit.num_lights(weapon_unit)
+            for light_index = 0, light_count - 1 do
+                Light.set_enabled(Unit.light(weapon_unit, light_index), false)
+            end
+            disabled_lights = disabled_lights + light_count
+
             if not state.inactive_warpfire_units[weapon_unit] then
-                -- Fatshark's own Warpfire shoot_end path sends wind_up_start.
-                -- cooldown_ready alone does not stop every unit-flow-owned idle
-                -- light, particularly while the ranged unit is spawned but
-                -- unwielded behind a melee weapon.
+                -- cooldown_ready is the Warpfire unit's ready/glow state. End
+                -- that state, then send the inventory's canonical unwield event.
                 Unit.flow_event(weapon_unit, "wind_up_start")
-                Unit.flow_event(weapon_unit, "cooldown_ready")
+                Unit.flow_event(weapon_unit, "lua_unwield")
                 Unit.set_unit_visibility(weapon_unit, false)
                 state.inactive_warpfire_units[weapon_unit] = true
                 reset_units = reset_units + 1
@@ -2188,13 +2136,13 @@ local function stop_inactive_warpfire_effect(inventory_extension, active_slot)
         end
     end
 
-    if stopped_state or reset_units > 0
+    if stopped_state or reset_units > 0 or disabled_lights > 0
             or not inventory_extension._pusfume_warpfire_idle_logged then
         inventory_extension._pusfume_warpfire_idle_logged = true
         mod:info(
-            "[pusfume] Inactive Warpfire visual state cleared slot=%s synced_state_stopped=%s units_reset=%d units=%s",
+            "[pusfume] Inactive Warpfire visual state cleared slot=%s synced_state_stopped=%s units_reset=%d lights_disabled=%d units=%s",
             tostring(active_slot), tostring(stopped_state), reset_units,
-            table.concat(reset_names, ","))
+            disabled_lights, table.concat(reset_names, ","))
     end
 end
 
@@ -2721,7 +2669,6 @@ function M.install(registry, config)
     install_cosmetic_hook(registry, config)
     local first_person_hook_ready = install_first_person_hook(registry, config)
     install_dialogue_voice_hook(registry)
-    install_owner_particle_guard(registry)
     install_probe_hook()
     install_material_probe_command(config)
 

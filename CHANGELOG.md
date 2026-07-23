@@ -10,6 +10,12 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Rejected v0.6.73 in live testing: the backpack geometry was restored, but
+  the green effect remained. Its owner-particle diagnostic reported
+  `metadata_cleared=0`, disproving that hypothesis. v0.6.74 removes that hook
+  and corrects the hidden Warpfire reset: it no longer finishes in the
+  `cooldown_ready` glow state, sends the canonical `lua_unwield` flow event,
+  and explicitly disables every light on both inactive 1P/3P weapon units.
 - Built, locally deployed, and uploaded v0.6.73 from source commit `43ec20f`
   as friends-only Steam ManifestID `4943475558408330409` at 2026-07-23
   13:23:02 America/Chicago. All eight installed files (178,122,777 bytes)
