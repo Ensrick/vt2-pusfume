@@ -107,7 +107,7 @@ class RuntimePresentationTests(unittest.TestCase):
         helper = self.native.split(
             "local function stop_inactive_warpfire_effect", 1
         )[1].split("local function switch_first_person_rig", 1)[0]
-        self.assertIn('active_slot == "slot_ranged"', helper)
+        self.assertIn('active_slot ~= "slot_ranged"', helper)
         self.assertIn("item_key ~= WARPFIRE_ITEM_KEY", helper)
         self.assertIn("weapon_extension:current_synced_state()", helper)
         self.assertIn("weapon_extension:change_synced_state(nil)", helper)
@@ -119,7 +119,10 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn('Unit.flow_event(weapon_unit, "wind_up_start")', helper)
         self.assertIn('Unit.flow_event(weapon_unit, "lua_unwield")', helper)
         self.assertIn("Unit.set_unit_visibility(weapon_unit, false)", helper)
-        self.assertIn("lights_disabled=%d units=%s", helper)
+        self.assertIn("INACTIVE_WARPFIRE_PARK_OFFSET", helper)
+        self.assertIn("state.inactive_warpfire_transforms[weapon_unit]", helper)
+        self.assertIn("transform.position:unbox()", helper)
+        self.assertIn("parked=%d restored=%d lights_disabled=%d units=%s", helper)
 
     def test_inherited_versus_equipment_particles_are_removed_at_the_source(self):
         helper = self.native.split(

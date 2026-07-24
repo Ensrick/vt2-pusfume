@@ -10,6 +10,12 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Rejected v0.6.74 in live testing: the green visual remained but moved after
+  the new unwield flow event. Runtime hashes prove its carriers are the native
+  Warpfire 1P (`cc727fa583f1f5a0`) and 3P (`8295e971fa9cb718`) units, while
+  `lights_disabled=0` rules out embedded lights. v0.6.75 caches each carrier's
+  exact local transform, parks both 1000 units below the player only while
+  Warpfire is inactive, and restores them before the normal ranged wield.
 - Built, locally deployed, and uploaded v0.6.74 from source commit `ee3a9a4`
   as friends-only Steam ManifestID `353510783120204742` at 2026-07-23
   13:51:38 America/Chicago. The first Steam transfer returned `File Not

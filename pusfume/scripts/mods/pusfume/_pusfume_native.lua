@@ -82,6 +82,7 @@ local state = {
     donor_texture_errors = {},
     donor_weapons_hidden = false,
     inactive_warpfire_units = setmetatable({}, { __mode = "k" }),
+    inactive_warpfire_transforms = setmetatable({}, { __mode = "k" }),
     particle_suppressed_units = setmetatable({}, { __mode = "k" }),
     locomotion_events_available = false,
 }
@@ -92,6 +93,7 @@ local FIRST_PERSON_WEAPON_HIDE_REASON = "pusfume_hands_diagnostic"
 local PACKMASTER_WEAPON_HIDE_REASON = "catapulted"
 local ASSASSIN_ROLE = "gutter_runner"
 local WARPFIRE_ITEM_KEY = "pusfume_warpfire_thrower"
+local INACTIVE_WARPFIRE_PARK_OFFSET = Vector3(0, 0, -1000)
 local PUSFUME_CHARACTER_VO = "vs_poison_wind_globadier"
 local PUSFUME_SOUND_CHARACTER = "dwarf_slayer"
 
@@ -2083,10 +2085,6 @@ local function relink_first_person_slot(inventory_extension, slot_data,
 end
 
 local function stop_inactive_warpfire_effect(inventory_extension, active_slot)
-    if active_slot == "slot_ranged" then
-        return
-    end
-
     local equipment = inventory_extension._equipment
     local slot_data = equipment and equipment.slots
         and equipment.slots.slot_ranged
@@ -2097,8 +2095,11 @@ local function stop_inactive_warpfire_effect(inventory_extension, active_slot)
         return
     end
 
+    local park_units = active_slot ~= "slot_ranged"
     local stopped_state = false
     local reset_units = 0
+    local parked_units = 0
+    local restored_units = 0
     local disabled_lights = 0
     local reset_names = {}
     for _, weapon_unit in pairs({
@@ -2108,40 +2109,63 @@ local function stop_inactive_warpfire_effect(inventory_extension, active_slot)
             slot_data.left_unit_3p,
         }) do
         if weapon_unit and Unit.alive(weapon_unit) then
+            local transform = state.inactive_warpfire_transforms[weapon_unit]
+
+            if park_units and not transform then
+                transform = {
+                    position = Vector3Box(Unit.local_position(weapon_unit, 0)),
+                }
+                state.inactive_warpfire_transforms[weapon_unit] = transform
+            elseif not park_units and transform then
+                Unit.set_local_position(
+                    weapon_unit, 0, transform.position:unbox())
+                state.inactive_warpfire_transforms[weapon_unit] = nil
+                state.inactive_warpfire_units[weapon_unit] = nil
+                restored_units = restored_units + 1
+            end
+
             local weapon_extension =
                 ScriptUnit.has_extension(weapon_unit, "weapon_system")
-            if weapon_extension
+            if park_units and weapon_extension
                     and type(weapon_extension.current_synced_state) == "function"
                     and weapon_extension:current_synced_state() then
                 weapon_extension:change_synced_state(nil)
                 stopped_state = true
             end
 
-            local light_count = Unit.num_lights(weapon_unit)
-            for light_index = 0, light_count - 1 do
-                Light.set_enabled(Unit.light(weapon_unit, light_index), false)
+            if park_units then
+                local light_count = Unit.num_lights(weapon_unit)
+                for light_index = 0, light_count - 1 do
+                    Light.set_enabled(Unit.light(weapon_unit, light_index), false)
+                end
+                disabled_lights = disabled_lights + light_count
             end
-            disabled_lights = disabled_lights + light_count
 
-            if not state.inactive_warpfire_units[weapon_unit] then
+            if park_units and not state.inactive_warpfire_units[weapon_unit] then
                 -- cooldown_ready is the Warpfire unit's ready/glow state. End
-                -- that state, then send the inventory's canonical unwield event.
+                -- that state, send the canonical unwield event, and park the
+                -- carrier because unit visibility does not affect linked flow FX.
                 Unit.flow_event(weapon_unit, "wind_up_start")
                 Unit.flow_event(weapon_unit, "lua_unwield")
                 Unit.set_unit_visibility(weapon_unit, false)
+                Unit.set_local_position(
+                    weapon_unit, 0, INACTIVE_WARPFIRE_PARK_OFFSET)
                 state.inactive_warpfire_units[weapon_unit] = true
                 reset_units = reset_units + 1
+                parked_units = parked_units + 1
                 reset_names[#reset_names + 1] = Unit.debug_name(weapon_unit)
             end
         end
     end
 
-    if stopped_state or reset_units > 0 or disabled_lights > 0
-            or not inventory_extension._pusfume_warpfire_idle_logged then
-        inventory_extension._pusfume_warpfire_idle_logged = true
+    if stopped_state or reset_units > 0 or restored_units > 0
+            or disabled_lights > 0
+            or not inventory_extension._pusfume_warpfire_park_logged then
+        inventory_extension._pusfume_warpfire_park_logged = true
         mod:info(
-            "[pusfume] Inactive Warpfire visual state cleared slot=%s synced_state_stopped=%s units_reset=%d lights_disabled=%d units=%s",
-            tostring(active_slot), tostring(stopped_state), reset_units,
+            "[pusfume] Warpfire carrier state slot=%s mode=%s synced_state_stopped=%s units_reset=%d parked=%d restored=%d lights_disabled=%d units=%s",
+            tostring(active_slot), park_units and "parked" or "active",
+            tostring(stopped_state), reset_units, parked_units, restored_units,
             disabled_lights, table.concat(reset_names, ","))
     end
 end
