@@ -10,6 +10,12 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, locally deployed, and uploaded v0.6.75 from source commit `7d3575c`
+  as friends-only Steam ManifestID `5442794754247712995` at 2026-07-24
+  16:14:34 America/Chicago. All eight installed files (178,136,000 bytes) are
+  SHA-256-identical to staging. The 146-test regression suite, full source
+  preflight, Blender 5.2 rig validation, native compilation, material splices,
+  and Assassin clip gates pass; live acceptance remains pending.
 - Rejected v0.6.74 in live testing: the green visual remained but moved after
   the new unwield flow event. Runtime hashes prove its carriers are the native
   Warpfire 1P (`cc727fa583f1f5a0`) and 3P (`8295e971fa9cb718`) units, while
