@@ -9,6 +9,234 @@ This file is the chronological experiment log. The consolidated successful
 architecture and reproduction contract are in
 [`NATIVE_CHARACTER_MILESTONE.md`](NATIVE_CHARACTER_MILESTONE.md).
 
+## Latest shipment
+
+- 2026-07-22 local: v0.6.66 LIVE RESULT / v0.6.67 SHIPPED `[unverified]` -
+  Janfon's Assassin equip clip sampled correctly through about `0.706 s`, then
+  vanilla `WeaponUnitExtension.start_action` bypassed the existing guards and
+  sent `equip_interrupt` directly to the intentionally controllerless Skaven
+  unit. v0.6.67 suppresses only that equip blend event while the manual driver
+  owns the rig and restores the action setting afterward. The same test
+  confirmed bright/matte metal and dark non-fur surfaces: the body had
+  accidentally retained v0.6.62's rejected 496-byte `mtr_skin` child.
+  v0.6.67 restores the last visually better 768-byte Globadier `mtr_outfit`
+  child while retaining raw packed-channel preservation and the `p_main`-only
+  AO floor. Fur and both first-person hand materials are unchanged. Source
+  `fef8240`; Steam friends-only ManifestID `1645135128086142298`; all eight
+  installed files are SHA-256-identical to staging at `179,161,925` bytes.
+  136 tests and all source/native gates pass.
+- 2026-07-22 local: v0.6.65 LIVE RESULT / v0.6.66 SHIPPED `[unverified]` -
+  Assassin equip reached the new manual-time driver and sampled its clip
+  correctly through `0.707 s`, then the fallback `idle` guard called
+  `Unit.has_animation_event` on the intentionally controllerless Skaven unit.
+  Stingray asserted at `_pusfume_native.lua:1652`. v0.6.66 requires a live
+  animation state machine before every guarded event lookup and changes no
+  model or material. Source `0f27275`; Steam friends-only ManifestID
+  `5717799537931992801`; all eight installed files hash-match staging at
+  `179,170,445` bytes. 135 tests and source preflight pass.
+- 2026-07-22 local: v0.6.64 LIVE RESULT / v0.6.65 SHIPPED `[unverified]` -
+  a single Assassin attack still left a rigid mesh over the camera and the
+  atlas-wide neutral AO made the third-person body bright/matte. The log showed
+  clip IDs `11` through `18` overlapping and a `1.97 s` attack replaced after
+  about `0.72 s`. v0.6.65 uses the proven manual-time API with one clip owner
+  and action-window playback. AO `255` is reverted everywhere; only `p_main`
+  receives a floor of `64`. Fur and first-person hand materials are unchanged.
+  Source commit `c044569`; Steam friends-only ManifestID
+  `8566173679127636529`; all eight installed files are SHA-256-identical to
+  staging at `179,162,189` bytes. The material gate corrected 16,571 body
+  samples with zero packed-channel mismatches and mean AO `151.39`; 134 tests
+  and source preflight pass. Live visual verification remains open.
+- 2026-07-22 local: v0.6.63 LIVE RESULT / v0.6.64 SHIPPED `[unverified]` -
+  packed-response preservation improved some third-person surfaces, but areas
+  using zero donor AO remained black. The Assassin mesh still locked across
+  the camera because rotation-only sanitation did not address the actual rest-
+  basis mismatch: the visible Janfon-99 unit is rebound to Fatshark's donor
+  skeleton while its clips were exported from Janfon's original skeleton.
+  v0.6.64 forces only opaque AO to neutral and rotation-retargets all nine clips
+  onto the exact donor-rest armature. Blender reports `0.00000250` maximum
+  rebind error and validates every animation frame within a `1.5 m` maximum
+  rest-displacement envelope. The obsolete Laurel runtime package dependency
+  is also removed for the embedded whisker child. Source commit `c917c00`,
+  friends-only Workshop ManifestID `989271468751950746`; all eight installed
+  files hash-match staging at `177,122,644` bytes.
+- 2026-07-22 local: v0.6.62 LIVE RESULT / v0.6.63 SHIPPED - the native
+  `mtr_skin` substitution did not stop the third-person body from becoming a
+  black silhouette in low world light. Atlas inspection found the actual
+  regression: clearing emission through GDI+ premultiplied almost all packed
+  metallic/AO RGB to zero. v0.6.63 edits packed BGRA directly and build-gates
+  32,768 body samples against the untouched source (`0` mismatches, mean AO
+  `119.03`). It also removes 588 location/scale curves from each Janfon
+  Assassin action before export; the largest removed displacement was
+  `0.8624`, while all nine rotation animations remain deforming. Source
+  `5fd1f9c`; Steam friends-only ManifestID `2559622198151416662`; eight live
+  files hash-match staging at `179,239,055` bytes; 132 tests and all native
+  compile/rest gates pass. Live visual verification remains pending.
+- 2026-07-19 local: v0.6.32 LIVE RESULT / v0.6.33 CANDIDATE `[unverified]` -
+  coherent hands and native hold poses were confirmed, but the hook was inert,
+  Ranger Veteran's weapon catalog remained visible, the Warpfire heat HUD was
+  absent, and Bardin dialogue still played. v0.6.33 adds an exact four-item
+  allowlist, direct 4.5-meter hook damage, native Ratling and networked gas
+  prototypes, Globadier dialogue-context routing, and a Pusfume Warpfire HUD
+  alias. The chest seam remains isolated in #28. All 72 tests, source
+  preflight, Lua 5.1 parsing, CI, native compilation, and the 54-node rest gate
+  pass. Source `77341d4`; eight deployed files matched staging at
+  `119,874,864` bytes; Steam confirmed friends-only ManifestID
+  `2481608271187325602` at 2026-07-18 23:49 America/Chicago. No live behavior
+  is claimed yet.
+
+- 2026-07-19 local: v0.6.32 CANDIDATE - crash
+  `cd33e247-dc5e-4aa6-96ed-840258a1bde5` proved the v0.6.31 Warpfire adapter
+  removed `dark_pact_action_one` while Fatshark's synchronized action retained
+  that transition. v0.6.32 keeps independent native aliases, rebinds their
+  lookup metadata, validates the complete action graph before registration,
+  and stages Packmaster/claw first-person pose events. The hook remains a
+  damaging Adventure sweep and plays `attack_grab` without requiring a target.
+  Source commit `b2a42a0` was compiled, locally hash-verified, and uploaded
+  friends-only at 2026-07-18 22:10 America/Chicago. Steam confirmed ManifestID
+  `1170425049691334215`; live verification is pending.
+- 2026-07-19 local: v0.6.30 LIVE RESULT / v0.6.31 CANDIDATE - no Pusfume crash;
+  hands were coherent, visible, and animated, and the native hook armed at the
+  correct identity transform. The weapons remained inert because Warpfire used
+  Pactsworn-only input tokens and its target helper dispatched on a Versus
+  breed, while Hero View deliberately exposed every Bardin-career weapon.
+  v0.6.31 maps Adventure fire/reload input onto the native Warpfire action and
+  synchronized FX states, adds career-scoped Adventure targeting and safe
+  network damage, animates the hook unit during its temporary sweeps, and
+  career-filters Pusfume's weapon grids. Blender 5.2 independently found zero
+  escaped UV loops but one missing expected material, `p_eye_g`; that body
+  issue remains isolated. All 65 tests and source preflight pass; live
+  verification is pending. Source commit `a7cc929` was compiled and all eight
+  deployed Workshop files hash-matched staging before the friends-only upload,
+  ManifestID `1065739404025473822` at 2026-07-18 21:22 America/Chicago.
+- 2026-07-18 local: v0.6.29 LIVE RESULT / v0.6.30 SHIPPED - preserving the
+  native Skaven controller fixed the gross hand deformation: Pusfume's hands
+  were visible, coherent, and animated. The apparent Globadier gestures are
+  supplied by Fatshark's shared Skaven first-person controller; live crash
+  locals prove `pusfume_packmaster_hook` and the native Packmaster claw unit
+  remained equipped. The hook was hidden because the mod's restore helper was
+  calling `hide_weapons` every frame, and crash
+  `9970472a-2b65-409b-b45d-1421516dbc88` occurred when the borrowed axe sweep
+  sent `attack_hit_alt_effect` to the Pactsworn controller. v0.6.30 performs
+  the native guarded armed/unhide handshake after weapon spawn, sanitizes all
+  hero-only hit reactions, and adds a live articulated-weapon probe. All 63
+  tests, source preflight, native compilation, material/animation checks,
+  54-node rest validation (`0.00000310` maximum error), and exact eight-file
+  staging/live SHA-256 comparison pass. Source commit `be6f63a`; Workshop
+  ManifestID `3684913542981979356`; pending live verification.
+- 2026-07-18 local: v0.6.28 LIVE RESULT / v0.6.29 SHIPPED - the native
+  Packmaster base and arms spawned at identity scale with `0.0000m` error at
+  every available arm/hand link, but appeared as a huge fur-and-claw lump.
+  Source comparison proved Bardin's profile was replacing the Skaven base's
+  embedded first-person controller at spawn and as the fallback on each wield;
+  playable Pactsworn profiles and their native weapons intentionally omit that
+  override. v0.6.29 suppresses only the donor controller. It also fixes crash
+  `3e42f9dd-5fbe-495d-8d55-d44ab5d0b062`, caused by the native Warpfire
+  condition calling Pactsworn-only `is_climbing()` on an Adventure hero status
+  extension. All 62 tests, source preflight, GitHub CI, native compilation,
+  54-node compiled-rest validation, and exact eight-file staging/live hash
+  comparison pass. Source commit `6c912e3`; Workshop ManifestID
+  `3618672643934952388`; pending live test.
+- 2026-07-18 local: v0.6.21 LIVE RESULT / v0.6.22 CANDIDATE - integrated fur
+  renders again, but third-person textures remain low-resolution or incorrectly
+  mapped, first-person fingers remain malformed, and no walk was visible. The
+  handoff directory's supposed walk was byte-identical to a generated 138-bone
+  model, not Janfon's original clip. v0.6.22 restores the genuine 82-bone walk,
+  rotation-retargets 79 mapped bones onto the untouched 138-bone rig, retains
+  Janfon's new authored idle as a separate clip, and adds structural plus visual
+  preflight. All 49 tests, source preflight, GitHub CI, native SDK compilation,
+  and exact eight-file staging/live hash comparison pass. Source commit
+  `83583ce`; the friends-only uploader reported success at 2026-07-18 14:42
+  America/Chicago, while Steam's stale ACF prevents claiming a new ManifestID.
+  Pending live verification.
+- 2026-07-18 local: v0.6.20 LIVE RESULT / v0.6.21 CANDIDATE - the game
+  shut down normally, but fingers curled incorrectly and the third-person body
+  looked UV-corrupted. The log proved all first-person attachment node distances
+  were zero while Stingray rejected `p_fur` and assigned a default material.
+  v0.6.21 enables the dedicated integrated-fur material and moves first-person
+  skin compilation to direct BSI, where scene nodes and inverse binds share the
+  donor-rebound Blender space. The SDK candidate compiles 54 linked transforms
+  at maximum rest error `0.00000310`. Source commit `04caf66`; Workshop
+  ManifestID `3411867430659936354`; live verification remains pending.
+- 2026-07-18 local: v0.6.19 CRASH / v0.6.20 SHIPPED - selecting Pusfume
+  reached first-person skin substitution, then crashed in vanilla
+  `PlayerUnitFirstPerson.hide_weapons` because the v0.6.19 init hook called it
+  before `extensions_ready` assigned `inventory_extension`. v0.6.20 leaves
+  the hide request pending during init and applies it only from the guarded
+  update path once inventory exists. The 0.01 FBX hand-scale contract is
+  unchanged and still compiles 54 donor-linked transforms at maximum error
+  `0.00000263`. Source commit `b578b23`; Workshop ManifestID
+  `627079647267377713`; pending live test.
+- 2026-07-18 local: v0.6.18 LIVE RESULT / v0.6.19 CANDIDATE - the newest log
+  reached normal shutdown with direct links, identity attachment root, and zero
+  mapped-node distances, while the visible hands remained long and thin. A
+  Blender re-import found the remaining contradiction: the mesh bounds were
+  correct, but local arm bones were roughly `20m` behind armature scale `0.01`.
+  Five isolated FBX encodings and four Stingray compiler runs separated basis
+  from translation scaling. Pre-scaling positions by `100` and exporting at
+  `global_scale=0.01` preserves the full-size mesh, compiles donor-sized
+  translations and unit bone bases, and passes the 54-node rest check at
+  maximum error `0.00000263`. The same candidate adds career-scoped Pusfume
+  UI identity, playable Globadier combat VO routing, and diagnostic first-
+  person weapon hiding. Source commit `721d3c0`; Workshop ManifestID
+  `8719688784520429489`; pending live test.
+- 2026-07-18 local: v0.6.17 CANDIDATE - post-compiler inspection proved
+  v0.6.16's donor positions were correct but all custom bone bases were about
+  `100x`, explaining the remaining sticks/strands. The counter-scaled FBX
+  preserves the authored mesh and compiles 54 donor-linked transforms with
+  maximum error `0.00000263` instead of `99.0`. The same candidate adopts
+  Janfon's 138-bone untouched body, repairs its asserted 682 missing weights,
+  retains integrated fur, and packages its deforming 96-frame action. Pending
+  source commit, Workshop upload, and live test.
+- 2026-07-17 23:40 local: v0.6.15 LIVE RESULT / v0.6.16 CANDIDATE - the
+  newest probe closed the hand errors to `0.0181/0.0119m`, but the arm roots
+  remained `0.4647/0.5126m` from the donor and the mesh rendered as two tiny
+  strands. This proves the remaining failure is incompatible rest geometry,
+  not visibility, material, camera placement, or hand anchoring. v0.6.16 parses
+  the installed compiled donor unit, rebinds 54 shared Blender bones to its
+  exact rest matrices, and uses native direct links with no runtime retarget.
+  Blender 5.2 measured maximum matrix error `0.00000310` and rest-mesh movement
+  `0.00000036m`. Source commit `1b35b11`; Workshop ManifestID
+  `3075372935869158668`; pending live test.
+- 2026-07-17 22:20 local: v0.6.14 LIVE RESULT / v0.6.15 CANDIDATE - vague
+  transparent strands appeared. The probe reported midpoint error `0.4414m`,
+  per-hand errors `0.4408/0.4419m`, and identical residuals; midpoint and arm
+  roots were double-applying the shared translation before Stingray refreshed
+  child world poses. v0.6.15 subtracts inherited midpoint motion and measures
+  resolved residuals on the following frame. Source commit `ecbddd0`; Workshop
+  ManifestID `5051999329694268825`; pending live test.
+- 2026-07-17 22:05 local: v0.6.13 LIVE RESULT / v0.6.14 CANDIDATE - one mesh
+  was shown with materials, identity root scale, disabled culling, and a
+  `0.0044m` midpoint error, but each hand remained about `0.18m` from its live
+  donor hand and only two tiny black specks were visible. Blender independently
+  verified a `1.104m` mesh width and `0.827m` authored hand span. v0.6.14 adds
+  rigid per-arm-root corrections and residual diagnostics. Source commit
+  `ee26fcf`; Workshop ManifestID `3997686606515825820`; pending live test.
+- 2026-07-17 21:44 local: v0.6.12 LIVE RESULT / v0.6.13 SHIPPED - the
+  retarget initialized all 53 pairs but reported `bounds_copied=false`; no hand
+  model was visible. Live hand-node separation remained 0.50-0.66m, proving the
+  clean Janfon rest pose is outside the donor camera anchors. v0.6.13 adds a
+  rigid two-hand-midpoint spine correction and disables first-person mesh-bound
+  culling. Source commit `ccaec5a`; Workshop ManifestID
+  `299222409316147201`; pending live test.
+- 2026-07-17 21:05 local: v0.6.11 LIVE RESULT / v0.6.12 CANDIDATE - the
+  crash-safe probe reported one mesh, visibility enabled, identity root scale,
+  and zero distance for all sampled source/target nodes while Janfon's arms
+  rendered as blinking sticks. This rules out missing assets and visibility.
+  v0.6.12 removes absolute per-bone links, captures pristine donor and Janfon
+  rest poses, transfers rotational animation deltas while preserving Janfon's
+  local offsets, and copies donor LOD bounds. Shipped as commit `b938d14`,
+  ManifestID `1512228345017462962`; pending live test.
+- 2026-07-17 20:46 local: FIRST-PERSON PROBE CRASH FIX SHIPPED -
+  v0.6.11-dev, commit `cb51156`, ManifestID `5832214133899576087`.
+  v0.6.10 asserted when its diagnostic queried target `j_spine2`; the real
+  attachment pair is donor `j_spine2` to Janfon `j_spine1`. The probe now
+  follows that pair, and preflight percent-bearing output is format-safe.
+- 2026-07-17 20:30 local: FIRST-PERSON A/B TEST SHIPPED - v0.6.10-dev,
+  commit `2ac6c29`, ManifestID `1380279707573289085`. v0.6.9 loaded the
+  custom 1P unit/material but rendered no arms. This candidate retains the
+  clean bind export, restores only Janfon's `j_spine2 -> j_spine1` adapter,
+  and logs mesh/root/node-distance evidence after 30 update frames.
+
 ## Ground rules
 
 - Pull before editing; the working tree is shared. Claim files below before
@@ -16,7 +244,8 @@ architecture and reproduction contract are in
   the other rebases.
 - Every change passes `tools/Test-PusfumeSource.ps1` and
   `py -m unittest discover -s tests` before commit.
-- Ship = `tools/Build-NativePusfume.ps1 -HeroPreview -SplicedGameChild`, then
+- Ship = `tools/Build-NativePusfume.ps1 -HeroPreview -SplicedGameChild` with
+  the private `-FirstPersonBlend` and extracted `-FirstPersonDonorUnit`, then
   VMBLauncher upload
   (settings file with ProjectRoot = `.build/native-workshop`; the staging root
   carries `.vmbrc`), then verify `Steam/logs/workshop_log.txt` gained a fresh

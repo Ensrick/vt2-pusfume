@@ -21,7 +21,16 @@ local state = {
     previewer_purity_installed = false,
     preview_widget_seen = false,
     donor_preview_suppressed = false,
+    hud_hook_installed = false,
+    hud_portrait_seen = false,
+    identity_surface_hooks_installed = false,
+    selector_identity_hook_installed = false,
+    character_info_identity_hook_installed = false,
+    loot_identity_hook_installed = false,
+    identity_widget_seen = false,
     native_preview_enabled = false,
+    preview_weapons_suppressed = false,
+    overcharge_hook_installed = false,
     selection_seen = false,
     target_column = nil,
 }
@@ -292,6 +301,125 @@ local function sync_pusfume_identity(window, registry, profile_index, career_ind
         mod:localize("pusfume_character_name"),
         mod:localize("pusfume_career_name"),
         level)
+
+    -- Vanilla writes identity before updating its selected indices. Reassert
+    -- the final widget content after selection so hook order cannot blank it.
+    local widgets = window._widgets_by_name
+    local hero_widget = widgets and widgets.info_hero_name
+    local career_widget = widgets and widgets.info_career_name
+    local level_widget = widgets and widgets.info_hero_level
+    if hero_widget and career_widget and level_widget then
+        hero_widget.content.text = mod:localize("pusfume_character_name")
+        career_widget.content.text = mod:localize("pusfume_career_name")
+        level_widget.content.text = tostring(level)
+        if not state.identity_widget_seen then
+            state.identity_widget_seen = true
+            mod:info("[pusfume] Hero identity widgets restored name=%s career=%s level=%s",
+                hero_widget.content.text, career_widget.content.text, level_widget.content.text)
+        end
+    end
+end
+
+local function is_pusfume_profile_career(registry, profile_index, career_index)
+    local profile = profile_index and SPProfiles[profile_index]
+
+    if not profile then
+        return false
+    end
+
+    if not career_index then
+        local hero_attributes = Managers.backend and Managers.backend:get_interface("hero_attributes")
+
+        career_index = hero_attributes and hero_attributes:get(profile.display_name, "career")
+    end
+
+    local career = career_index and profile.careers[career_index]
+
+    if career and career.name == registry.CAREER_NAME then
+        return true
+    end
+
+    local hero_attributes = Managers.backend and Managers.backend:get_interface("hero_attributes")
+    local active_index = hero_attributes and hero_attributes:get(profile.display_name, "career")
+
+    career = active_index and profile.careers[active_index]
+
+    return career and career.name == registry.CAREER_NAME
+end
+
+local function mark_identity_surface(surface)
+    if not state.identity_widget_seen then
+        state.identity_widget_seen = true
+        mod:info("[pusfume] Pusfume character name restored on %s", surface)
+    end
+end
+
+local function install_identity_write_guard(class, registry)
+    if not class or not class._set_hero_info then
+        return
+    end
+
+    mod:hook(class, "_set_hero_info", function(func, window, hero_name, career_name, level)
+        local pusfume_career_name = mod:localize("pusfume_career_name")
+
+        if career_name == pusfume_career_name
+                or is_pusfume_selection(window, registry) then
+            hero_name = mod:localize("pusfume_character_name")
+            career_name = pusfume_career_name
+        end
+
+        return func(window, hero_name, career_name, level)
+    end)
+end
+
+local function install_identity_surface_hooks(registry)
+    if not state.selector_identity_hook_installed
+            and CharacterSelectionView and CharacterSelectionView.set_current_hero then
+        mod:hook_safe(CharacterSelectionView, "set_current_hero", function(view, profile_index)
+            local params = view._state_machine_params
+            local career_index = params and params.career_index
+
+            if is_pusfume_profile_career(registry, profile_index, career_index)
+                    and view._hero_name_text_widget then
+                view._hero_name_text_widget.content.text = mod:localize("pusfume_character_name")
+                mark_identity_surface("character selector header")
+            end
+        end)
+        state.selector_identity_hook_installed = true
+    end
+
+    if not state.character_info_identity_hook_installed
+            and HeroWindowCharacterInfo and HeroWindowCharacterInfo._update_hero_portrait_frame then
+        mod:hook_safe(HeroWindowCharacterInfo, "_update_hero_portrait_frame", function(window)
+            if is_pusfume_profile_career(registry, window.profile_index, window.career_index) then
+                local widget = window._widgets_by_name and window._widgets_by_name.hero_name
+
+                if widget then
+                    widget.content.text = mod:localize("pusfume_character_name")
+                    mark_identity_surface("inventory character panel")
+                end
+            end
+        end)
+        state.character_info_identity_hook_installed = true
+    end
+
+    if not state.loot_identity_hook_installed
+            and HeroViewStateLoot and HeroViewStateLoot._setup_info_window then
+        mod:hook_safe(HeroViewStateLoot, "_setup_info_window", function(view)
+            if is_pusfume_profile_career(registry, view.profile_index, view.career_index) then
+                local widget = view._widgets_by_name and view._widgets_by_name.info_text_title
+
+                if widget then
+                    widget.content.text = mod:localize("pusfume_character_name")
+                    mark_identity_surface("inventory loot panel")
+                end
+            end
+        end)
+        state.loot_identity_hook_installed = true
+    end
+
+    state.identity_surface_hooks_installed = state.selector_identity_hook_installed
+        and state.character_info_identity_hook_installed and state.loot_identity_hook_installed
 end
 
 local function install_modern_hooks(registry)
@@ -307,6 +435,8 @@ local function install_modern_hooks(registry)
         sync_preview_visibility(window, track_selection(registry, profile_index, career_index))
         sync_pusfume_identity(window, registry, profile_index, career_index)
     end)
+
+    install_identity_write_guard(HeroWindowCharacterSelectionConsole, registry)
 
     state.modern_hook_installed = true
 end
@@ -325,6 +455,8 @@ local function install_legacy_hooks(registry)
         sync_pusfume_identity(window, registry, profile_index, career_index)
     end)
 
+    install_identity_write_guard(CharacterSelectionStateCharacter, registry)
+
     state.legacy_hook_installed = true
 end
 
@@ -338,7 +470,8 @@ local function install_previewer_purity_hooks(registry, native)
     -- when the previewed career is Pusfume, force the native skin instead of
     -- the equipped donor Ranger skin (the inventory surface resolved the
     -- equipped loadout skin and therefore spawned Bardin), and flag the
-    -- previewer so its weapon and ammo units stay hidden.
+    -- previewer so the native character remains active while its Pusfume-only
+    -- prototype equipment is rendered normally.
     mod:hook(MenuWorldPreviewer, "request_spawn_hero_unit", function(func, previewer,
             profile_name, career_index, state_character, callback, optional_scale,
             camera_move_duration, optional_skin, reset_camera)
@@ -428,21 +561,24 @@ local function install_previewer_purity_hooks(registry, native)
 
         initialize_native_preview(previewer)
 
-        local equipment_units = previewer._equipment_units
+    end)
 
-        if not equipment_units then
+    mod:hook(MenuWorldPreviewer, "equip_item", function(func, previewer,
+            item_name, slot, backend_id, skin, skip_wield_anim)
+        local slot_type = slot and slot.type
+
+        if previewer._pusfume_preview_active
+                and (slot_type == "melee" or slot_type == "ranged") then
+            if not previewer._pusfume_preview_weapons_logged then
+                previewer._pusfume_preview_weapons_logged = true
+                state.preview_weapons_suppressed = true
+                mod:info("[pusfume] Menu preview weaponless idle enforced")
+            end
+
             return
         end
 
-        for _, hands in pairs(equipment_units) do
-            if type(hands) == "table" then
-                for _, weapon_unit in pairs(hands) do
-                    if weapon_unit and Unit.alive(weapon_unit) then
-                        Unit.set_unit_visibility(weapon_unit, false)
-                    end
-                end
-            end
-        end
+        return func(previewer, item_name, slot, backend_id, skin, skip_wield_anim)
     end)
 
     state.previewer_purity_installed = true
@@ -491,11 +627,151 @@ local function install_preview_hooks(registry, native)
     state.preview_hook_installed = true
 end
 
+local function install_overcharge_hook(registry)
+    if state.overcharge_hook_installed or not OverchargeBarUI then
+        return
+    end
+
+    mod:hook(OverchargeBarUI, "update", function(func, overcharge_ui, dt, t, player)
+        local pusfume = player ~= nil and type(player.career_name) == "function"
+            and player:career_name() == registry.CAREER_NAME
+
+        if pusfume ~= (overcharge_ui._pusfume_dark_pact_widget == true) then
+            local definition
+
+            if pusfume then
+                definition = UIWidgets.create_dark_pact_overcharge_bar_widget(
+                    "charge_bar_dark_pact", nil, nil, nil, nil, { 250, 70 })
+
+                -- UI Tweaks' legacy HideBuffs hook assumes every overcharge
+                -- widget exposes both threshold styles. Pactsworn's radial
+                -- widget intentionally omits them, so provide invisible shims
+                -- without adding threshold passes to the Versus presentation.
+                definition.style.min_threshold = {
+                    color = { 0, 0, 0, 0 },
+                    offset = { 0, 0, 0 },
+                    size = { 0, 0 },
+                }
+                definition.style.max_threshold = {
+                    color = { 0, 0, 0, 0 },
+                    offset = { 0, 0, 0 },
+                    size = { 0, 0 },
+                }
+            else
+                definition = UIWidgets.create_overcharge_bar_widget(
+                    "charge_bar", nil, nil, nil, nil, { 250, 16 })
+            end
+
+            overcharge_ui.charge_bar = UIWidget.init(definition)
+            overcharge_ui._pusfume_dark_pact_widget = pusfume or nil
+            overcharge_ui.initialize_charge_bar = true
+
+            if pusfume then
+                mod:info("[pusfume] Full Pactsworn Warpfire HUD widget active")
+            end
+        end
+
+        return func(overcharge_ui, dt, t, player)
+    end)
+
+    mod:hook(OverchargeBarUI, "_update_overcharge", function(func,
+            overcharge_ui, player, ...)
+        local has_overcharge = func(overcharge_ui, player, ...)
+
+        if overcharge_ui._pusfume_dark_pact_widget then
+            local style = overcharge_ui.charge_bar.style
+
+            -- HideBuffs resets this height to 10 before returning. Restore the
+            -- authored Pactsworn dimensions after the complete hook chain.
+            style.bar_1.size[2] = 70
+            style.min_threshold.size[2] = 0
+            style.max_threshold.size[2] = 0
+        end
+
+        return has_overcharge
+    end)
+    state.overcharge_hook_installed = true
+end
+
+local function install_hud_hook(registry)
+    if state.hud_hook_installed or not UnitFramesHandler then
+        return
+    end
+
+    mod:hook_safe(UnitFramesHandler, "_sync_player_stats", function(handler, unit_frame)
+        local player_data = unit_frame and unit_frame.player_data
+        local extensions = player_data and player_data.extensions
+        local career_extension = extensions and extensions.career
+        local career_name = career_extension and career_extension:career_name()
+
+        if career_name ~= registry.CAREER_NAME then
+            return
+        end
+
+        local widget = unit_frame.widget
+        local data = unit_frame.data
+        if not widget or not data then
+            return
+        end
+
+        if data.portrait_texture ~= "portrait_pusfume" then
+            data.portrait_texture = "portrait_pusfume"
+            widget:set_portrait("portrait_pusfume")
+        end
+
+        if not state.hud_portrait_seen then
+            state.hud_portrait_seen = true
+            mod:info("[pusfume] Live HUD portrait restored texture=portrait_pusfume")
+        end
+    end)
+    state.hud_hook_installed = true
+end
+
+local function register_backend_localizations()
+    -- The vanilla hero-identity text passes run global Localize over whatever
+    -- string lands in the widget, and VMF mod loc is invisible to the global
+    -- localizer, so the resolved "Pusfume" rendered as the missing-loc marker
+    -- "< Pusfume >". Registering the display strings as their own keys in
+    -- LocalizationManager's backend table (the _base_lookup chokepoint every
+    -- resolution path bottoms out in) makes them self-resolving on
+    -- localize=true passes while localize=false passes still print them
+    -- verbatim. Data registration, not a Localize hook: wrapper hooks get
+    -- blown away by the manager's rawset re-init and miss simple_lookup.
+    local localizer = Managers and Managers.localizer
+
+    if not localizer or not localizer.append_backend_localizations then
+        return false
+    end
+
+    localizer:append_backend_localizations({
+        [mod:localize("pusfume_character_name")] = mod:localize("pusfume_character_name"),
+        [mod:localize("pusfume_career_name")] = mod:localize("pusfume_career_name"),
+    })
+
+    return true
+end
+
 function M.install(registry, native)
+    if not register_backend_localizations() then
+        mod:warning("[pusfume] Backend localizer unavailable; hero name may show <> markers")
+    end
+
+    if not state.backend_loc_reinit_hooked and LocalizationManager then
+        state.backend_loc_reinit_hooked = true
+        -- _backend_localizations is reset inside LocalizationManager.init, so
+        -- a locale change or manager re-init drops the entries; re-register.
+        mod:hook_safe(LocalizationManager, "init", function()
+            register_backend_localizations()
+        end)
+    end
+
     install_modern_hooks(registry)
     install_legacy_hooks(registry)
     install_preview_hooks(registry, native)
     install_previewer_purity_hooks(registry, native)
+    install_hud_hook(registry)
+    install_overcharge_hook(registry)
+    install_identity_surface_hooks(registry)
 
     state.hook_installed = state.modern_hook_installed or state.legacy_hook_installed
 

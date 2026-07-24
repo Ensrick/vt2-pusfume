@@ -15,6 +15,22 @@
 
 The image remains the source-safe fallback preview. The private native build now replaces it at runtime with a live-confirmed compiled Pusfume unit.
 
+## Pusfume character portrait
+
+| Field | Value |
+| --- | --- |
+| Canonical source | `art_source/ui/pusfume_frame2.png` |
+| Creator | Janfon / `notfuegonasus` |
+| Handoff date | 2026-07-17 |
+| SHA-256 | `85C28E8918F5C061D8BF44F6C75C91A0ECFA7A99E119B0E567F354927DE22FCB` |
+| Permission | Supplied by the creator as the canonical character portrait for the collaborative Pusfume mod |
+| Generated variants | Opaque 110x130 selector, masked 86x108 HUD/score, and masked 60x70 compact portrait |
+| Mask provenance | Vanilla-compatible silhouettes copied from the project's live-tested Dynamic Cosmetic Portraits pipeline |
+
+Run `tools/Build-PusfumePortrait.ps1` to reproduce all three GUI textures,
+recipes, and materials from the canonical source. The build center-crops only
+to VT2's portrait aspect ratio and preserves the original source byte-for-byte.
+
 ## Private native placeholder
 
 | Field | Value |

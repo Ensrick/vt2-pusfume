@@ -4,3 +4,5 @@
 pusfume/bundleV2/
 __pycache__/
 *.py[cod]
+node_modules/
+outputs/*/qa/

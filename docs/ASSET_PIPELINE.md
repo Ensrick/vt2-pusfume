@@ -72,20 +72,39 @@ Stage and deploy the native unit without copying generated assets into the publi
 .\tools\Build-NativePusfume.ps1 `
   -HeroPreview `
   -LegacyFur `
-  -TextureSource ".build\pusfume_handoff\textures conv"
+  -SplicedGameChild `
+  -FirstPersonBlend ".build\janfon_1p_20260717\pusfume_1p_arms 2.blend" `
+  -FirstPersonDonorUnit ".build\donor_1p_extract\units\beings\player\dwarf_ranger\first_person_base\chr_first_person_mesh.unit" `
+  -TextureSource ".build\pusfume_handoff\textures conv" `
+  -Upload
 ```
 
 The command first runs `tools/prepare_animated_pusfume_fbx.py` through Blender 5.2. That step merges Janfon's skinned model and baked walk into one character FBX, rigidly retargets each licensed legacy fur card to the current body, and fails unless the transferred action moves the armature, body, and fur without changing authored fur edge lengths. The source FBXs remain unchanged; generated output stays under ignored `.build/generated-native`.
 
-The command then writes only beneath ignored `.build/native-workshop`, generates VT2 texture recipes and materials from the untracked handoff, enables the native cosmetic in that staged copy, compiles it with VMB, and copies the resulting bundles into Workshop item `3764954245` by default.
+The command then writes only beneath ignored `.build/native-workshop`, generates VT2 texture recipes and materials from the untracked handoff, and enables the native cosmetic in that staged copy. It mirrors the machine VMBLauncher settings into ignored staging with only `ProjectRoot` changed, then uses VMBLauncher for compilation, hash-verified local and enabled-remote deployment, and the optional friends-only Workshop upload.
 
-A local deploy alone is not a release: Steam can re-sync a subscribed item back to the last uploaded manifest at any time, so testers only reliably run the last UPLOAD. The staging root carries a `.vmbrc` so the monorepo's `VMBLauncher.exe` resolves it directly; upload with a settings file whose `ProjectRoot` is the staging root:
+When `-FirstPersonBlend` is supplied, `tools/prepare_pusfume_1p_blend.py`
+finds the single armature-bound arm mesh, requires the expected left and right
+arm/hand groups, removes only negligible orphan groups, and enforces four
+normalized influences. `-FirstPersonDonorUnit` must point to the locally
+extracted compiled
+`units/beings/player/dwarf_ranger/first_person_base/chr_first_person_mesh.unit`;
+the raw game unit remains ignored and must never be committed. The guarded
+version-189 parser reads the donor's scene graph, and Blender rebinds every
+shared bone to its exact rest matrix while preserving Janfon's world-space
+rest mesh. The build rejects missing donor bones, matrix error over `0.0001`,
+or mesh movement over `0.00001m`. It then exports the 99-bone attachment
+without animation, links its 53 native donor nodes directly, and splices the
+proven character-skin binding to Janfon's direct body diffuse and normal maps.
+This path requires `-SplicedGameChild`; public source defaults remain disabled.
 
-```powershell
-& "<vermintide-2-tweaker>\tools\vmb-launcher\...\VMBLauncher.exe" upload pusfume --config <settings.json> --no-banner
-```
+The 2026-07-17 handoff's `positioningtest` action spans frames 0-342. Its scale
+curves are effectively constant, but several shoulder translations are real,
+so it is retained as a diagnostic clip rather than installed as the gameplay
+controller. Normal first-person movement, attacks, blocks, jumps, and
+interactions should drive the linked arms through VT2's native rig.
 
-Then confirm `Steam\logs\workshop_log.txt` gained a fresh `Uploaded new content ... for item 3764954245` line; `ugc_tool` prints success even when nothing transferred. Record the ManifestID and verify the next game log's `last_updated` timestamp after a full Steam restart. Use `-HeroPreview` for this intentional private selector build and `-NoDeploy` only for CI or a compiler-only check. Pass `-BlenderExe` if Blender 5.2 is installed outside the default location. The tracked config intentionally leaves native mode and native preview disabled so a normal public build cannot reference absent or unreviewed assets.
+A local deploy alone is not a release: Steam can re-sync a subscribed item back to the last uploaded manifest at any time, so testers only reliably run the last upload. Use `-Upload` on the same build command; never invoke VMBLauncher or `ugc_tool` separately. The script starts every external tool with `UseShellExecute=false`, redirected output, `CreateNoWindow=true`, and hidden window style, so Blender, VMBLauncher, and SDK consoles cannot disrupt the desktop. It rejects uploader success unless `Steam\logs\workshop_log.txt` gains a fresh `Uploaded new content ... for item 3764954245` record and prints the confirmed ManifestID. Use `-NoRemote` only to intentionally skip an enabled tester target and report that omission. Use `-HeroPreview` for this intentional private selector build and `-NoDeploy` only for CI or a compiler-only check. Pass `-BlenderExe` if Blender 5.2 is installed outside the default location. The tracked config intentionally leaves native mode and native preview disabled so a normal public build cannot reference absent or unreviewed assets.
 
 The third-person body, first-person arms, hats, and equipment should be separate exports. Preserve compatible VT2 bone names, hierarchy, and rest pose exactly. Send raw albedo, normal, emissive, roughness, metallic, and mask maps instead of relying on embedded FBX materials.
 
@@ -99,4 +118,4 @@ The confirmed `-SplicedGameChild` build loads the installed playable Globadier p
 
 When a compiled controller remains in a fixed state, the local native build can isolate the animation blender from the state graph. It disables the controller, starts `pusfume_3p_walk` directly on layer 1, freezes automatic playback, and explicitly sweeps the returned clip ID over its verified 0.8-second range. This diagnostic is enabled only in the staged Workshop build; tracked public configuration keeps it disabled.
 
-With deformation confirmed, the staged controller is now state-driven rather than a single looping clip. `tools/generate_idle_pusfume_fbx.py` bakes a placeholder idle on the exact model skeleton: a two-second sinusoidal loop that breathes through the spine and neck, nods the head, and sways both tail bones, exported armature-only with the same axes and baking settings as the walk merge. Live testing proved a single 0.02-radian channel is imperceptible in game, so the generator rejects any idle whose maximum pose delta falls below 0.02 or above 0.5. The generated state machine defaults to `base/idle` and transitions to `base/walk` and back through `walk` and `idle` events with 0.25-second blends. At runtime, the mod measures the player unit's horizontal speed from frame-to-frame position deltas and fires the matching event with hysteresis: `walk` above 0.5 m/s, `idle` below 0.2 m/s. The manual clip sweep is retired from staged builds so the packaged controller owns playback; `/pusfume_preflight` reports whether the compiled controller exposes both events. Replace the generated idle with an authored clip from Janfon on the same rig when one is available - the `.animation` recipe contract does not change.
+With deformation confirmed, the staged controller is state-driven rather than a single looping clip. v0.6.22 uses Janfon's new 96-frame authored idle and retargets the original 25-frame walk from its 82-bone source onto the 138-bone untouched Skaven rig. `tools/validate_pusfume_animation_contract.py` requires both clips to contain the complete target bone-name set and a nonzero action duration before the SDK compiler runs. `tools/generate_idle_pusfume_fbx.py` remains the deterministic fallback when `-IdleAnimationFbx` is omitted. The state machine defaults to `base/idle` and transitions to `base/walk` and back through `walk` and `idle` events with 0.25-second blends. At runtime, the mod measures horizontal speed and fires `walk` above 0.5 m/s and `idle` below 0.2 m/s.

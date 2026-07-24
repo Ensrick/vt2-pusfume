@@ -277,7 +277,10 @@ def remap_material_uvs_to_atlas(mesh_object):
         raise RuntimeError("The model FBX has no active UV layer")
 
     material_names = [material.name for material in mesh_object.data.materials]
-    missing = sorted(set(ATLAS_REGIONS) - set(material_names))
+    # Some meshes omit optional material slots such as the old glowing-eye
+    # duplicate. Every present atlas material is still remapped and validated.
+    required = set(ATLAS_REGIONS) - {"p_eye_g"}
+    missing = sorted(required - set(material_names))
     if missing:
         raise RuntimeError(f"The model FBX is missing atlas material slots: {missing}")
 
@@ -369,12 +372,29 @@ def main(model_path, walk_path, output_path, fur_path=None, legacy_body_path=Non
             bpy.data.actions.remove(candidate)
 
     bpy.context.scene.render.fps = 30
-    bpy.context.scene.frame_start = 1
-    bpy.context.scene.frame_end = 25
+    # Janfon authors helper keys outside the intended loop window (e.g. keys
+    # spanning negative frames to 51 for a 29-frame run). The action's Manual
+    # Frame Range is the authoritative clip window when set; the raw keyframe
+    # extent is only a fallback and can bake lead-in/out garbage that stalls
+    # the clip in-game.
+    if action.use_frame_range:
+        window_start, window_end = action.frame_start, action.frame_end
+        window_source = "manual"
+    else:
+        window_start, window_end = action.frame_range
+        window_source = "keyed"
+    print(
+        f"[anim-window] action={action.name} source={window_source} "
+        f"start={window_start} end={window_end}"
+    )
+    bpy.context.scene.frame_start = int(round(window_start))
+    bpy.context.scene.frame_end = int(round(window_end))
 
-    first_vertices = sample_mesh(model_mesh, 1)
+    sample_start = bpy.context.scene.frame_start
+    sample_middle = (sample_start + bpy.context.scene.frame_end) // 2
+    first_vertices = sample_mesh(model_mesh, sample_start)
     first_pose = {bone.name: bone.matrix.copy() for bone in model_armature.pose.bones}
-    middle_vertices = sample_mesh(model_mesh, 13)
+    middle_vertices = sample_mesh(model_mesh, sample_middle)
     max_vertex_delta = max(
         (first - middle).length
         for first, middle in zip(first_vertices, middle_vertices)
@@ -396,8 +416,8 @@ def main(model_path, walk_path, output_path, fur_path=None, legacy_body_path=Non
 
     fur_vertex_delta = None
     if fur_mesh:
-        first_fur_vertices = sample_mesh(fur_mesh, 1)
-        middle_fur_vertices = sample_mesh(fur_mesh, 13)
+        first_fur_vertices = sample_mesh(fur_mesh, sample_start)
+        middle_fur_vertices = sample_mesh(fur_mesh, sample_middle)
         fur_vertex_delta = max(
             (first - middle).length
             for first, middle in zip(first_fur_vertices, middle_fur_vertices)

@@ -103,8 +103,9 @@ function M.refresh_item_permissions()
 
     for _, item in pairs(ItemMasterList or {}) do
         local can_wield = item.can_wield
+        local is_weapon = item.slot_type == "melee" or item.slot_type == "ranged"
 
-        if type(can_wield) == "table"
+        if not is_weapon and type(can_wield) == "table"
                 and can_wield ~= CanWieldAllItemTemplates
                 and contains(can_wield, M.DONOR_CAREER_NAME)
                 and not contains(can_wield, M.CAREER_NAME) then
@@ -125,8 +126,9 @@ function M.item_permission_status()
 
     for _, item in pairs(ItemMasterList or {}) do
         local can_wield = item.can_wield
+        local is_weapon = item.slot_type == "melee" or item.slot_type == "ranged"
 
-        if type(can_wield) == "table"
+        if not is_weapon and type(can_wield) == "table"
                 and can_wield ~= CanWieldAllItemTemplates
                 and contains(can_wield, M.DONOR_CAREER_NAME) then
             status.eligible = status.eligible + 1
@@ -170,6 +172,69 @@ function M.set_native_skin(skin_name)
     M.NATIVE_SKIN_NAME = skin_name
 end
 
+-- StatisticsDefinitions builds its per-career stat families by iterating
+-- CareerSettings at BOOT, before this mod registers the career, so every
+-- career-keyed stat path (min_health_percentage.pusfume,
+-- completed_career_levels.pusfume.*) is absent and any stats consumer that
+-- records per-career data raises a fatal (career_tweaker armor/overcharge
+-- add_damage stat, crash 2026-07-19 23:30). Replicate the boot generation for
+-- this career. Idempotent for VMF reloads; definitions land before any
+-- player-unit StatisticsDatabase registration consumes them.
+function M.register_statistics_definitions()
+    local player_definitions = StatisticsDefinitions and StatisticsDefinitions.player
+
+    if not player_definitions then
+        mod:warning("[pusfume] StatisticsDefinitions unavailable; per-career stats not registered")
+        return false
+    end
+
+    local career_name = M.CAREER_NAME
+
+    if player_definitions.min_health_percentage
+            and not player_definitions.min_health_percentage[career_name] then
+        player_definitions.min_health_percentage[career_name] = {
+            name = career_name,
+            value = 1,
+        }
+    end
+
+    if player_definitions.min_health_completed
+            and not player_definitions.min_health_completed[career_name] then
+        player_definitions.min_health_completed[career_name] = {
+            name = career_name,
+            source = "player_data",
+            value = 0,
+            database_name = "min_health_completed_" .. career_name,
+        }
+    end
+
+    if player_definitions.completed_career_levels
+            and not player_definitions.completed_career_levels[career_name]
+            and LevelSettings and UnlockableLevels and DifficultySettings then
+        local career_levels = {}
+
+        for level_key, _ in pairs(LevelSettings) do
+            if table.contains(UnlockableLevels, level_key) then
+                career_levels[level_key] = {}
+
+                for diff, _ in pairs(DifficultySettings) do
+                    career_levels[level_key][diff] = {
+                        name = diff,
+                        source = "player_data",
+                        value = 0,
+                        database_name = "completed_career_levels_" .. career_name
+                            .. "_" .. level_key .. "_" .. diff,
+                    }
+                end
+            end
+        end
+
+        player_definitions.completed_career_levels[career_name] = career_levels
+    end
+
+    return true
+end
+
 function M.register()
     fassert(CareerSettings and CareerSettings[M.DONOR_CAREER_NAME], "Pusfume donor career is unavailable.")
     fassert(CareerSettingsOriginal, "CareerSettingsOriginal is unavailable.")
@@ -191,6 +256,9 @@ function M.register()
     career.display_name = M.CAREER_NAME
     career.description = "pusfume_description"
     career.profile_name = M.PROFILE_NAME
+    -- Versus rat careers use this Wwise routing value while character_vo is
+    -- applied per spawned Pusfume unit to avoid mutating Bardin's profile.
+    career.sound_character = "dwarf_slayer"
     career.playfab_name = nil
     career.required_dlc = nil
     career.sort_order = 5
@@ -200,8 +268,28 @@ function M.register()
     career.character_state_list = build_state_list(profile.base_character_states, career.additional_character_states_list)
     career.camera_state_list = build_state_list(profile.base_camera_states, career.additional_camera_states_list)
     career.base_skin = M.NATIVE_SKIN_NAME or CareerSettings[M.DONOR_CAREER_NAME].base_skin
+    career.portrait_image = "portrait_pusfume"
+    career.picking_image = "medium_portrait_pusfume"
+    career.portrait_image_picking = "medium_portrait_pusfume"
+    career.portrait_thumbnail = "small_portrait_pusfume"
+    career.preview_animation = "idle"
+    career.preview_idle_animation = "idle"
+    career.preview_items = {}
+    career.preview_wield_slot = nil
     career.activated_ability = ActivatedAbilitySettings.pusfume
     career.passive_ability = PassiveAbilitySettings.pusfume
+    career.attributes = career.attributes or {}
+    career.attributes.max_hp = 100
+
+    -- Warpfire uses the ordinary hero overcharge extension in Adventure. The
+    -- HUD resolves its presentation by career name, so the synthetic career
+    -- needs an explicit alias rather than Bardin's non-visible fallback.
+    OverchargeData = OverchargeData or {}
+
+    if OverchargeData.vs_warpfire_thrower then
+        OverchargeData[M.CAREER_NAME] = deep_clone(
+            OverchargeData.vs_warpfire_thrower)
+    end
 
     CareerSettingsOriginal[M.CAREER_NAME] = deep_clone(career)
 
@@ -221,6 +309,7 @@ function M.register()
     end
 
     PROFILES_BY_CAREER_NAMES[M.CAREER_NAME] = profile
+    M.register_statistics_definitions()
 
     local changed_items = M.refresh_item_permissions()
     local permission_status = M.item_permission_status()

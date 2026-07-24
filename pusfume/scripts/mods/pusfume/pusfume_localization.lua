@@ -8,16 +8,40 @@ return {
     pusfume_description = {
         en = "A Hell Pit survivor with a scheme for every problem and an exit for every scheme.",
     },
-    pusfume_passive_name = { en = "The Great Scheme" },
+    pusfume_packmaster_hook_name = { en = "Packmaster Hook (Prototype)" },
+    pusfume_packmaster_hook_description = {
+        en = "A recovered Packmaster hook that strikes and pulls Adventure enemies closer.",
+    },
+    pusfume_assassin_claws_name = { en = "Assassin Blades (Janfon Prototype)" },
+    pusfume_assassin_claws_description = {
+        en = "Recovered Gutter Runner blades using Janfon's authored hand animations and a temporary hero dual-dagger combat pattern.",
+    },
+    pusfume_warpfire_thrower_name = { en = "Warpfire Thrower (Prototype)" },
+    pusfume_warpfire_thrower_description = {
+        en = "A temperamental Warpfire Thrower using a temporary Adventure firing pattern.",
+    },
+    pusfume_ratling_gun_name = { en = "Warpstone Ratling Gun (Prototype)" },
+    pusfume_ratling_gun_description = {
+        en = "A recovered Gun Rat rotary weapon adapted for Pusfume's Adventure loadout.",
+    },
+    pusfume_poison_wind_globe_name = { en = "Poison Wind Globes (Prototype)" },
+    pusfume_poison_wind_globe_description = {
+        en = "Globadier gas globes adapted as a repeatable Pusfume ranged weapon.",
+    },
+    pusfume_crossbow_name = { en = "Skaven Crossbow Stand-in (Prototype)" },
+    pusfume_crossbow_description = {
+        en = "A functional copy of Bardin's crossbow reserved as the stand-in for Pusfume's future Skaven crossbow.",
+    },
+    pusfume_passive_name = { en = "Aggressive Iteration" },
     pusfume_passive_description = {
-        en = "Complete two Skaven-themed schemes during the mission to earn stolen supplies.",
+        en = "Killing a Special captures a minor form of its power for Pusfume's next ranged attack.",
     },
-    pusfume_active_name = { en = "Skaven Ingenuity" },
+    pusfume_active_name = { en = "Moulder Ingenuity" },
     pusfume_active_description = {
-        en = "Set down Pusfume's bag so allies can improve potions, bombs, and traps. Inventory upgrades are not enabled in this prototype.",
+        en = "Ready Pusfume's Tool Bag to augment the next consumable selected.",
     },
-    pusfume_ingenuity_station_placeholder = {
-        en = "Skaven Ingenuity station deployed. Interaction upgrades are still guarded in this test build.",
+    pusfume_ingenuity_armed_placeholder = {
+        en = "Moulder Ingenuity is armed. Consumable transformations are guarded in this test build.",
     },
     pusfume_hell_pit_native_name = { en = "Hell Pit Native" },
     pusfume_hell_pit_native_description = {
@@ -25,16 +49,10 @@ return {
     },
     pusfume_scaredy_rat_name = { en = "Scaredy-rat" },
     pusfume_scaredy_rat_description = {
-        en = "Taking damage grants 20% movement speed for 3 seconds.",
+        en = "Pusfume ignores hit movement penalties and gains 20% movement speed for 3 seconds after taking melee damage.",
     },
-    pusfume_insider_knowledge_name = { en = "Insider Knowledge" },
-    pusfume_insider_knowledge_description = {
-        en = "Skaven enemies take 5% more damage from the whole team.",
+    pusfume_swift_claws_name = { en = "Swift Claws" },
+    pusfume_swift_claws_description = {
+        en = "Pusfume reloads ranged weapons 15% faster.",
     },
-    pusfume_scheme_kill_skaven = { en = "Thin the Competition" },
-    pusfume_scheme_kill_skaven_description = { en = "Kill Skaven." },
-    pusfume_scheme_kill_skaven_specials = { en = "Remove Rival Specialists" },
-    pusfume_scheme_kill_specials_description = { en = "Kill Skaven specials." },
-    pusfume_scheme_reward_strength = { en = "Stolen Strength Draught" },
-    pusfume_scheme_reward_speed = { en = "Borrowed Speed Brew" },
 }

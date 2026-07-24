@@ -66,6 +66,21 @@ class PusfumeAtlasLayoutTests(unittest.TestCase):
         self.assertEqual(["df"], self.layout["force_opaque_suffixes"])
         self.assertNotIn("p_whiskers", self.layout["materials"])
 
+    def test_packed_response_edits_channels_without_alpha_compositing(self):
+        build = (TOOLS / "Build-NativePusfume.ps1").read_text(encoding="utf-8-sig")
+        self.assertIn("function Set-PackedChannel", build)
+        self.assertIn("LockBits", build)
+        self.assertIn("function Assert-PusfumeBodyResponse", build)
+        self.assertIn("response_mismatches", build)
+        self.assertIn("p_main_ao_neutral=true", build)
+        self.assertIn("if ($NeutralizeBodyAo)", build)
+        self.assertIn("$expectedAo = 255", build)
+        self.assertNotIn("function Set-PackedChannelFloor", build)
+        self.assertNotIn("-AoFloor", build)
+        self.assertIn("$bodyTile = $eyeLayout.tiles.body", build)
+        self.assertNotIn("[Math]::Max(64, $referenceBytes", build)
+        self.assertNotIn("$zeroMatrix.Matrix33 = 0", build)
+
 
 if __name__ == "__main__":
     unittest.main()

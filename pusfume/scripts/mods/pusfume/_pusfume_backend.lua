@@ -2,18 +2,19 @@ local mod = get_mod("pusfume")
 
 local M = {}
 local status = {
-    expected_hook_count = 23,
-    expected_runtime_guard_count = 4,
+    expected_hook_count = 24,
+    expected_runtime_guard_count = 5,
     hook_count = 0,
     installed = false,
     runtime_guard_count = 0,
     runtime_guards_installed = false,
     used_empty_loadout_fallback = false,
     wire_guard_installed = false,
+    weapon_grid_guard_installed = false,
     stripped_sync_keys = {},
 }
 
-local function expose_donor_loadout(self, loadouts, registry)
+local function expose_donor_loadout(self, loadouts, registry, weapons)
     if type(loadouts) ~= "table" then
         return loadouts
     end
@@ -39,7 +40,7 @@ local function expose_donor_loadout(self, loadouts, registry)
         end
     end
 
-    loadouts[registry.CAREER_NAME] = donor_loadout
+    loadouts[registry.CAREER_NAME] = weapons.overlay_loadout(donor_loadout)
 
     return loadouts
 end
@@ -60,7 +61,7 @@ local function hook_career_first(class_name, method_name, registry)
     status.hook_count = status.hook_count + 1
 end
 
-function M.refresh_runtime_aliases(registry)
+function M.refresh_runtime_aliases(registry, weapons)
     local backend_manager = Managers and Managers.backend
     local item_interface = backend_manager and backend_manager._interfaces
         and backend_manager._interfaces.items
@@ -69,27 +70,39 @@ function M.refresh_runtime_aliases(registry)
         return false
     end
 
-    local stores = {
+    local flat_stores = {
         "_loadouts",
         "_bot_loadouts",
-        "_career_loadouts",
-        "_selected_career_custom_loadouts",
-        "_default_loadouts",
         "_default_loadout_overrides",
     }
 
-    for _, store_name in ipairs(stores) do
+    for _, store_name in ipairs(flat_stores) do
         local store = item_interface[store_name]
 
         if type(store) == "table" and store[registry.DONOR_CAREER_NAME] ~= nil then
-            store[registry.CAREER_NAME] = store[registry.DONOR_CAREER_NAME]
+            store[registry.CAREER_NAME] = weapons.overlay_loadout(store[registry.DONOR_CAREER_NAME])
         end
+    end
+
+    for _, store_name in ipairs({ "_career_loadouts", "_default_loadouts" }) do
+        local store = item_interface[store_name]
+
+        if type(store) == "table" and store[registry.DONOR_CAREER_NAME] ~= nil then
+            store[registry.CAREER_NAME] = weapons.overlay_loadout_collection(
+                store[registry.DONOR_CAREER_NAME])
+        end
+    end
+
+    local selected = item_interface._selected_career_custom_loadouts
+
+    if type(selected) == "table" then
+        selected[registry.CAREER_NAME] = selected[registry.DONOR_CAREER_NAME]
     end
 
     return true
 end
 
-function M.loadout_status(registry)
+function M.loadout_status(registry, weapons)
     local backend_manager = Managers and Managers.backend
     local item_interface = backend_manager and backend_manager._interfaces
         and backend_manager._interfaces.items
@@ -104,7 +117,10 @@ function M.loadout_status(registry)
     for _, slot_name in ipairs({ "slot_melee", "slot_ranged" }) do
         local ok, item = pcall(BackendUtils.get_loadout_item, registry.CAREER_NAME, slot_name, false)
 
-        if ok and item and item.data then
+        local expected_item = weapons.item_for_slot(slot_name)
+        local expected_key = expected_item and expected_item.key
+
+        if ok and item and item.data and item.key == expected_key then
             resolved[#resolved + 1] = string.format("%s=%s", slot_name,
                 tostring(item.data.name or item.backend_id))
         else
@@ -119,8 +135,53 @@ function M.loadout_status(registry)
     return true, table.concat(resolved, " ")
 end
 
-function M.install_runtime_guards(registry)
-    M.refresh_runtime_aliases(registry)
+local function install_weapon_grid_guard(registry, weapons)
+    if status.weapon_grid_guard_installed or not ItemGridUI then
+        return status.weapon_grid_guard_installed
+    end
+
+    mod:hook(ItemGridUI, "change_item_filter", function(func, self, item_filter, ...)
+        local profile = PROFILES_BY_NAME[self._hero_name]
+        local career = profile and profile.careers[self._career_index]
+        local is_weapon_filter = type(item_filter) == "string"
+            and (string.find(item_filter, "slot_type == melee", 1, true)
+                or string.find(item_filter, "slot_type == ranged", 1, true))
+
+        if career and career.name == registry.CAREER_NAME and is_weapon_filter then
+            local slot_name = string.find(item_filter, "slot_type == melee", 1, true)
+                and "slot_melee" or "slot_ranged"
+
+            -- Always give Pusfume his own career context so the grid resolves
+            -- against his can_wield rather than the donor hero's.
+            item_filter = string.gsub(item_filter,
+                "can_wield_by_current_hero", "can_wield_by_current_career")
+
+            -- Closed roster: restrict to the hard rat allowlist. Open roster:
+            -- let can_wield_by_current_career surface every opened hero weapon.
+            if not weapons.open_all_hero_weapons() then
+                local item_keys = weapons.allowed_item_keys(slot_name)
+                local identity_filters = {}
+
+                for _, item_key in ipairs(item_keys) do
+                    identity_filters[#identity_filters + 1] = "item_key == " .. item_key
+                end
+
+                item_filter = string.format("( %s ) and ( %s )",
+                    item_filter, table.concat(identity_filters, " or "))
+            end
+        end
+
+        return func(self, item_filter, ...)
+    end)
+    status.weapon_grid_guard_installed = true
+    status.runtime_guard_count = status.runtime_guard_count + 1
+
+    return true
+end
+
+function M.install_runtime_guards(registry, weapons)
+    M.refresh_runtime_aliases(registry, weapons)
+    install_weapon_grid_guard(registry, weapons)
 
     if status.runtime_guards_installed then
         return true
@@ -133,21 +194,50 @@ function M.install_runtime_guards(registry)
     -- Alias at the stable outer API so per-career loadout mods never see Pusfume
     -- as independent storage and cannot serve an unrelated career's weapons.
     mod:hook(BackendUtils, "get_loadout_item_id", function(func, career_name, ...)
+        local slot_name = select(1, ...)
+
+        if career_name == registry.CAREER_NAME and weapons.is_weapon_slot(slot_name) then
+            return weapons.backend_id_for_slot(slot_name)
+        end
+
         return func(alias_career(career_name, registry), ...)
     end)
     status.runtime_guard_count = status.runtime_guard_count + 1
 
     mod:hook(BackendUtils, "get_loadout_item", function(func, career_name, ...)
+        local slot_name = select(1, ...)
+
+        if career_name == registry.CAREER_NAME and weapons.is_weapon_slot(slot_name) then
+            return weapons.item_for_slot(slot_name)
+        end
+
         return func(alias_career(career_name, registry), ...)
     end)
     status.runtime_guard_count = status.runtime_guard_count + 1
 
     mod:hook(BackendUtils, "set_loadout_item", function(func, backend_id, career_name, ...)
+        local slot_name = select(1, ...)
+
+        if career_name == registry.CAREER_NAME and weapons.is_weapon_slot(slot_name) then
+            return weapons.select_backend_id(slot_name, backend_id)
+        end
+
         return func(backend_id, alias_career(career_name, registry), ...)
     end)
     status.runtime_guard_count = status.runtime_guard_count + 1
 
     mod:hook(BackendUtils, "try_set_loadout_item", function(func, career_name, ...)
+        local slot_name = select(1, ...)
+        local item_key = select(2, ...)
+
+        if career_name == registry.CAREER_NAME and weapons.is_weapon_slot(slot_name) then
+            if weapons.select_item_key(slot_name, item_key) then
+                return weapons.item_for_slot(slot_name)
+            end
+
+            return nil
+        end
+
         return func(alias_career(career_name, registry), ...)
     end)
     status.runtime_guard_count = status.runtime_guard_count + 1
@@ -228,7 +318,7 @@ function M.install_runtime_guards(registry)
 
     status.runtime_guards_installed = true
     registry.set_loadout_validator(function()
-        return M.loadout_status(registry)
+        return M.loadout_status(registry, weapons)
     end)
 
     mod:info("[pusfume] installed BackendUtils donor guards=%d/%d",
@@ -237,7 +327,7 @@ function M.install_runtime_guards(registry)
     return true
 end
 
-function M.install(registry)
+function M.install(registry, weapons)
     if status.installed then
         return status
     end
@@ -245,14 +335,19 @@ function M.install(registry)
     mod:hook("BackendInterfaceItemPlayfab", "get_loadout", function(func, self, ...)
         local loadouts = func(self, ...)
 
-        return expose_donor_loadout(self, loadouts, registry)
+        return expose_donor_loadout(self, loadouts, registry, weapons)
     end)
     status.hook_count = status.hook_count + 1
 
     mod:hook("BackendInterfaceItemPlayfab", "get_bot_loadout", function(func, self, ...)
         local loadouts = func(self, ...)
 
-        return expose_donor_loadout(self, loadouts, registry)
+        return expose_donor_loadout(self, loadouts, registry, weapons)
+    end)
+    status.hook_count = status.hook_count + 1
+
+    mod:hook("BackendInterfaceItemPlayfab", "get_all_backend_items", function(func, self, ...)
+        return weapons.inject_backend_items(func(self, ...))
     end)
     status.hook_count = status.hook_count + 1
 
@@ -262,11 +357,7 @@ function M.install(registry)
         "delete_loadout",
         "set_default_override",
         "get_default_override",
-        "get_career_loadouts",
         "get_selected_career_loadout",
-        "get_default_loadouts",
-        "get_loadout_by_career_name",
-        "get_loadout_item_id",
         "get_cosmetic_loadout",
     }
 
@@ -274,7 +365,45 @@ function M.install(registry)
         hook_career_first("BackendInterfaceItemPlayfab", method_name, registry)
     end
 
+    for _, method_name in ipairs({ "get_career_loadouts", "get_default_loadouts" }) do
+        mod:hook("BackendInterfaceItemPlayfab", method_name, function(func, self, career_name, ...)
+            if career_name == registry.CAREER_NAME then
+                return weapons.overlay_loadout_collection(
+                    func(self, registry.DONOR_CAREER_NAME, ...))
+            end
+
+            return func(self, career_name, ...)
+        end)
+        status.hook_count = status.hook_count + 1
+    end
+
+    mod:hook("BackendInterfaceItemPlayfab", "get_loadout_by_career_name", function(func, self,
+            career_name, ...)
+        if career_name == registry.CAREER_NAME then
+            return weapons.overlay_loadout(func(self, registry.DONOR_CAREER_NAME, ...))
+        end
+
+        return func(self, career_name, ...)
+    end)
+    status.hook_count = status.hook_count + 1
+
+    mod:hook("BackendInterfaceItemPlayfab", "get_loadout_item_id", function(func, self,
+            career_name, slot_name, ...)
+        if career_name == registry.CAREER_NAME and weapons.is_weapon_slot(slot_name) then
+            return weapons.backend_id_for_slot(slot_name)
+        end
+
+        return func(self, alias_career(career_name, registry), slot_name, ...)
+    end)
+    status.hook_count = status.hook_count + 1
+
     mod:hook("BackendInterfaceItemPlayfab", "set_loadout_item", function(func, self, item_id, career_name, ...)
+        local slot_name = select(1, ...)
+
+        if career_name == registry.CAREER_NAME and weapons.is_weapon_slot(slot_name) then
+            return weapons.select_backend_id(slot_name, item_id)
+        end
+
         return func(self, item_id, alias_career(career_name, registry), ...)
     end)
     status.hook_count = status.hook_count + 1
