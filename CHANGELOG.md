@@ -17,6 +17,12 @@ request rather than in release notes.
   `normal` visibility group instead of only toggling whole-unit visibility. It
   also reports mesh counts and hand-to-blade attachment error for the next
   empirical pass.
+- Built, locally deployed, and uploaded v0.6.81 from source commit `8e160fa`
+  as friends-only Steam ManifestID `8500909830190316557` at 2026-07-25
+  17:09:20 America/Chicago. All eight installed files (178,194,986 bytes) are
+  SHA-256-identical to staging. The 149-test regression suite, full source
+  preflight, Blender 5.2 rig validation, native compilation, material splices,
+  and all nine Janfon Assassin clip gates pass; live acceptance remains pending.
 - Prepared v0.6.80 to resume Assassin Blade acceptance after body/material
   stabilization. The last live evidence already proved that both Fatshark claw
   units rebound to Janfon's animated 99-bone attachment and that equip, idle,
