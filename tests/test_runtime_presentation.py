@@ -156,6 +156,20 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn("if config.native_skaven_first_person then", self.native)
         self.assertIn("native_skaven_baseline", self.native)
 
+    def test_skaven_viewmodel_retracts_as_one_rig_near_geometry(self):
+        helper = self.native.split(
+            "local function update_skaven_viewmodel_retraction", 1
+        )[1].split("local function relink_damage_unit", 1)[0]
+        self.assertIn("SKAVEN_VIEWMODEL_OBSTRUCTION_DISTANCE = 1.35", self.native)
+        self.assertIn("filter_in_line_of_sight_no_players_no_enemies", helper)
+        self.assertEqual(helper.count("PhysicsWorld.raycast("), 1)
+        self.assertIn("extension._pusfume_skaven_first_person_unit", helper)
+        self.assertIn("extension._pusfume_active_first_person_rig == \"skaven\"", helper)
+        self.assertIn("Vector3(0, -current, 0)", helper)
+        self.assertIn("update_skaven_viewmodel_retraction(extension, dt)", self.native)
+        self.assertNotIn("equipment.right_hand_wielded_unit", helper)
+        self.assertNotIn("equipment.left_hand_wielded_unit", helper)
+
     def test_native_skaven_first_person_packages_are_resident_before_spawn(self):
         self.assertIn("NATIVE_SKAVEN_FIRST_PERSON_PACKAGES", self.native)
         self.assertIn("ensure_native_skaven_first_person_packages", self.native)

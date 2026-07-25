@@ -10,6 +10,15 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Accepted v0.6.76 in live testing: parking both inactive Warpfire carriers
+  removed the persistent green Globadier/Warpfire orb without a crash. GitHub
+  issue #42 is closed.
+- Prepared v0.6.77 with perspective-correct Warpfire flame ownership. Holding
+  third-person inspect now replaces the camera-linked 1P flame with the native
+  3P effect at the equipped world weapon's `fx_muzzle`, then restores the 1P
+  effect on return. A smoothed 1.35-unit five-ray obstruction probe retracts
+  the complete linked Skaven viewmodel near scenery, keeping hands, animations,
+  damage units, and weapon geometry aligned.
 - Built, locally deployed, and uploaded v0.6.76 from source commit `c11fd06`
   as friends-only Steam ManifestID `7156781742326830188` at 2026-07-25
   00:34:05 America/Chicago. All eight installed files (178,133,707 bytes) are

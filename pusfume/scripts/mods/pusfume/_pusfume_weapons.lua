@@ -385,6 +385,185 @@ local function ensure_flamethrower_wwise_dep(template)
     end
 end
 
+local function warpfire_owner_is_pusfume(owner_unit)
+    if not installed_registry or not owner_unit or not Unit.alive(owner_unit) then
+        return false
+    end
+
+    local career_extension = ScriptUnit.has_extension(
+        owner_unit, "career_system")
+
+    return career_extension
+        and type(career_extension.career_name) == "function"
+        and career_extension:career_name() == installed_registry.CAREER_NAME
+end
+
+local function warpfire_effect_carrier(owner_unit, weapon_unit, is_local_player)
+    local first_person_extension = is_local_player
+        and ScriptUnit.has_extension(owner_unit, "first_person_system")
+    local first_person_active = first_person_extension
+        and type(first_person_extension.first_person_mode_active) == "function"
+        and first_person_extension:first_person_mode_active()
+
+    if first_person_active then
+        return weapon_unit, "first_person"
+    end
+
+    local inventory_extension = ScriptUnit.has_extension(
+        owner_unit, "inventory_system")
+    local equipment = inventory_extension and inventory_extension:equipment()
+    local third_person_unit = equipment
+        and (equipment.left_hand_wielded_unit_3p
+            or equipment.right_hand_wielded_unit_3p)
+
+    if third_person_unit and Unit.alive(third_person_unit) then
+        return third_person_unit, "third_person"
+    end
+
+    return weapon_unit, "first_person"
+end
+
+local function warpfire_effect_node(weapon_unit, perspective, current_action)
+    local preferred_node = perspective == "third_person"
+        and "fx_muzzle" or current_action.fx_node
+
+    if preferred_node and Unit.has_node(weapon_unit, preferred_node) then
+        return Unit.node(weapon_unit, preferred_node)
+    end
+
+    for _, node_name in ipairs({ "fx_muzzle", "p_fx" }) do
+        if Unit.has_node(weapon_unit, node_name) then
+            return Unit.node(weapon_unit, node_name)
+        end
+    end
+
+    return 0
+end
+
+local function reconcile_warpfire_effect(
+        owner_unit, weapon_unit, state_data, is_local_player, world)
+    local current_action = state_data.current_action
+
+    if not current_action then
+        return weapon_unit, "first_person"
+    end
+
+    local carrier, perspective = warpfire_effect_carrier(
+        owner_unit, weapon_unit, is_local_player)
+    local effect_name = perspective == "third_person"
+        and current_action.particle_effect_flames_3p
+        or current_action.particle_effect_flames
+    effect_name = effect_name or state_data.flamethrower_effect_name
+
+    local carrier_changed = state_data.pusfume_effect_carrier ~= carrier
+    local perspective_changed =
+        state_data.pusfume_effect_perspective ~= perspective
+    local effect_changed = state_data.flamethrower_effect_name ~= effect_name
+
+    if (carrier_changed or perspective_changed or effect_changed)
+            and effect_name and carrier and Unit.alive(carrier) then
+        if state_data.flamethrower_effect then
+            World.destroy_particles(world, state_data.flamethrower_effect)
+        end
+
+        local muzzle_node = warpfire_effect_node(
+            carrier, perspective, current_action)
+        local muzzle_position = Unit.world_position(carrier, muzzle_node)
+        local muzzle_rotation = Unit.world_rotation(carrier, muzzle_node)
+
+        state_data.flamethrower_effect = World.create_particles(
+            world, effect_name, muzzle_position, muzzle_rotation)
+        state_data.flamethrower_effect_name = effect_name
+        state_data.muzzle_node = muzzle_node
+        state_data.pusfume_effect_carrier = carrier
+        state_data.pusfume_effect_perspective = perspective
+
+        mod:info(
+            "[pusfume] Warpfire effect perspective=%s carrier=%s effect=%s",
+            perspective,
+            tostring(Unit.get_data(carrier, "unit_name")
+                or Unit.debug_name(carrier)),
+            effect_name)
+    end
+
+    return carrier, perspective
+end
+
+local function install_warpfire_perspective_effect(template)
+    local shooting = template.synced_states and template.synced_states.shooting
+
+    if not shooting or shooting.pusfume_perspective_effect then
+        return shooting ~= nil
+    end
+
+    local native_enter = shooting.enter
+    local native_update = shooting.update
+    local native_leave = shooting.leave
+
+    shooting.enter = function(self, owner_unit, weapon_unit, state_data,
+            is_local_player, world, ...)
+        if native_enter then
+            native_enter(self, owner_unit, weapon_unit, state_data,
+                is_local_player, world, ...)
+        end
+
+        if warpfire_owner_is_pusfume(owner_unit) then
+            state_data.pusfume_effect_carrier = weapon_unit
+            state_data.pusfume_effect_perspective = "first_person"
+            reconcile_warpfire_effect(
+                owner_unit, weapon_unit, state_data, is_local_player, world)
+        end
+    end
+
+    shooting.update = function(self, owner_unit, weapon_unit, state_data,
+            is_local_player, world, dt, ...)
+        if not warpfire_owner_is_pusfume(owner_unit) then
+            if native_update then
+                return native_update(self, owner_unit, weapon_unit, state_data,
+                    is_local_player, world, dt, ...)
+            end
+
+            return
+        end
+
+        local carrier, perspective = reconcile_warpfire_effect(
+            owner_unit, weapon_unit, state_data, is_local_player, world)
+
+        if perspective == "first_person" and native_update then
+            return native_update(self, owner_unit, carrier, state_data,
+                is_local_player, world, dt, ...)
+        end
+
+        if state_data.flamethrower_effect
+                and carrier and Unit.alive(carrier) then
+            local muzzle_position = Unit.world_position(
+                carrier, state_data.muzzle_node)
+            local muzzle_rotation = Unit.world_rotation(
+                carrier, state_data.muzzle_node)
+
+            World.move_particles(
+                world,
+                state_data.flamethrower_effect,
+                muzzle_position,
+                muzzle_rotation)
+        end
+    end
+
+    shooting.leave = function(self, owner_unit, weapon_unit, state_data,
+            is_local_player, world, ...)
+        if native_leave then
+            native_leave(self, owner_unit, weapon_unit, state_data,
+                is_local_player, world, ...)
+        end
+
+        state_data.pusfume_effect_carrier = nil
+        state_data.pusfume_effect_perspective = nil
+    end
+    shooting.pusfume_perspective_effect = true
+
+    return true
+end
+
 local function adapt_warpfire_template(template)
     local action_one = template.actions and template.actions.dark_pact_action_one
     local action_reload = template.actions and template.actions.dark_pact_reload
@@ -427,6 +606,7 @@ local function adapt_warpfire_template(template)
     if template.synced_states and template.synced_states.priming then
         template.synced_states.priming.enter = nil
     end
+    install_warpfire_perspective_effect(template)
 
     -- The Versus warpfire soundbank is not resident in Adventure (the item
     -- declares no such wwise_dep), so its shooting/cooling synced-state events

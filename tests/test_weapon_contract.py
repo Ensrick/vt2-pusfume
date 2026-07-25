@@ -61,6 +61,17 @@ class WeaponContractTests(unittest.TestCase):
         self.assertIn("template.synced_states.priming.enter = nil", WEAPONS)
         self.assertNotIn("template.synced_states = nil", WEAPONS)
 
+    def test_warpfire_effect_tracks_the_visible_perspective_carrier(self):
+        self.assertIn("install_warpfire_perspective_effect", WEAPONS)
+        self.assertIn("first_person_extension:first_person_mode_active()", WEAPONS)
+        self.assertIn("equipment.left_hand_wielded_unit_3p", WEAPONS)
+        self.assertIn('and "fx_muzzle" or current_action.fx_node', WEAPONS)
+        self.assertIn("current_action.particle_effect_flames_3p", WEAPONS)
+        self.assertIn("World.destroy_particles(world, state_data.flamethrower_effect)", WEAPONS)
+        self.assertIn("World.move_particles(", WEAPONS)
+        self.assertIn("state_data.pusfume_effect_perspective", WEAPONS)
+        self.assertIn("warpfire_owner_is_pusfume(owner_unit)", WEAPONS)
+
     def test_warpfire_has_a_pusfume_only_adventure_enemy_target_adapter(self):
         self.assertIn("pusfume_warpfire_targets", WEAPONS)
         self.assertIn("side:enemy_units()", WEAPONS)

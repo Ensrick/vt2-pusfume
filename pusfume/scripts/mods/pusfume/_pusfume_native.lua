@@ -95,6 +95,9 @@ local ASSASSIN_ROLE = "gutter_runner"
 local WARPFIRE_ITEM_KEY = "pusfume_warpfire_thrower"
 local INACTIVE_WARPFIRE_PARK_OFFSET =
     Vector3Box(Vector3(0, 0, -1000))
+local SKAVEN_VIEWMODEL_OBSTRUCTION_DISTANCE = 1.35
+local SKAVEN_VIEWMODEL_MAX_RETRACTION = 0.35
+local SKAVEN_VIEWMODEL_RETRACTION_SPEED = 14
 local PUSFUME_CHARACTER_VO = "vs_poison_wind_globadier"
 local PUSFUME_SOUND_CHARACTER = "dwarf_slayer"
 
@@ -1968,6 +1971,89 @@ local function spawn_dual_first_person_rig(extension, config)
     return true
 end
 
+local function update_skaven_viewmodel_retraction(extension, dt)
+    local skaven_base = extension._pusfume_skaven_first_person_unit
+
+    if not skaven_base or not Unit.alive(skaven_base) then
+        return
+    end
+
+    local visible = extension.first_person_mode
+        and extension._show_first_person_units
+        and not extension.tutorial_first_person
+    local active = visible
+        and extension._pusfume_active_first_person_rig == "skaven"
+    local closest_distance
+
+    if active then
+        local camera_position = extension:current_position()
+        local camera_rotation = extension:current_rotation()
+        local forward = Quaternion.forward(camera_rotation)
+        local right = Quaternion.right(camera_rotation)
+        local up = Quaternion.up(camera_rotation)
+        local directions = {
+            forward,
+            Vector3.normalize(forward + right * 0.18),
+            Vector3.normalize(forward - right * 0.18),
+            Vector3.normalize(forward + up * 0.12),
+            Vector3.normalize(forward - up * 0.24),
+        }
+        local physics_world = World.physics_world(extension.world)
+
+        for _, direction in ipairs(directions) do
+            local _, _, distance = PhysicsWorld.raycast(
+                physics_world,
+                camera_position,
+                direction,
+                SKAVEN_VIEWMODEL_OBSTRUCTION_DISTANCE,
+                "all",
+                "types",
+                "both",
+                "closest",
+                "collision_filter",
+                "filter_in_line_of_sight_no_players_no_enemies")
+
+            if distance and (not closest_distance or distance < closest_distance) then
+                closest_distance = distance
+            end
+        end
+    end
+
+    local target = 0
+
+    if closest_distance then
+        local obstruction = 1
+            - closest_distance / SKAVEN_VIEWMODEL_OBSTRUCTION_DISTANCE
+        target = math.clamp(
+            obstruction * SKAVEN_VIEWMODEL_MAX_RETRACTION,
+            0,
+            SKAVEN_VIEWMODEL_MAX_RETRACTION)
+    end
+
+    local current = extension._pusfume_viewmodel_retraction or 0
+    local blend = math.min((dt or 0) * SKAVEN_VIEWMODEL_RETRACTION_SPEED, 1)
+
+    current = current + (target - current) * blend
+
+    if math.abs(current) < 0.0001 then
+        current = 0
+    end
+
+    extension._pusfume_viewmodel_retraction = current
+    Unit.set_local_position(skaven_base, 0, Vector3(0, -current, 0))
+
+    local obstructed = target > 0.01
+
+    if extension._pusfume_viewmodel_obstructed ~= obstructed then
+        extension._pusfume_viewmodel_obstructed = obstructed
+        mod:info(
+            "[pusfume] Skaven viewmodel obstruction active=%s distance=%s retraction=%.3f",
+            tostring(obstructed),
+            closest_distance and string.format("%.3f", closest_distance) or "none",
+            target)
+    end
+end
+
 local function relink_damage_unit(world, weapon_extension, first_person_unit,
         attachment_node_linking)
     local damage_unit = weapon_extension and weapon_extension.actual_damage_unit
@@ -2552,6 +2638,7 @@ local function install_first_person_hook(registry, config)
                     and not config.first_person_direct_link then
                 update_first_person_retarget(extension)
             end
+            update_skaven_viewmodel_retraction(extension, dt)
             update_custom_first_person_clip(extension, t)
             extension._pusfume_first_person_probe_frames =
                 (extension._pusfume_first_person_probe_frames or 0) + 1
