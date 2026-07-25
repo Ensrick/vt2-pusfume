@@ -10,6 +10,11 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Rejected v0.6.77-v0.6.78's custom whole-rig obstruction retraction after
+  live testing showed the Ratling gun still sinking into scenery and introduced
+  severe rubber-like hand deformation. v0.6.79 deletes that root translation
+  and instead forwards Fatshark's native `disable_shooting` animation variable
+  and `near_wall_updated` event to the active Skaven first-person controller.
 - Rejected v0.6.77 for Ratling presentation: releasing primary fire exited
   the weapon's firing state but left both animation layers latched in the
   shooting pose. v0.6.78 restores Fatshark's safe `attack_finished`,
