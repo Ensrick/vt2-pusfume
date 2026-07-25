@@ -19,6 +19,12 @@ request rather than in release notes.
   effect on return. A smoothed 1.35-unit five-ray obstruction probe retracts
   the complete linked Skaven viewmodel near scenery, keeping hands, animations,
   damage units, and weapon geometry aligned.
+- Built, locally deployed, and uploaded v0.6.77 from source commit `fd650da`
+  as friends-only Steam ManifestID `2387240631566160998` at 2026-07-25
+  01:39:03 America/Chicago. All eight installed files (178,221,778 bytes) are
+  SHA-256-identical to staging. The 148-test regression suite, full source
+  preflight, Blender 5.2 rig validation, native compilation, material splices,
+  and Assassin clip gates pass; live acceptance remains pending.
 - Built, locally deployed, and uploaded v0.6.76 from source commit `c11fd06`
   as friends-only Steam ManifestID `7156781742326830188` at 2026-07-25
   00:34:05 America/Chicago. All eight installed files (178,133,707 bytes) are
