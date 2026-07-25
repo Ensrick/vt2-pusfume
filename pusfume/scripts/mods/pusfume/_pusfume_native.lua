@@ -321,27 +321,6 @@ local function restore_first_person_weapons(extension)
         return false
     end
 
-    if extension._pusfume_active_skaven_role == ASSASSIN_ROLE then
-        if right_weapon_unit and Unit.alive(right_weapon_unit) then
-            Unit.set_unit_visibility(right_weapon_unit, false)
-        end
-        if left_weapon_unit and Unit.alive(left_weapon_unit) then
-            Unit.set_unit_visibility(left_weapon_unit, false)
-        end
-
-        extension._pusfume_weapon_presentation_ready = true
-        extension._pusfume_presented_right_weapon_unit = right_weapon_unit
-        extension._pusfume_presented_left_weapon_unit = left_weapon_unit
-        if not extension._pusfume_assassin_hands_only_logged then
-            extension._pusfume_assassin_hands_only_logged = true
-            mod:info(
-                "[pusfume] Assassin hands-only prototype active; action units retained and claw geometry hidden")
-        end
-
-        return true
-    end
-
-    extension._pusfume_assassin_hands_only_logged = nil
     extension:unhide_weapons(PACKMASTER_WEAPON_HIDE_REASON)
 
     -- v0.6.19-v0.6.29 used this mod-owned reason while diagnosing Janfon's
@@ -350,6 +329,24 @@ local function restore_first_person_weapons(extension)
     if extension.hide_weapon_reasons
             and extension.hide_weapon_reasons[FIRST_PERSON_WEAPON_HIDE_REASON] then
         extension:unhide_weapons(FIRST_PERSON_WEAPON_HIDE_REASON)
+    end
+
+    if extension._pusfume_active_skaven_role == ASSASSIN_ROLE then
+        if right_weapon_unit and Unit.alive(right_weapon_unit) then
+            Unit.set_unit_visibility(right_weapon_unit, true)
+        end
+        if left_weapon_unit and Unit.alive(left_weapon_unit) then
+            Unit.set_unit_visibility(left_weapon_unit, true)
+        end
+
+        if not extension._pusfume_assassin_blades_logged then
+            extension._pusfume_assassin_blades_logged = true
+            mod:info(
+                "[pusfume] Assassin blade geometry active on Janfon attachment right=%s left=%s",
+                tostring(right_weapon_unit), tostring(left_weapon_unit))
+        end
+    else
+        extension._pusfume_assassin_blades_logged = nil
     end
 
     local first_person_unit = extension.first_person_unit
@@ -1013,39 +1010,6 @@ local function suppress_inherited_equipment_particles(extension, unit)
         mod:info(
             "[pusfume] Suppressed inherited Versus equipment particles units=%d",
             suppressed)
-    end
-end
-
-local function hide_assassin_third_person_weapons(unit)
-    if not ALIVE[unit] then
-        return
-    end
-
-    local inventory = ScriptUnit.has_extension(unit, "inventory_system")
-    local item_template = inventory
-        and type(inventory.get_wielded_slot_item_template) == "function"
-        and inventory:get_wielded_slot_item_template()
-
-    if not item_template or item_template.pusfume_role_pose ~= "to_gutter_runner" then
-        return
-    end
-
-    local equipment = inventory:equipment()
-    local hidden = 0
-    for _, weapon_unit in pairs({
-            equipment.right_hand_wielded_unit_3p,
-            equipment.left_hand_wielded_unit_3p,
-        }) do
-        if weapon_unit and ALIVE[weapon_unit] then
-            Unit.set_unit_visibility(weapon_unit, false)
-            hidden = hidden + 1
-        end
-    end
-
-    if hidden > 0 and not inventory._pusfume_assassin_3p_hands_only_logged then
-        inventory._pusfume_assassin_3p_hands_only_logged = true
-        mod:info(
-            "[pusfume] Assassin third-person claw geometry hidden; Janfon hand animation remains active")
     end
 end
 
@@ -1993,6 +1957,17 @@ local function relink_weapon_unit(inventory_extension, weapon_unit,
         return false
     end
 
+    local root_attachment = attachment_node_linking[1]
+    local source_node = root_attachment and root_attachment.source
+
+    if type(source_node) == "string"
+            and not Unit.has_node(first_person_unit, source_node) then
+        mod:error(
+            "[pusfume] First-person weapon link rejected missing source node=%s unit=%s",
+            source_node, tostring(first_person_unit))
+        return false
+    end
+
     local weapon_extension = ScriptUnit.has_extension(weapon_unit, "weapon_system")
 
     GearUtils.unlink(inventory_extension._world, weapon_unit)
@@ -2663,7 +2638,6 @@ local function install_probe_hook()
             apply_donor_material(extension, extension._pusfume_native_config)
             suppress_inherited_equipment_particles(extension, unit)
             hide_donor_weapons(extension, unit, extension._pusfume_native_config)
-            hide_assassin_third_person_weapons(unit)
         end
 
         apply_manual_clip_probe(extension, t)

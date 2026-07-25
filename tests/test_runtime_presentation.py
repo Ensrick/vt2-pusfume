@@ -89,19 +89,24 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn("recovered_hidden=%s", helper)
         self.assertIn("restore_first_person_weapons(extension)", self.native)
 
-    def test_assassin_prototype_keeps_action_units_but_hides_claw_geometry(self):
+    def test_assassin_blades_follow_janfon_attachment_and_remain_visible(self):
         helper = self.native.split("local function restore_first_person_weapons", 1)[1].split(
             "local DONOR_PACKAGE_REFERENCE", 1
         )[0]
         self.assertIn(
             "extension._pusfume_active_skaven_role == ASSASSIN_ROLE", helper
         )
-        self.assertIn("Unit.set_unit_visibility(right_weapon_unit, false)", helper)
-        self.assertIn("Unit.set_unit_visibility(left_weapon_unit, false)", helper)
-        self.assertIn("Assassin hands-only prototype active", helper)
-        self.assertIn("local function hide_assassin_third_person_weapons", self.native)
-        self.assertIn("equipment.right_hand_wielded_unit_3p", self.native)
-        self.assertIn("equipment.left_hand_wielded_unit_3p", self.native)
+        self.assertIn("Unit.set_unit_visibility(right_weapon_unit, true)", helper)
+        self.assertIn("Unit.set_unit_visibility(left_weapon_unit, true)", helper)
+        self.assertIn("Assassin blade geometry active on Janfon attachment", helper)
+        self.assertNotIn("Assassin hands-only prototype active", self.native)
+        self.assertNotIn("hide_assassin_third_person_weapons", self.native)
+        relink = self.native.split("local function relink_weapon_unit", 1)[1].split(
+            "local function relink_ammo_unit", 1
+        )[0]
+        self.assertIn("attachment_node_linking[1]", relink)
+        self.assertIn("Unit.has_node(first_person_unit, source_node)", relink)
+        self.assertIn("First-person weapon link rejected missing source node", relink)
 
     def test_switching_away_from_warpfire_clears_its_linked_visual_state(self):
         helper = self.native.split(
@@ -138,7 +143,7 @@ class RuntimePresentationTests(unittest.TestCase):
     def test_inherited_versus_equipment_particles_are_removed_at_the_source(self):
         helper = self.native.split(
             "local function clear_linked_particle_metadata", 1
-        )[1].split("local function hide_assassin_third_person_weapons", 1)[0]
+        )[1].split("local function articulation_vector", 1)[0]
         self.assertIn('Unit.has_data(weapon_unit, "particles")', helper)
         self.assertIn("pcall(World.destroy_particles", helper)
         self.assertIn('"particles", "node_part_pairs", 0', helper)

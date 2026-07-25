@@ -10,6 +10,12 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Prepared v0.6.80 to resume Assassin Blade acceptance after body/material
+  stabilization. The last live evidence already proved that both Fatshark claw
+  units rebound to Janfon's animated 99-bone attachment and that equip, idle,
+  and attack clips advance. The obsolete hands-only safety gates are removed,
+  first-person blade geometry is restored, third-person claws are no longer
+  forcibly hidden, and missing left/right weapon-attachment nodes fail safely.
 - Rejected v0.6.77-v0.6.78's custom whole-rig obstruction retraction after
   live testing showed the Ratling gun still sinking into scenery and introduced
   severe rubber-like hand deformation. v0.6.79 deletes that root translation
