@@ -283,11 +283,57 @@ local function ratling_winding_enter(self, owner_unit, weapon_unit, state_data, 
     end
 end
 
-local function ratling_winding_leave(self, owner_unit, weapon_unit, state_data, is_local_player, world)
+local function play_ratling_reset_event(unit, event_name)
+    if not unit or not Unit.alive(unit)
+            or not Unit.has_animation_state_machine(unit)
+            or not Unit.has_animation_event(unit, event_name) then
+        return false
+    end
+
+    Unit.animation_event(unit, event_name)
+
+    return true
+end
+
+local function reset_ratling_firing_pose(owner_unit, is_local_player, is_destroy)
+    if is_destroy then
+        return
+    end
+
+    local first_person_reset = false
+
+    if is_local_player then
+        local first_person_extension = ScriptUnit.has_extension(
+            owner_unit, "first_person_system")
+        local active_animation_unit = first_person_extension
+            and (first_person_extension._pusfume_active_animation_unit
+                or first_person_extension:get_first_person_unit())
+
+        first_person_reset = play_ratling_reset_event(
+            active_animation_unit, "attack_finished")
+    end
+
+    local upper_body_reset = play_ratling_reset_event(
+        owner_unit, "no_anim_upperbody")
+    local combat_reset = play_ratling_reset_event(owner_unit, "to_combat")
+
+    mod:info(
+        "[pusfume] Ratling firing pose reset first_person=%s upper_body=%s combat=%s",
+        tostring(first_person_reset),
+        tostring(upper_body_reset),
+        tostring(combat_reset))
+end
+
+local function ratling_winding_leave(self, owner_unit, weapon_unit, state_data,
+        is_local_player, world, next_state, is_destroy)
     local wwise_world = Managers.world:wwise_world(world)
 
     if is_local_player then
         WwiseWorld.trigger_event(wwise_world, "Stop_player_ratling_gunner_weapon_ready", weapon_unit)
+    end
+
+    if next_state ~= "firing" then
+        reset_ratling_firing_pose(owner_unit, is_local_player, is_destroy)
     end
 end
 
@@ -328,7 +374,10 @@ local function ratling_firing_update(self, owner_unit, weapon_unit, state_data, 
     WwiseWorld.set_source_parameter(wwise_world, wwise_source_id, "ratling_gun_shooting_loop_parameter", time_shooting_percent)
 end
 
-local function ratling_firing_leave(self, owner_unit, weapon_unit, state_data, is_local_player, world)
+local function ratling_firing_leave(self, owner_unit, weapon_unit, state_data,
+        is_local_player, world, next_state, is_destroy)
+    reset_ratling_firing_pose(owner_unit, is_local_player, is_destroy)
+
     local wwise_world = Managers.world:wwise_world(world)
 
     if is_local_player then

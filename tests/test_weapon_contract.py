@@ -160,6 +160,22 @@ class WeaponContractTests(unittest.TestCase):
         self.assertIn('"Play_player_ratling_gunner_weapon_ready"', WEAPONS)
         self.assertIn('"ratling_gun_shooting_loop_parameter"', WEAPONS)
 
+    def test_ratling_firing_exit_restores_first_and_third_person_pose(self):
+        self.assertIn("reset_ratling_firing_pose", WEAPONS)
+        self.assertIn(
+            "first_person_extension._pusfume_active_animation_unit", WEAPONS
+        )
+        self.assertIn(
+            'active_animation_unit, "attack_finished"', WEAPONS
+        )
+        self.assertIn('owner_unit, "no_anim_upperbody"', WEAPONS)
+        self.assertIn('play_ratling_reset_event(owner_unit, "to_combat")', WEAPONS)
+        self.assertIn(
+            "reset_ratling_firing_pose(owner_unit, is_local_player, is_destroy)",
+            WEAPONS,
+        )
+        self.assertIn('if next_state ~= "firing" then', WEAPONS)
+
     def test_warpfire_substitutes_resident_drakegun_flame_loop(self):
         # The Versus warpfire soundbank is not resident in Adventure, so the
         # resident hero drakegun flamethrower loop is played over the fire action

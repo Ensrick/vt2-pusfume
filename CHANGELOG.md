@@ -10,6 +10,12 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Rejected v0.6.77 for Ratling presentation: releasing primary fire exited
+  the weapon's firing state but left both animation layers latched in the
+  shooting pose. v0.6.78 restores Fatshark's safe `attack_finished`,
+  `no_anim_upperbody`, and `to_combat` exit events directly on Pusfume's active
+  Skaven controller and owner unit, without restoring the unavailable
+  Pactsworn career/VCE callbacks.
 - Accepted v0.6.76 in live testing: parking both inactive Warpfire carriers
   removed the persistent green Globadier/Warpfire orb without a crash. GitHub
   issue #42 is closed.
