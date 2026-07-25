@@ -10,6 +10,12 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Rejected v0.6.75 in live testing: the green effect remained because the
+  carrier park failed before moving either unit, then weapon switching crashed
+  at `_pusfume_native.lua:2151`. Stingray reported `Vector3 expected, got
+  userdata`, proving a temporary `Vector3` cannot be retained as a module
+  upvalue. v0.6.76 stores the park offset in a durable `Vector3Box` and unboxes
+  it only at the `Unit.set_local_position` call.
 - Built, locally deployed, and uploaded v0.6.75 from source commit `7d3575c`
   as friends-only Steam ManifestID `5442794754247712995` at 2026-07-24
   16:14:34 America/Chicago. All eight installed files (178,136,000 bytes) are

@@ -119,7 +119,18 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn('Unit.flow_event(weapon_unit, "wind_up_start")', helper)
         self.assertIn('Unit.flow_event(weapon_unit, "lua_unwield")', helper)
         self.assertIn("Unit.set_unit_visibility(weapon_unit, false)", helper)
-        self.assertIn("INACTIVE_WARPFIRE_PARK_OFFSET", helper)
+        self.assertIn(
+            "INACTIVE_WARPFIRE_PARK_OFFSET:unbox()", helper
+        )
+        self.assertIn(
+            "local INACTIVE_WARPFIRE_PARK_OFFSET =\n"
+            "    Vector3Box(Vector3(0, 0, -1000))",
+            self.native,
+        )
+        self.assertNotIn(
+            "local INACTIVE_WARPFIRE_PARK_OFFSET = Vector3(",
+            self.native,
+        )
         self.assertIn("state.inactive_warpfire_transforms[weapon_unit]", helper)
         self.assertIn("transform.position:unbox()", helper)
         self.assertIn("parked=%d restored=%d lights_disabled=%d units=%s", helper)

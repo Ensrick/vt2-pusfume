@@ -93,7 +93,8 @@ local FIRST_PERSON_WEAPON_HIDE_REASON = "pusfume_hands_diagnostic"
 local PACKMASTER_WEAPON_HIDE_REASON = "catapulted"
 local ASSASSIN_ROLE = "gutter_runner"
 local WARPFIRE_ITEM_KEY = "pusfume_warpfire_thrower"
-local INACTIVE_WARPFIRE_PARK_OFFSET = Vector3(0, 0, -1000)
+local INACTIVE_WARPFIRE_PARK_OFFSET =
+    Vector3Box(Vector3(0, 0, -1000))
 local PUSFUME_CHARACTER_VO = "vs_poison_wind_globadier"
 local PUSFUME_SOUND_CHARACTER = "dwarf_slayer"
 
@@ -2149,7 +2150,7 @@ local function stop_inactive_warpfire_effect(inventory_extension, active_slot)
                 Unit.flow_event(weapon_unit, "lua_unwield")
                 Unit.set_unit_visibility(weapon_unit, false)
                 Unit.set_local_position(
-                    weapon_unit, 0, INACTIVE_WARPFIRE_PARK_OFFSET)
+                    weapon_unit, 0, INACTIVE_WARPFIRE_PARK_OFFSET:unbox())
                 state.inactive_warpfire_units[weapon_unit] = true
                 reset_units = reset_units + 1
                 parked_units = parked_units + 1
