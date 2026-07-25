@@ -15,6 +15,12 @@ request rather than in release notes.
   severe rubber-like hand deformation. v0.6.79 deletes that root translation
   and instead forwards Fatshark's native `disable_shooting` animation variable
   and `near_wall_updated` event to the active Skaven first-person controller.
+- Built, locally deployed, and uploaded v0.6.79 from source commit `8514e7a`
+  as friends-only Steam ManifestID `7131311412399502592` at 2026-07-25
+  13:18:34 America/Chicago. All seven installed files (177,953,657 bytes) are
+  SHA-256-identical to staging. The 149-test regression suite, full source
+  preflight, Blender 5.2 rig validation, native compilation, material splices,
+  and Assassin clip gates pass; live acceptance remains pending.
 - Rejected v0.6.77 for Ratling presentation: releasing primary fire exited
   the weapon's firing state but left both animation layers latched in the
   shooting pose. v0.6.78 restores Fatshark's safe `attack_finished`,
