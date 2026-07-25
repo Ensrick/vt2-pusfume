@@ -16,6 +16,13 @@ request rather than in release notes.
   `no_anim_upperbody`, and `to_combat` exit events directly on Pusfume's active
   Skaven controller and owner unit, without restoring the unavailable
   Pactsworn career/VCE callbacks.
+- Built, locally deployed, and uploaded v0.6.78 from source commit `cf3b6d7`
+  as friends-only Steam ManifestID `5235457639200765279` at 2026-07-25
+  02:02:44 America/Chicago. All seven installed files (177,729,858 bytes) are
+  SHA-256-identical to staging with no obsolete bundle left behind. The
+  149-test regression suite, full source preflight, Blender 5.2 rig validation,
+  native compilation, material splices, and Assassin clip gates pass; live
+  acceptance remains pending.
 - Accepted v0.6.76 in live testing: parking both inactive Warpfire carriers
   removed the persistent green Globadier/Warpfire orb without a crash. GitHub
   issue #42 is closed.
