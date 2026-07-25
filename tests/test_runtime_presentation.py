@@ -106,7 +106,13 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn('Unit.set_visibility(unit, "normal", true)', visibility_helper)
         self.assertIn("Unit.set_unit_visibility(unit, true)", visibility_helper)
         self.assertIn("Unit.num_meshes(unit)", visibility_helper)
+        self.assertIn(
+            'Unit.set_mesh_visibility(unit, mesh_index, true, "default")',
+            visibility_helper,
+        )
         self.assertIn("attachment_error=%s/%s", helper)
+        self.assertIn("camera_distance=%s/%s default_context=forced", helper)
+        self.assertIn("first_person_attachment_camera_distance(", helper)
         self.assertNotIn("Assassin hands-only prototype active", self.native)
         self.assertNotIn("hide_assassin_third_person_weapons", self.native)
         relink = self.native.split("local function relink_weapon_unit", 1)[1].split(

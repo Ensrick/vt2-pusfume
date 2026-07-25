@@ -294,6 +294,7 @@ local function show_first_person_weapon_unit(unit)
     end
 
     local uses_normal_group = Unit.has_visibility_group(unit, "normal")
+    local mesh_count = Unit.num_meshes(unit)
 
     -- Fatshark's first-person wield path uses the visibility group when it is
     -- present. Whole-unit visibility does not override a disabled group.
@@ -303,7 +304,14 @@ local function show_first_person_weapon_unit(unit)
         Unit.set_unit_visibility(unit, true)
     end
 
-    return uses_normal_group, Unit.num_meshes(unit)
+    -- The native Gutter Runner claws have no visibility group. Force their
+    -- only renderable into the camera's default culling context as well as
+    -- enabling the unit, so inherited context state cannot keep it hidden.
+    for mesh_index = 0, mesh_count - 1 do
+        Unit.set_mesh_visibility(unit, mesh_index, true, "default")
+    end
+
+    return uses_normal_group, mesh_count
 end
 
 local function first_person_weapon_attachment_error(
@@ -317,6 +325,20 @@ local function first_person_weapon_attachment_error(
     return Vector3.distance(
         Unit.world_position(animation_unit, Unit.node(animation_unit, source_node)),
         Unit.world_position(weapon_unit, 0))
+end
+
+local function first_person_attachment_camera_distance(
+        extension, animation_unit, source_node)
+    local camera_unit = extension and extension.first_person_unit
+    if not camera_unit or not Unit.alive(camera_unit)
+            or not animation_unit or not Unit.alive(animation_unit)
+            or not Unit.has_node(animation_unit, source_node) then
+        return nil
+    end
+
+    return Vector3.distance(
+        Unit.world_position(camera_unit, 0),
+        Unit.world_position(animation_unit, Unit.node(animation_unit, source_node)))
 end
 
 local function restore_first_person_weapons(extension)
@@ -366,6 +388,8 @@ local function restore_first_person_weapons(extension)
     local left_visibility_group, left_meshes
     local right_attachment_error
     local left_attachment_error
+    local right_camera_distance
+    local left_camera_distance
 
     if extension._pusfume_active_skaven_role == ASSASSIN_ROLE then
         right_visibility_group, right_meshes =
@@ -377,11 +401,15 @@ local function restore_first_person_weapons(extension)
             animation_unit, "j_rightweaponattach", right_weapon_unit)
         left_attachment_error = first_person_weapon_attachment_error(
             animation_unit, "j_leftweaponattach", left_weapon_unit)
+        right_camera_distance = first_person_attachment_camera_distance(
+            extension, animation_unit, "j_rightweaponattach")
+        left_camera_distance = first_person_attachment_camera_distance(
+            extension, animation_unit, "j_leftweaponattach")
 
         if not extension._pusfume_assassin_blades_logged then
             extension._pusfume_assassin_blades_logged = true
             mod:info(
-                "[pusfume] Assassin blade presentation right=%s left=%s normal_groups=%s/%s meshes=%s/%s attachment_error=%s/%s",
+                "[pusfume] Assassin blade presentation right=%s left=%s normal_groups=%s/%s meshes=%s/%s attachment_error=%s/%s camera_distance=%s/%s default_context=forced",
                 tostring(right_weapon_unit),
                 tostring(left_weapon_unit),
                 tostring(right_visibility_group),
@@ -389,7 +417,9 @@ local function restore_first_person_weapons(extension)
                 tostring(right_meshes),
                 tostring(left_meshes),
                 tostring(right_attachment_error),
-                tostring(left_attachment_error))
+                tostring(left_attachment_error),
+                tostring(right_camera_distance),
+                tostring(left_camera_distance))
         end
     else
         extension._pusfume_assassin_blades_logged = nil

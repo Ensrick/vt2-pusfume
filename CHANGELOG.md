@@ -10,6 +10,13 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Rejected v0.6.81 in live testing: both native claw units contained one mesh,
+  had no `normal` visibility group, were enabled as whole units, and reached
+  zero attachment error after a weapon round trip, but remained invisible.
+  v0.6.82 now forces every claw mesh into Stingray's `default` culling context
+  with `Unit.set_mesh_visibility`. Its diagnostic also reports each animated
+  attachment's distance from the permanent first-person camera root, separating
+  a render-context failure from an out-of-view transform in the next log.
 - Rejected v0.6.80 in live testing: both native claw units loaded and rebound
   to Janfon's 99-bone attachment, the authored clips advanced, and no hide
   reason remained, but both blades stayed invisible. v0.6.81 now follows
