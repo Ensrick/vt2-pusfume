@@ -10,6 +10,12 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, locally deployed, and uploaded v0.6.82 from source commit `832cd89`
+  as friends-only Steam ManifestID `579444873668293088` at 2026-07-25
+  17:55:21 America/Chicago. All eight installed files (178,062,529 bytes) are
+  SHA-256-identical to staging. The 149-test regression suite, full source
+  preflight, Blender 5.2 rig validation, native compilation, material splices,
+  and all nine Janfon Assassin clip gates pass; live acceptance remains pending.
 - Rejected v0.6.81 in live testing: both native claw units contained one mesh,
   had no `normal` visibility group, were enabled as whole units, and reached
   zero attachment error after a weapon round trip, but remained invisible.
