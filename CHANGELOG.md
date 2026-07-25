@@ -10,6 +10,13 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, locally deployed, and uploaded v0.6.76 from source commit `c11fd06`
+  as friends-only Steam ManifestID `7156781742326830188` at 2026-07-25
+  00:34:05 America/Chicago. All eight installed files (178,133,707 bytes) are
+  SHA-256-identical to staging. The 146-test regression suite, full source
+  preflight, GitHub CI, Blender 5.2 rig validation, native compilation,
+  material splices, and Assassin clip gates pass; live acceptance remains
+  pending.
 - Rejected v0.6.75 in live testing: the green effect remained because the
   carrier park failed before moving either unit, then weapon switching crashed
   at `_pusfume_native.lua:2151`. Stingray reported `Vector3 expected, got
