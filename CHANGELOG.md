@@ -16,6 +16,12 @@ request rather than in release notes.
   and attack clips advance. The obsolete hands-only safety gates are removed,
   first-person blade geometry is restored, third-person claws are no longer
   forcibly hidden, and missing left/right weapon-attachment nodes fail safely.
+- Built, locally deployed, and uploaded v0.6.80 from source commit `a7c101e`
+  as friends-only Steam ManifestID `5443211189464922447` at 2026-07-25
+  16:13:08 America/Chicago. All eight installed files (178,316,397 bytes) are
+  SHA-256-identical to staging. The 149-test regression suite, full source
+  preflight, Blender 5.2 rig validation, native compilation, material splices,
+  and all nine Janfon Assassin clip gates pass; live acceptance remains pending.
 - Rejected v0.6.77-v0.6.78's custom whole-rig obstruction retraction after
   live testing showed the Ratling gun still sinking into scenery and introduced
   severe rubber-like hand deformation. v0.6.79 deletes that root translation
