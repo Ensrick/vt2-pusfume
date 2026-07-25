@@ -96,9 +96,17 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn(
             "extension._pusfume_active_skaven_role == ASSASSIN_ROLE", helper
         )
-        self.assertIn("Unit.set_unit_visibility(right_weapon_unit, true)", helper)
-        self.assertIn("Unit.set_unit_visibility(left_weapon_unit, true)", helper)
-        self.assertIn("Assassin blade geometry active on Janfon attachment", helper)
+        self.assertIn("show_first_person_weapon_unit(right_weapon_unit)", helper)
+        self.assertIn("show_first_person_weapon_unit(left_weapon_unit)", helper)
+        self.assertIn("Assassin blade presentation", helper)
+        visibility_helper = self.native.split(
+            "local function show_first_person_weapon_unit", 1
+        )[1].split("local function first_person_weapon_attachment_error", 1)[0]
+        self.assertIn('Unit.has_visibility_group(unit, "normal")', visibility_helper)
+        self.assertIn('Unit.set_visibility(unit, "normal", true)', visibility_helper)
+        self.assertIn("Unit.set_unit_visibility(unit, true)", visibility_helper)
+        self.assertIn("Unit.num_meshes(unit)", visibility_helper)
+        self.assertIn("attachment_error=%s/%s", helper)
         self.assertNotIn("Assassin hands-only prototype active", self.native)
         self.assertNotIn("hide_assassin_third_person_weapons", self.native)
         relink = self.native.split("local function relink_weapon_unit", 1)[1].split(

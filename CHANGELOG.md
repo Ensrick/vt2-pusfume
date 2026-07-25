@@ -10,6 +10,13 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Rejected v0.6.80 in live testing: both native claw units loaded and rebound
+  to Janfon's 99-bone attachment, the authored clips advanced, and no hide
+  reason remained, but both blades stayed invisible. v0.6.81 now follows
+  Fatshark's exact first-person wield contract by enabling each claw unit's
+  `normal` visibility group instead of only toggling whole-unit visibility. It
+  also reports mesh counts and hand-to-blade attachment error for the next
+  empirical pass.
 - Prepared v0.6.80 to resume Assassin Blade acceptance after body/material
   stabilization. The last live evidence already proved that both Fatshark claw
   units rebound to Janfon's animated 99-bone attachment and that equip, idle,

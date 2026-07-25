@@ -288,6 +288,37 @@ local function update_first_person_weapon_pose(extension, equipment)
     end
 end
 
+local function show_first_person_weapon_unit(unit)
+    if not unit or not Unit.alive(unit) then
+        return false, 0
+    end
+
+    local uses_normal_group = Unit.has_visibility_group(unit, "normal")
+
+    -- Fatshark's first-person wield path uses the visibility group when it is
+    -- present. Whole-unit visibility does not override a disabled group.
+    if uses_normal_group then
+        Unit.set_visibility(unit, "normal", true)
+    else
+        Unit.set_unit_visibility(unit, true)
+    end
+
+    return uses_normal_group, Unit.num_meshes(unit)
+end
+
+local function first_person_weapon_attachment_error(
+        animation_unit, source_node, weapon_unit)
+    if not animation_unit or not Unit.alive(animation_unit)
+            or not Unit.has_node(animation_unit, source_node)
+            or not weapon_unit or not Unit.alive(weapon_unit) then
+        return nil
+    end
+
+    return Vector3.distance(
+        Unit.world_position(animation_unit, Unit.node(animation_unit, source_node)),
+        Unit.world_position(weapon_unit, 0))
+end
+
 local function restore_first_person_weapons(extension)
     -- VT2 assigns inventory_extension in extensions_ready(), after init.
     -- Calling the native hide API during construction crashes before that
@@ -331,19 +362,34 @@ local function restore_first_person_weapons(extension)
         extension:unhide_weapons(FIRST_PERSON_WEAPON_HIDE_REASON)
     end
 
+    local right_visibility_group, right_meshes
+    local left_visibility_group, left_meshes
+    local right_attachment_error
+    local left_attachment_error
+
     if extension._pusfume_active_skaven_role == ASSASSIN_ROLE then
-        if right_weapon_unit and Unit.alive(right_weapon_unit) then
-            Unit.set_unit_visibility(right_weapon_unit, true)
-        end
-        if left_weapon_unit and Unit.alive(left_weapon_unit) then
-            Unit.set_unit_visibility(left_weapon_unit, true)
-        end
+        right_visibility_group, right_meshes =
+            show_first_person_weapon_unit(right_weapon_unit)
+        left_visibility_group, left_meshes =
+            show_first_person_weapon_unit(left_weapon_unit)
+        local animation_unit = extension._pusfume_active_animation_unit
+        right_attachment_error = first_person_weapon_attachment_error(
+            animation_unit, "j_rightweaponattach", right_weapon_unit)
+        left_attachment_error = first_person_weapon_attachment_error(
+            animation_unit, "j_leftweaponattach", left_weapon_unit)
 
         if not extension._pusfume_assassin_blades_logged then
             extension._pusfume_assassin_blades_logged = true
             mod:info(
-                "[pusfume] Assassin blade geometry active on Janfon attachment right=%s left=%s",
-                tostring(right_weapon_unit), tostring(left_weapon_unit))
+                "[pusfume] Assassin blade presentation right=%s left=%s normal_groups=%s/%s meshes=%s/%s attachment_error=%s/%s",
+                tostring(right_weapon_unit),
+                tostring(left_weapon_unit),
+                tostring(right_visibility_group),
+                tostring(left_visibility_group),
+                tostring(right_meshes),
+                tostring(left_meshes),
+                tostring(right_attachment_error),
+                tostring(left_attachment_error))
         end
     else
         extension._pusfume_assassin_blades_logged = nil
