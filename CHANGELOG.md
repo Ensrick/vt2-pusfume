@@ -10,6 +10,13 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, locally deployed, and uploaded v0.6.85 from source commit `7d24704`
+  as friends-only Steam ManifestID `1371165026904852628` at 2026-07-25
+  20:15:58 America/Chicago; Steam's Workshop log confirms `Uploaded new
+  content` and the deploy is hash-verified. The 151-test regression suite,
+  full source preflight, Blender 5.2 rig validation, native compilation,
+  material splices, and all nine Janfon Assassin clip gates pass; live
+  acceptance remains pending.
 - Rejected v0.6.84 in live testing: both blades remained invisible on the
   restored v0.6.82 presentation, with the log showing the driver armed,
   `attachment_error=0/0` at the hands, and forced default-context meshes.
