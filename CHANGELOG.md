@@ -10,6 +10,13 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, locally deployed, and uploaded v0.6.83 from source commit `0478755`
+  as friends-only Steam ManifestID `1508377919851841286` at 2026-07-25
+  19:12:23 America/Chicago. Seven files deployed with VMBLauncher hash
+  verification; Steam's Workshop log confirms `Uploaded new content`. The
+  150-test regression suite, full source preflight, Blender 5.2 rig
+  validation, native compilation, material splices, and all nine Janfon
+  Assassin clip gates pass; live acceptance remains pending.
 - Diagnosed the invisible Assassin blades offline instead of shipping another
   visibility workaround. Parsing both compiled claw units proved each contains
   one mesh compiled `ViewportVisible|CullingAlwaysVisible` with no visibility
