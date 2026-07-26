@@ -10,6 +10,13 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, locally deployed, and uploaded v0.6.89 from source commit `049ea9b`
+  as friends-only Steam ManifestID `8012240457343967231` at 2026-07-26
+  16:01:07 America/Chicago; Steam's Workshop log confirms `Uploaded new
+  content` and the deploy is hash-verified. The offline FK gate passed on
+  the shipped compiled clips (coherent floor-origin anatomy: spine 1.09,
+  hands 1.22-1.38 above the rig root); 153 tests and full source preflight
+  pass; live acceptance remains pending.
 - Rejected v0.6.88 in live testing (claws still invisible; Warpfire hands
   newly skewed/stretched) and built the missing oracle: an offline
   forward-kinematics evaluator (`tools/fk_compiled_clip.py`) that computes
