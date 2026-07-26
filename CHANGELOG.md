@@ -10,6 +10,12 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, locally deployed, and uploaded v0.6.87 from source commit `91ceb14`
+  as friends-only Steam ManifestID `2971808066321779674` at 2026-07-26
+  14:23:11 America/Chicago; Steam's Workshop log confirms `Uploaded new
+  content` and the deploy is hash-verified (8 files). The 152-test
+  regression suite, full source preflight, and all nine Janfon Assassin
+  clip gates pass; live acceptance remains pending.
 - Read the v0.6.86 live instrumentation: the crossfades DO pose the rig
   (attack clips accumulate real relative hand travel and no stall reissue
   ever fired), the attachment has no state machine to disable, and the
