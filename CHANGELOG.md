@@ -10,6 +10,13 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, locally deployed, and uploaded v0.6.90 from source commit `d2a8379`
+  as friends-only Steam ManifestID `6392949598140268440` at 2026-07-26
+  18:32:26 America/Chicago under a live owner-bound ship claim (the
+  launcher's machine-global claim gate now refuses unclaimed uploads);
+  Steam's Workshop log confirms `Uploaded new content` and the deploy is
+  hash-verified. 153 tests and full source preflight pass; the build ships
+  diagnostics only relative to v0.6.89.
 - Rejected v0.6.89 in live testing (claws still invisible) with two hard
   findings from its own telemetry: the incremental spine anchor was
   unstable (`view_cam` ramped from -45 m to -1083 m over one second) while
