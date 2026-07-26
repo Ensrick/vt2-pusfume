@@ -10,6 +10,12 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, locally deployed, and uploaded v0.6.86 from source commit `5009dba`
+  as friends-only Steam ManifestID `4768083710877239287` at 2026-07-25
+  21:19:48 America/Chicago; Steam's Workshop log confirms `Uploaded new
+  content` and the deploy is hash-verified. The 152-test regression suite,
+  full source preflight, and all nine Janfon Assassin clip gates pass; live
+  acceptance remains pending.
 - Refined the Assassin defect from the latest live reports: hook and Warpfire
   arms render normally and the third-person body is intact; ONLY Assassin
   mode loses hands and blades, and the v0.6.82 run remains the sole session
