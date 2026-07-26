@@ -310,13 +310,12 @@ def export_action(
 
     output_path = os.path.join(output_dir, action.name + ".fbx")
 
-    # The compiled unit ships through prepare_pusfume_1p_blend's 100x bone
-    # pre-scale + 0.01 FBX global_scale pair, but these action FBXs exported
-    # at Blender defaults, so the SDK baked centimetre-as-metre rest positions
-    # into every location key. At runtime the clips scattered the bones 10-15
-    # metres from the camera (v0.6.87 view_hand evidence, issue #46). Export
-    # the actions through the identical counter-scale so the compiled clip
-    # skeleton matches the compiled unit skeleton.
+    # Offline-verified compile scales (issue #46): a plain export compiles
+    # every position at 1/100 of the authored value (bone[92] 0.0111 vs rest
+    # 1.1064), while this 100x bone pre-scale + 0.01 global_scale pair
+    # compiles them at true scale (ratio 1.00 against the unit rest). The
+    # rig's internal composition (camera_node at eye height, hands below it)
+    # must survive intact; the runtime anchors the root by camera_node.
     rest_before = {
         bone.name: (target.matrix_world @ bone.matrix_local).translation.copy()
         for bone in target.data.bones

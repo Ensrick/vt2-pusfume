@@ -78,21 +78,44 @@ class AnimationHandoffContractTests(unittest.TestCase):
         self.assertIn('bones = "units/pusfume/pusfume_1p_versus_arms"', build)
         self.assertIn('$requiredCompiledResources += "units/pusfume/anims/', build)
 
-    def test_assassin_export_uses_stingray_position_counter_scale(self):
-        # Unfixed action FBXs at Blender defaults let the SDK bake
-        # centimetre-as-metre rest positions into every location key; at
-        # runtime the clips scattered the bones 10-15 m from the camera
-        # (issue #46, v0.6.87 view_hand evidence). The actions must ship
-        # through the same 100x pre-scale + 0.01 global_scale pair as the
-        # compiled unit mesh, restore the rig, and gate on restore drift.
+    def test_assassin_clips_ship_authored_scale_and_camera_anchor(self):
+        # Offline-verified compile scales (issue #46): plain FBX exports
+        # compile every position at 1/100 of the authored value; the 100x
+        # pre-scale + 0.01 global_scale pair compiles them at true scale
+        # (ratio 1.00 against the unit rest). The tolerance recipe stays at
+        # the proven 0.001 pair because raising it re-scales the packed
+        # range instead of culling tracks. Janfon's rig is floor-origin with
+        # camera_node at eye height, so the runtime must anchor the root by
+        # camera_node, and must park the crossfade layer when leaving the
+        # role so a stale clip cannot stretch unlinked bones.
         exporter = self.read("tools/export_pusfume_1p_actions.py")
         self.assertIn("def scale_armature_bone_positions", exporter)
         self.assertIn("scale_armature_bone_positions(target, 100.0)", exporter)
         self.assertIn("scale_armature_bone_positions(target, 0.01)", exporter)
         self.assertIn("global_scale=0.01,", exporter)
-        self.assertIn("apply_unit_scale=True,", exporter)
         self.assertIn("maximum_restore_delta > 0.0001", exporter)
-        self.assertIn('"position_counter_scale"', exporter)
+        build = self.read("tools/Build-NativePusfume.ps1")
+        assassin_recipe = build.split(
+            'bones = "units/pusfume/pusfume_1p_versus_arms"', 1
+        )[1].split("'@", 1)[0]
+        self.assertIn("0.001", assassin_recipe)
+        self.assertNotIn("100.0", assassin_recipe)
+        native = self.read("pusfume/scripts/mods/pusfume/_pusfume_native.lua")
+        # Janfon's clips are floor-origin with NO eye anchor (camera_node
+        # stays at his rig origin, FK-verified); the eye-relative reference
+        # is the Fatshark base's state-machine pose, so the rig root aligns
+        # its spine onto the base's spine every frame.
+        self.assertIn('Unit.has_node(skaven_base, "j_spine1")', native)
+        self.assertIn(
+            "Quaternion.inverse(root_rotation), base_spine - rig_spine",
+            native,
+        )
+        self.assertIn("local idle_clip = type(clips) == \"table\" and clips.claws_idle", native)
+        self.assertIn(
+            "Unit.crossfade_animation(\n"
+            "                previous_clip.animation_unit, idle_clip.clip, 1, 0.05,",
+            native,
+        )
 
     def test_assassin_export_clears_saved_source_pose(self):
         exporter = self.read("tools/export_pusfume_1p_actions.py")

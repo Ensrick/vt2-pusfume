@@ -218,18 +218,18 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn("active.previous_hand = Vector3Box(relative_hand)", driver)
         self.assertIn("active.hand_travel < 0.01", driver)
         self.assertIn("clip pose stalled; reissued crossfade", driver)
-        self.assertIn("hand_travel=%.4f sm=%s reissued=%s view_hand=%s", driver)
-        # The clips are rotation-animated on the root; the identity root
-        # transform must be re-asserted after each manual clip write, or the
-        # rig swings away from the camera view.
         self.assertIn(
-            "Unit.set_local_position(active.animation_unit, 0, Vector3.zero())",
+            "hand_travel=%.4f sm=%s reissued=%s view_hand=%s view_cam=%s view_spine=%s",
             driver,
         )
+        # The rig root stays rotation-slaved to the camera and its position
+        # is spine-aligned to the Fatshark base every frame (Janfon's clips
+        # are floor-origin with no eye anchor).
         self.assertIn(
-            "Unit.set_local_rotation(active.animation_unit, 0, Quaternion.identity())",
+            "Unit.set_local_rotation(animation_unit, 0, Quaternion.identity())",
             driver,
         )
+        self.assertIn("base_spine - rig_spine", driver)
         self.assertIn(
             "Quaternion.inverse(Unit.world_rotation(camera_unit, 0))", driver
         )

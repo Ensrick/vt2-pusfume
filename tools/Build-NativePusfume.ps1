@@ -604,6 +604,11 @@ $animationRecipe | Set-Content -LiteralPath (Join-Path $animationRoot "pusfume_3
 $animationRecipe | Set-Content -LiteralPath (Join-Path $animationRoot "pusfume_3p_idle.animation") -Encoding utf8
 
 if ($assassinFirstPersonAnimationsEnabled) {
+    # Tolerance values are load-bearing: raising the first slot re-scales the
+    # packed position range instead of culling tracks (offline-parsed, ratio
+    # exactly value/tolerance), so keep the proven 0.001 pair. The helper-bone
+    # position poison (issue #46) is repaired after bundling by
+    # rewrite_animation_positions.py + splice_bundle_resource.py below.
     $assassinAnimationRecipe = @'
 bones = "units/pusfume/pusfume_1p_versus_arms"
 tolerance = {

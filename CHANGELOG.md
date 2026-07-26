@@ -10,6 +10,26 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Rejected v0.6.88 in live testing (claws still invisible; Warpfire hands
+  newly skewed/stretched) and built the missing oracle: an offline
+  forward-kinematics evaluator (`tools/fk_compiled_clip.py`) that computes
+  hand positions from the exact compiled clip + compiled unit hierarchy.
+  Offline findings, all measured: plain FBX exports compile every position
+  at 1/100 of the authored value; the v0.6.88 counter-scale pair compiles
+  them at TRUE scale (ratio 1.00 against unit rest); raising the .animation
+  tolerance re-scales the packed range instead of culling tracks (dead end,
+  documented in the build script); and Janfon's rig is floor-origin with
+  its own `camera_node` at eye height and hands composed 1.22 m up - so
+  pinning the rig root to the camera lifts everything an eye height out of
+  view. v0.6.89 therefore ships the counter-scale export (true-scale
+  positions, restore-gated at 0.1 mm), anchors the rig root each frame so
+  camera_node lands exactly on the camera link point (FK-predicted hands:
+  (+-0.5, 0.33, -0.28) in view space), parks the crossfade layer on role
+  exit (the Warpfire stretch was the stale clip posing unlinked bones), and
+  extends the samples with `view_cam`/`view_spine` for mapping sanity. The
+  rest-rewrite splice tools stay in the repo as diagnosis instruments but
+  are out of the ship path: rewriting positions to unit rest broke the
+  rig's internal composition because the unit rest zeroes camera_node.
 - Built, locally deployed, and uploaded v0.6.88 from source commit `1ef8171`
   as friends-only Steam ManifestID `1816104269779305243` at 2026-07-26
   15:02:15 America/Chicago; Steam's Workshop log confirms `Uploaded new

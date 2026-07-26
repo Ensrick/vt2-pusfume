@@ -288,31 +288,57 @@ local function update_custom_first_person_clip(extension, t)
     Unit.crossfade_animation_set_time(
         active.animation_unit, active.id, clip_time, true)
 
-    -- Janfon's clips are rotation-animated on every bone including the root.
-    -- The root link only pins the parent; a clip-driven local rotation on
-    -- node 0 swings the whole rig away from the view. Re-assert the identity
-    -- root transform every frame after the clip writes it.
-    Unit.set_local_position(active.animation_unit, 0, Vector3.zero())
-    Unit.set_local_rotation(active.animation_unit, 0, Quaternion.identity())
+    -- Janfon's clips are floor-origin (offline FK on the compiled data:
+    -- spine at +1.09, hands at +1.22 from the rig root; camera_node stays at
+    -- the origin, so his rig carries NO eye anchor). Fatshark's skaven base
+    -- poses its bones eye-relative through its state machine - that is what
+    -- makes every other weapon's per-bone-linked hands sit correctly. Anchor
+    -- the clip-driven rig by aligning its spine onto the base's spine each
+    -- frame, and keep the root rotation slaved to the camera.
+    local skaven_base = extension._pusfume_skaven_first_person_unit
+    local animation_unit = active.animation_unit
+    Unit.set_local_rotation(animation_unit, 0, Quaternion.identity())
+    if skaven_base and Unit.alive(skaven_base)
+            and Unit.has_node(skaven_base, "j_spine1")
+            and Unit.has_node(animation_unit, "j_spine1") then
+        local base_spine = Unit.world_position(
+            skaven_base, Unit.node(skaven_base, "j_spine1"))
+        local rig_spine = Unit.world_position(
+            animation_unit, Unit.node(animation_unit, "j_spine1"))
+        local root_rotation = Unit.world_rotation(animation_unit, 0)
+        local delta = Quaternion.rotate(
+            Quaternion.inverse(root_rotation), base_spine - rig_spine)
+        Unit.set_local_position(animation_unit, 0,
+            Unit.local_position(animation_unit, 0) + delta)
+    else
+        Unit.set_local_position(animation_unit, 0, Vector3.zero())
+    end
 
     -- Engine truth: our elapsed/clip_time numbers are wall-clock bookkeeping
     -- and prove nothing about pose output. Track how far the right hand node
     -- actually moves relative to the camera root; a moving clip with zero
     -- relative travel means the crossfade produced no bone output (the
     -- invisible-hands state - bind pose folded around the camera eye).
-    local animation_unit = active.animation_unit
     local camera_unit = extension.first_person_unit
-    local view_hand
+    local view_hand, view_cam, view_spine
+    local function view_space(node_name)
+        if not Unit.has_node(animation_unit, node_name) then
+            return nil
+        end
+        return Quaternion.rotate(
+            Quaternion.inverse(Unit.world_rotation(camera_unit, 0)),
+            Unit.world_position(
+                animation_unit, Unit.node(animation_unit, node_name))
+                - Unit.world_position(camera_unit, 0))
+    end
     if camera_unit and Unit.alive(camera_unit)
             and Unit.has_node(animation_unit, "j_righthand") then
-        local relative_hand = Unit.world_position(
-                animation_unit, Unit.node(animation_unit, "j_righthand"))
-            - Unit.world_position(camera_unit, 0)
         -- Camera-local frame (x=right, y=forward, z=up): visible hands sit
         -- roughly (+-0.3, 0.3..0.9, -0.4..0.1). Negative y = behind the view.
-        view_hand = Quaternion.rotate(
-            Quaternion.inverse(Unit.world_rotation(camera_unit, 0)),
-            relative_hand)
+        view_hand = view_space("j_righthand")
+        view_cam = view_space("camera_node")
+        view_spine = view_space("j_spine1")
+        local relative_hand = view_hand
         if active.previous_hand then
             active.hand_travel = active.hand_travel
                 + Vector3.distance(relative_hand, active.previous_hand:unbox())
@@ -342,13 +368,16 @@ local function update_custom_first_person_clip(extension, t)
     if elapsed >= active.next_sample and active.next_sample <= 0.7 then
         local sm_state = extension._pusfume_assassin_disabled_state_machine_unit
                 and "manual" or "native"
+        local function fmt(vector)
+            return vector and string.format("(%.2f, %.2f, %.2f)",
+                vector.x, vector.y, vector.z) or "n/a"
+        end
         mod:info(
-            "[pusfume] Janfon assassin sample event=%s elapsed=%.3f clip_time=%.3f/%.3f bone_mode=%s hand_travel=%.4f sm=%s reissued=%s view_hand=%s",
+            "[pusfume] Janfon assassin sample event=%s elapsed=%.3f clip_time=%.3f/%.3f bone_mode=%s hand_travel=%.4f sm=%s reissued=%s view_hand=%s view_cam=%s view_spine=%s",
             active.event, elapsed, clip_time, active.duration,
             Unit.animation_bone_mode(animation_unit),
             active.hand_travel or 0, sm_state, tostring(active.reissued),
-            view_hand and string.format("(%.2f, %.2f, %.2f)",
-                view_hand.x, view_hand.y, view_hand.z) or "n/a")
+            fmt(view_hand), fmt(view_cam), fmt(view_spine))
         active.next_sample = active.next_sample + 0.2
     end
 end
@@ -2438,6 +2467,27 @@ local function switch_first_person_rig(extension, inventory_extension, role)
         if disabled_unit and Unit.alive(disabled_unit) then
             Unit.enable_animation_state_machine(disabled_unit)
         end
+
+        -- A crossfade left running on the SM-less attachment keeps posing the
+        -- bones the per-bone role links do not cover (fingertips, helpers),
+        -- stretching the mesh between the linked and clip-held bones on the
+        -- next role. Park the layer on the idle clip's first frame instead.
+        local previous_clip = extension._pusfume_assassin_clip
+        local clips = installed_config
+            and installed_config.assassin_first_person_clips
+        local idle_clip = type(clips) == "table" and clips.claws_idle
+        if previous_clip and idle_clip
+                and previous_clip.animation_unit
+                and Unit.alive(previous_clip.animation_unit) then
+            local parked_id = Unit.crossfade_animation(
+                previous_clip.animation_unit, idle_clip.clip, 1, 0.05,
+                true, "normal")
+            Unit.crossfade_animation_set_speed(
+                previous_clip.animation_unit, parked_id, 0)
+            Unit.crossfade_animation_set_time(
+                previous_clip.animation_unit, parked_id, 0, true)
+        end
+
         extension._pusfume_assassin_manual_driver = nil
         extension._pusfume_assassin_disabled_state_machine_unit = nil
         extension._pusfume_assassin_clip = nil
