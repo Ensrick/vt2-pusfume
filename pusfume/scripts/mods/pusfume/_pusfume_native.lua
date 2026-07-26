@@ -257,6 +257,10 @@ local function play_custom_first_person_clip(extension, event_name)
         playback_rate = clip.duration / target_duration,
         started_at = Managers.time and Managers.time:time("game") or 0,
         target_duration = target_duration,
+        hand_travel = 0,
+        previous_hand = nil,
+        reissued = false,
+        clip_resource = clip.clip,
     }
     mod:info(
         "[pusfume] Janfon assassin 1P clip event=%s clip=%s id=%s duration=%.3f target=%.3f rate=%.3f loop=%s",
@@ -284,11 +288,52 @@ local function update_custom_first_person_clip(extension, t)
     Unit.crossfade_animation_set_time(
         active.animation_unit, active.id, clip_time, true)
 
+    -- Engine truth: our elapsed/clip_time numbers are wall-clock bookkeeping
+    -- and prove nothing about pose output. Track how far the right hand node
+    -- actually moves relative to the camera root; a moving clip with zero
+    -- relative travel means the crossfade produced no bone output (the
+    -- invisible-hands state - bind pose folded around the camera eye).
+    local animation_unit = active.animation_unit
+    local camera_unit = extension.first_person_unit
+    if camera_unit and Unit.alive(camera_unit)
+            and Unit.has_node(animation_unit, "j_righthand") then
+        local relative_hand = Unit.world_position(
+                animation_unit, Unit.node(animation_unit, "j_righthand"))
+            - Unit.world_position(camera_unit, 0)
+        if active.previous_hand then
+            active.hand_travel = active.hand_travel
+                + Vector3.distance(relative_hand, active.previous_hand:unbox())
+            active.previous_hand:store(relative_hand)
+        else
+            active.previous_hand = Vector3Box(relative_hand)
+        end
+
+        -- Self-heal once per clip: a non-loop clip half way through with under
+        -- a centimetre of relative hand motion is a dead crossfade; reissue it.
+        if not active.loop and not active.reissued
+                and active.clip_resource
+                and clip_time >= 0.5 * active.duration
+                and active.hand_travel < 0.01 then
+            active.reissued = true
+            active.id = Unit.crossfade_animation(
+                animation_unit, active.clip_resource, 1, 0.0,
+                false, "normal")
+            Unit.crossfade_animation_set_speed(animation_unit, active.id, 0)
+            Unit.crossfade_animation_set_time(animation_unit, active.id, clip_time, true)
+            mod:info(
+                "[pusfume] Janfon assassin clip pose stalled; reissued crossfade event=%s travel=%.5f clip_time=%.3f",
+                active.event, active.hand_travel, clip_time)
+        end
+    end
+
     if elapsed >= active.next_sample and active.next_sample <= 0.7 then
+        local sm_state = extension._pusfume_assassin_disabled_state_machine_unit
+                and "manual" or "native"
         mod:info(
-            "[pusfume] Janfon assassin sample event=%s elapsed=%.3f clip_time=%.3f/%.3f bone_mode=%s",
+            "[pusfume] Janfon assassin sample event=%s elapsed=%.3f clip_time=%.3f/%.3f bone_mode=%s hand_travel=%.4f sm=%s reissued=%s",
             active.event, elapsed, clip_time, active.duration,
-            Unit.animation_bone_mode(active.animation_unit))
+            Unit.animation_bone_mode(animation_unit),
+            active.hand_travel or 0, sm_state, tostring(active.reissued))
         active.next_sample = active.next_sample + 0.2
     end
 end

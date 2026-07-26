@@ -10,6 +10,18 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Refined the Assassin defect from the latest live reports: hook and Warpfire
+  arms render normally and the third-person body is intact; ONLY Assassin
+  mode loses hands and blades, and the v0.6.82 run remains the sole session
+  where the claw clips visibly played. All logged engine state is identical
+  between the working and failing runs, and the sample lines only prove our
+  wall-clock bookkeeping, not bone output. A rig at bind pose root-linked to
+  the camera folds around the eye and near-plane clips - reading as
+  invisible. v0.6.86 instruments engine truth: each sample now reports the
+  right hand's actual accumulated travel relative to the camera root plus
+  the driver mode, and a non-loop clip reaching half duration with under a
+  centimetre of relative motion reissues its crossfade once and logs the
+  stall. No models, materials, or visibility logic changed.
 - Built, locally deployed, and uploaded v0.6.85 from source commit `7d24704`
   as friends-only Steam ManifestID `1371165026904852628` at 2026-07-25
   20:15:58 America/Chicago; Steam's Workshop log confirms `Uploaded new

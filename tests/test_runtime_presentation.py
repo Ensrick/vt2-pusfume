@@ -206,6 +206,24 @@ class RuntimePresentationTests(unittest.TestCase):
             self.native,
         )
 
+    def test_assassin_clip_driver_measures_real_bone_output(self):
+        # elapsed/clip_time are wall-clock bookkeeping; only relative hand
+        # travel proves the crossfade posed the rig. A dead crossfade at half
+        # duration with <1 cm travel is reissued once and logged.
+        driver = self.native.split(
+            "local function update_custom_first_person_clip", 1
+        )[1].split("local function update_first_person_weapon_pose", 1)[0]
+        self.assertIn('Unit.has_node(animation_unit, "j_righthand")', driver)
+        self.assertIn("Vector3.distance(relative_hand, active.previous_hand:unbox())", driver)
+        self.assertIn("active.previous_hand = Vector3Box(relative_hand)", driver)
+        self.assertIn("active.hand_travel < 0.01", driver)
+        self.assertIn("clip pose stalled; reissued crossfade", driver)
+        self.assertIn("hand_travel=%.4f sm=%s reissued=%s", driver)
+        setup = self.native.split(
+            "local function play_custom_first_person_clip", 1
+        )[1].split("local function update_custom_first_person_clip", 1)[0]
+        self.assertIn("clip_resource = clip.clip,", setup)
+
     def test_assassin_blade_proxies_present_metal_3p_units(self):
         # The native 1P claw units carry a Versus spectral-glow material that
         # draws nothing in Adventure (issue #46, v0.6.80-84). The visible
