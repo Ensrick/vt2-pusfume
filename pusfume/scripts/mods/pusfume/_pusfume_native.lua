@@ -288,6 +288,13 @@ local function update_custom_first_person_clip(extension, t)
     Unit.crossfade_animation_set_time(
         active.animation_unit, active.id, clip_time, true)
 
+    -- Janfon's clips are rotation-animated on every bone including the root.
+    -- The root link only pins the parent; a clip-driven local rotation on
+    -- node 0 swings the whole rig away from the view. Re-assert the identity
+    -- root transform every frame after the clip writes it.
+    Unit.set_local_position(active.animation_unit, 0, Vector3.zero())
+    Unit.set_local_rotation(active.animation_unit, 0, Quaternion.identity())
+
     -- Engine truth: our elapsed/clip_time numbers are wall-clock bookkeeping
     -- and prove nothing about pose output. Track how far the right hand node
     -- actually moves relative to the camera root; a moving clip with zero
@@ -295,11 +302,17 @@ local function update_custom_first_person_clip(extension, t)
     -- invisible-hands state - bind pose folded around the camera eye).
     local animation_unit = active.animation_unit
     local camera_unit = extension.first_person_unit
+    local view_hand
     if camera_unit and Unit.alive(camera_unit)
             and Unit.has_node(animation_unit, "j_righthand") then
         local relative_hand = Unit.world_position(
                 animation_unit, Unit.node(animation_unit, "j_righthand"))
             - Unit.world_position(camera_unit, 0)
+        -- Camera-local frame (x=right, y=forward, z=up): visible hands sit
+        -- roughly (+-0.3, 0.3..0.9, -0.4..0.1). Negative y = behind the view.
+        view_hand = Quaternion.rotate(
+            Quaternion.inverse(Unit.world_rotation(camera_unit, 0)),
+            relative_hand)
         if active.previous_hand then
             active.hand_travel = active.hand_travel
                 + Vector3.distance(relative_hand, active.previous_hand:unbox())
@@ -330,10 +343,12 @@ local function update_custom_first_person_clip(extension, t)
         local sm_state = extension._pusfume_assassin_disabled_state_machine_unit
                 and "manual" or "native"
         mod:info(
-            "[pusfume] Janfon assassin sample event=%s elapsed=%.3f clip_time=%.3f/%.3f bone_mode=%s hand_travel=%.4f sm=%s reissued=%s",
+            "[pusfume] Janfon assassin sample event=%s elapsed=%.3f clip_time=%.3f/%.3f bone_mode=%s hand_travel=%.4f sm=%s reissued=%s view_hand=%s",
             active.event, elapsed, clip_time, active.duration,
             Unit.animation_bone_mode(animation_unit),
-            active.hand_travel or 0, sm_state, tostring(active.reissued))
+            active.hand_travel or 0, sm_state, tostring(active.reissued),
+            view_hand and string.format("(%.2f, %.2f, %.2f)",
+                view_hand.x, view_hand.y, view_hand.z) or "n/a")
         active.next_sample = active.next_sample + 0.2
     end
 end

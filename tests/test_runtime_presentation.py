@@ -218,7 +218,21 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn("active.previous_hand = Vector3Box(relative_hand)", driver)
         self.assertIn("active.hand_travel < 0.01", driver)
         self.assertIn("clip pose stalled; reissued crossfade", driver)
-        self.assertIn("hand_travel=%.4f sm=%s reissued=%s", driver)
+        self.assertIn("hand_travel=%.4f sm=%s reissued=%s view_hand=%s", driver)
+        # The clips are rotation-animated on the root; the identity root
+        # transform must be re-asserted after each manual clip write, or the
+        # rig swings away from the camera view.
+        self.assertIn(
+            "Unit.set_local_position(active.animation_unit, 0, Vector3.zero())",
+            driver,
+        )
+        self.assertIn(
+            "Unit.set_local_rotation(active.animation_unit, 0, Quaternion.identity())",
+            driver,
+        )
+        self.assertIn(
+            "Quaternion.inverse(Unit.world_rotation(camera_unit, 0))", driver
+        )
         setup = self.native.split(
             "local function play_custom_first_person_clip", 1
         )[1].split("local function update_custom_first_person_clip", 1)[0]

@@ -10,6 +10,18 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Read the v0.6.86 live instrumentation: the crossfades DO pose the rig
+  (attack clips accumulate real relative hand travel and no stall reissue
+  ever fired), the attachment has no state machine to disable, and the
+  hands remain invisible - so pose output was never the defect. The
+  remaining mechanism is direction: Janfon's clips are rotation-animated on
+  every bone including the root, and a clip-driven local rotation on node 0
+  swings the entire rig away from the camera view while the root link only
+  pins the parent (consistent with the 12 m equip snap and with the single
+  lucky v0.6.82 sighting). v0.6.87 re-asserts the identity root transform
+  every frame after the manual clip write and adds camera-local hand
+  coordinates (`view_hand=(x right, y forward, z up)`) to every sample so
+  the hands' position relative to the view is finally in the log.
 - Built, locally deployed, and uploaded v0.6.86 from source commit `5009dba`
   as friends-only Steam ManifestID `4768083710877239287` at 2026-07-25
   21:19:48 America/Chicago; Steam's Workshop log confirms `Uploaded new
