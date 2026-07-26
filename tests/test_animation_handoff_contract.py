@@ -78,6 +78,22 @@ class AnimationHandoffContractTests(unittest.TestCase):
         self.assertIn('bones = "units/pusfume/pusfume_1p_versus_arms"', build)
         self.assertIn('$requiredCompiledResources += "units/pusfume/anims/', build)
 
+    def test_assassin_export_uses_stingray_position_counter_scale(self):
+        # Unfixed action FBXs at Blender defaults let the SDK bake
+        # centimetre-as-metre rest positions into every location key; at
+        # runtime the clips scattered the bones 10-15 m from the camera
+        # (issue #46, v0.6.87 view_hand evidence). The actions must ship
+        # through the same 100x pre-scale + 0.01 global_scale pair as the
+        # compiled unit mesh, restore the rig, and gate on restore drift.
+        exporter = self.read("tools/export_pusfume_1p_actions.py")
+        self.assertIn("def scale_armature_bone_positions", exporter)
+        self.assertIn("scale_armature_bone_positions(target, 100.0)", exporter)
+        self.assertIn("scale_armature_bone_positions(target, 0.01)", exporter)
+        self.assertIn("global_scale=0.01,", exporter)
+        self.assertIn("apply_unit_scale=True,", exporter)
+        self.assertIn("maximum_restore_delta > 0.0001", exporter)
+        self.assertIn('"position_counter_scale"', exporter)
+
     def test_assassin_export_clears_saved_source_pose(self):
         exporter = self.read("tools/export_pusfume_1p_actions.py")
         duplicate = exporter.split(

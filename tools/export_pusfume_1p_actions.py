@@ -286,6 +286,19 @@ def retarget_action(source, target, mesh, action, rest_points, authored_range):
     }, frame_start, frame_end, keyed_start
 
 
+def scale_armature_bone_positions(target, factor):
+    """Scale bone head/tail positions only; bases and rolls are unchanged."""
+    bpy.ops.object.select_all(action="DESELECT")
+    target.select_set(True)
+    bpy.context.view_layer.objects.active = target
+    bpy.ops.object.mode_set(mode="EDIT")
+    for edit_bone in target.data.edit_bones:
+        edit_bone.head *= factor
+        edit_bone.tail *= factor
+    bpy.ops.object.mode_set(mode="OBJECT")
+    bpy.context.view_layer.update()
+
+
 def export_action(
     source, target, mesh, action, rest_points, authored_range, output_dir
 ):
@@ -296,25 +309,59 @@ def export_action(
     )
 
     output_path = os.path.join(output_dir, action.name + ".fbx")
-    bpy.ops.object.select_all(action="DESELECT")
-    target.select_set(True)
-    bpy.context.view_layer.objects.active = target
-    bpy.ops.export_scene.fbx(
-        filepath=output_path,
-        use_selection=True,
-        axis_forward="-Y",
-        axis_up="Z",
-        object_types={"ARMATURE"},
-        add_leaf_bones=False,
-        primary_bone_axis="Y",
-        secondary_bone_axis="X",
-        bake_anim=True,
-        bake_anim_use_all_bones=True,
-        bake_anim_use_nla_strips=False,
-        bake_anim_use_all_actions=False,
-        bake_anim_force_startend_keying=True,
-        bake_anim_simplify_factor=0.0,
+
+    # The compiled unit ships through prepare_pusfume_1p_blend's 100x bone
+    # pre-scale + 0.01 FBX global_scale pair, but these action FBXs exported
+    # at Blender defaults, so the SDK baked centimetre-as-metre rest positions
+    # into every location key. At runtime the clips scattered the bones 10-15
+    # metres from the camera (v0.6.87 view_hand evidence, issue #46). Export
+    # the actions through the identical counter-scale so the compiled clip
+    # skeleton matches the compiled unit skeleton.
+    rest_before = {
+        bone.name: (target.matrix_world @ bone.matrix_local).translation.copy()
+        for bone in target.data.bones
+    }
+    scale_armature_bone_positions(target, 100.0)
+    try:
+        bpy.ops.object.select_all(action="DESELECT")
+        target.select_set(True)
+        bpy.context.view_layer.objects.active = target
+        bpy.ops.export_scene.fbx(
+            filepath=output_path,
+            use_selection=True,
+            global_scale=0.01,
+            apply_unit_scale=True,
+            axis_forward="-Y",
+            axis_up="Z",
+            object_types={"ARMATURE"},
+            add_leaf_bones=False,
+            primary_bone_axis="Y",
+            secondary_bone_axis="X",
+            bake_anim=True,
+            bake_anim_use_all_bones=True,
+            bake_anim_use_nla_strips=False,
+            bake_anim_use_all_actions=False,
+            bake_anim_force_startend_keying=True,
+            bake_anim_simplify_factor=0.0,
+        )
+    finally:
+        scale_armature_bone_positions(target, 0.01)
+
+    maximum_restore_delta = max(
+        (
+            (
+                (target.matrix_world @ bone.matrix_local).translation
+                - rest_before[bone.name]
+            ).length
+            for bone in target.data.bones
+        ),
+        default=0.0,
     )
+    if maximum_restore_delta > 0.0001:
+        raise RuntimeError(
+            "Action %s counter-scale did not restore the rig: %.8f"
+            % (action.name, maximum_restore_delta)
+        )
     return {
         "action": action.name,
         "duration": (frame_end - frame_start) / FPS,
@@ -325,6 +372,11 @@ def export_action(
         "maximum_pose_delta": retarget_audit["maximum_pose_delta"],
         "output": output_path,
         "output_bytes": os.path.getsize(output_path),
+        "position_counter_scale": {
+            "factor": 100.0,
+            "fbx_global_scale": 0.01,
+            "maximum_restore_delta": maximum_restore_delta,
+        },
         "retarget_audit": retarget_audit,
         "target_action": target_action.name,
     }

@@ -10,6 +10,18 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Found the invisible-Assassin root cause in the v0.6.87 live diagnostics:
+  `view_hand` put the right hand 10-15 metres from the camera in changing
+  directions - the compiled clips scatter the skeleton at 100x scale. The
+  nine action FBXs exported at Blender defaults, so the VT2 SDK baked
+  centimetre-as-metre rest positions into every location key; the compiled
+  unit mesh avoided this only because prepare_pusfume_1p_blend ships
+  through a 100x bone pre-scale + 0.01 FBX global_scale pair. v0.6.88
+  routes the action exports through the identical counter-scale (scale bone
+  positions 100x, export at global_scale 0.01, restore, and fail the build
+  if the rig does not restore within 0.1 mm), so the compiled clip skeleton
+  finally matches the compiled unit skeleton. The v0.6.87 per-frame root pin
+  and view_hand diagnostics remain.
 - Built, locally deployed, and uploaded v0.6.87 from source commit `91ceb14`
   as friends-only Steam ManifestID `2971808066321779674` at 2026-07-26
   14:23:11 America/Chicago; Steam's Workshop log confirms `Uploaded new
