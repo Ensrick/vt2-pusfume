@@ -288,31 +288,13 @@ local function update_custom_first_person_clip(extension, t)
     Unit.crossfade_animation_set_time(
         active.animation_unit, active.id, clip_time, true)
 
-    -- Janfon's clips are floor-origin (offline FK on the compiled data:
-    -- spine at +1.09, hands at +1.22 from the rig root; camera_node stays at
-    -- the origin, so his rig carries NO eye anchor). Fatshark's skaven base
-    -- poses its bones eye-relative through its state machine - that is what
-    -- makes every other weapon's per-bone-linked hands sit correctly. Anchor
-    -- the clip-driven rig by aligning its spine onto the base's spine each
-    -- frame, and keep the root rotation slaved to the camera.
-    local skaven_base = extension._pusfume_skaven_first_person_unit
+    -- v0.6.89's spine anchor is retired: its incremental correction ran away
+    -- (view_cam ramped to -1000 m) while the rendered hands never moved,
+    -- proving the crossfade owns every tracked bone's transform and that
+    -- node-0 local writes are dead bookkeeping. No manual root writes; the
+    -- roots= telemetry below locates which link in the camera -> base -> rig
+    -- chain actually breaks.
     local animation_unit = active.animation_unit
-    Unit.set_local_rotation(animation_unit, 0, Quaternion.identity())
-    if skaven_base and Unit.alive(skaven_base)
-            and Unit.has_node(skaven_base, "j_spine1")
-            and Unit.has_node(animation_unit, "j_spine1") then
-        local base_spine = Unit.world_position(
-            skaven_base, Unit.node(skaven_base, "j_spine1"))
-        local rig_spine = Unit.world_position(
-            animation_unit, Unit.node(animation_unit, "j_spine1"))
-        local root_rotation = Unit.world_rotation(animation_unit, 0)
-        local delta = Quaternion.rotate(
-            Quaternion.inverse(root_rotation), base_spine - rig_spine)
-        Unit.set_local_position(animation_unit, 0,
-            Unit.local_position(animation_unit, 0) + delta)
-    else
-        Unit.set_local_position(animation_unit, 0, Vector3.zero())
-    end
 
     -- Engine truth: our elapsed/clip_time numbers are wall-clock bookkeeping
     -- and prove nothing about pose output. Track how far the right hand node
@@ -372,12 +354,26 @@ local function update_custom_first_person_clip(extension, t)
             return vector and string.format("(%.2f, %.2f, %.2f)",
                 vector.x, vector.y, vector.z) or "n/a"
         end
+        -- Absolute world positions for every link in the placement chain.
+        -- One log line then shows which link diverges: the hero camera unit,
+        -- the skaven base linked to it, the clip-driven rig linked to the
+        -- base, and the rendered hand.
+        local skaven_base = extension._pusfume_skaven_first_person_unit
+        local base_root = skaven_base and Unit.alive(skaven_base)
+            and Unit.world_position(skaven_base, 0)
+        local rig_root = Unit.world_position(animation_unit, 0)
+        local camera_root = camera_unit and Unit.alive(camera_unit)
+            and Unit.world_position(camera_unit, 0)
+        local hand_world = Unit.has_node(animation_unit, "j_righthand")
+            and Unit.world_position(
+                animation_unit, Unit.node(animation_unit, "j_righthand"))
         mod:info(
-            "[pusfume] Janfon assassin sample event=%s elapsed=%.3f clip_time=%.3f/%.3f bone_mode=%s hand_travel=%.4f sm=%s reissued=%s view_hand=%s view_cam=%s view_spine=%s",
+            "[pusfume] Janfon assassin sample event=%s elapsed=%.3f clip_time=%.3f/%.3f bone_mode=%s hand_travel=%.4f sm=%s reissued=%s view_hand=%s view_cam=%s view_spine=%s roots: cam=%s base=%s rig=%s hand=%s",
             active.event, elapsed, clip_time, active.duration,
             Unit.animation_bone_mode(animation_unit),
             active.hand_travel or 0, sm_state, tostring(active.reissued),
-            fmt(view_hand), fmt(view_cam), fmt(view_spine))
+            fmt(view_hand), fmt(view_cam), fmt(view_spine),
+            fmt(camera_root), fmt(base_root), fmt(rig_root), fmt(hand_world))
         active.next_sample = active.next_sample + 0.2
     end
 end

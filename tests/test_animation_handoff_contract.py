@@ -101,15 +101,11 @@ class AnimationHandoffContractTests(unittest.TestCase):
         self.assertIn("0.001", assassin_recipe)
         self.assertNotIn("100.0", assassin_recipe)
         native = self.read("pusfume/scripts/mods/pusfume/_pusfume_native.lua")
-        # Janfon's clips are floor-origin with NO eye anchor (camera_node
-        # stays at his rig origin, FK-verified); the eye-relative reference
-        # is the Fatshark base's state-machine pose, so the rig root aligns
-        # its spine onto the base's spine every frame.
-        self.assertIn('Unit.has_node(skaven_base, "j_spine1")', native)
-        self.assertIn(
-            "Quaternion.inverse(root_rotation), base_spine - rig_spine",
-            native,
-        )
+        # The v0.6.89 spine anchor is retired (unstable, and node-0 writes do
+        # not reach the rendered rig); placement evidence comes from the
+        # absolute roots telemetry instead.
+        self.assertNotIn("base_spine - rig_spine", native)
+        self.assertIn("roots: cam=%s base=%s rig=%s hand=%s", native)
         self.assertIn("local idle_clip = type(clips) == \"table\" and clips.claws_idle", native)
         self.assertIn(
             "Unit.crossfade_animation(\n"

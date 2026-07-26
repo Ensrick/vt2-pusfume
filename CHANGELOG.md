@@ -10,6 +10,18 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Rejected v0.6.89 in live testing (claws still invisible) with two hard
+  findings from its own telemetry: the incremental spine anchor was
+  unstable (`view_cam` ramped from -45 m to -1083 m over one second) while
+  the rendered hands never followed it despite the whole skeleton
+  descending from `root_point`, proving the crossfade owns every tracked
+  bone's transform and manual node-0 writes never reach the rendered rig
+  (which also retro-classifies the v0.6.87 root pin as a no-op). The
+  view-space hand signature also flips direction between sessions,
+  consistent with the rig sitting at a fixed WORLD position rather than
+  following the camera. v0.6.90 removes the anchor entirely and adds
+  absolute `roots: cam/base/rig/hand` world positions to every sample so
+  one test pins which link in the camera -> base -> rig chain is broken.
 - Built, locally deployed, and uploaded v0.6.89 from source commit `049ea9b`
   as friends-only Steam ManifestID `8012240457343967231` at 2026-07-26
   16:01:07 America/Chicago; Steam's Workshop log confirms `Uploaded new

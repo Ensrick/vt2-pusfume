@@ -222,14 +222,13 @@ class RuntimePresentationTests(unittest.TestCase):
             "hand_travel=%.4f sm=%s reissued=%s view_hand=%s view_cam=%s view_spine=%s",
             driver,
         )
-        # The rig root stays rotation-slaved to the camera and its position
-        # is spine-aligned to the Fatshark base every frame (Janfon's clips
-        # are floor-origin with no eye anchor).
-        self.assertIn(
-            "Unit.set_local_rotation(animation_unit, 0, Quaternion.identity())",
-            driver,
-        )
-        self.assertIn("base_spine - rig_spine", driver)
+        # v0.6.89's incremental spine anchor ran away (view_cam ramped to
+        # -1000 m) while rendered hands never moved: the crossfade owns every
+        # tracked bone, so manual node-0 writes must never return. The
+        # absolute roots= telemetry locates the broken placement link.
+        self.assertNotIn("base_spine - rig_spine", driver)
+        self.assertNotIn("Unit.set_local_position(animation_unit, 0,", driver)
+        self.assertIn("roots: cam=%s base=%s rig=%s hand=%s", driver)
         self.assertIn(
             "Quaternion.inverse(Unit.world_rotation(camera_unit, 0))", driver
         )
