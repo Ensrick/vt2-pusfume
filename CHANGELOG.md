@@ -10,6 +10,13 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, locally deployed, and uploaded v0.6.88 from source commit `1ef8171`
+  as friends-only Steam ManifestID `1816104269779305243` at 2026-07-26
+  15:02:15 America/Chicago; Steam's Workshop log confirms `Uploaded new
+  content` and the deploy is hash-verified. All nine action exports passed
+  the new counter-scale restore gate (maximum drift 0.25 micrometres); the
+  153-test regression suite and full source preflight pass; live acceptance
+  remains pending.
 - Found the invisible-Assassin root cause in the v0.6.87 live diagnostics:
   `view_hand` put the right hand 10-15 metres from the camera in changing
   directions - the compiled clips scatter the skeleton at 100x scale. The
