@@ -10,6 +10,13 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, locally deployed, and uploaded v0.6.84 from source commit `cbc9eb3`
+  as friends-only Steam ManifestID `3860736927016602401` at 2026-07-25
+  19:57:15 America/Chicago; Steam's Workshop log confirms `Uploaded new
+  content` and the deploy is hash-verified. The 150-test regression suite,
+  full source preflight, Blender 5.2 rig validation, native compilation,
+  material splices, and all nine Janfon Assassin clip gates pass; live
+  acceptance remains pending.
 - Rejected v0.6.83 in live testing: block latched the hands, the stuck pose
   survived switching to the Warpfire Thrower, and light attacks played no
   animation. The live log shows the cause was v0.6.83 itself:
