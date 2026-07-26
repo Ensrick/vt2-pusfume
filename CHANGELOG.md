@@ -10,6 +10,18 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Diagnosed the invisible Assassin blades offline instead of shipping another
+  visibility workaround. Parsing both compiled claw units proved each contains
+  one mesh compiled `ViewportVisible|CullingAlwaysVisible` with no visibility
+  groups and no state machine, so the v0.6.81/v0.6.82 group and render-context
+  fixes could not have been the cause. The claw child material's parent
+  (`4F76323884D2753D`) ships as a zero-byte stub in every claw bundle; its only
+  real payload in all 4,678 game bundles lives in
+  `resource_packages/common_shaders`, which Versus keeps resident and
+  Adventure never loads. Without it the blade meshes bind no shader and draw
+  nothing. v0.6.83 loads that shared dependency package synchronously with the
+  native Skaven first-person packages and reports `shared_materials=` in the
+  Assassin blade presentation diagnostic.
 - Built, locally deployed, and uploaded v0.6.82 from source commit `832cd89`
   as friends-only Steam ManifestID `579444873668293088` at 2026-07-25
   17:55:21 America/Chicago. All eight installed files (178,062,529 bytes) are

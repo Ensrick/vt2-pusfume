@@ -40,6 +40,14 @@ local NATIVE_SKAVEN_FIRST_PERSON_PACKAGES = {
     RATLING_FIRST_PERSON_ARMS,
 }
 local NATIVE_SKAVEN_PACKAGE_REFERENCE = "pusfume_native_skaven_first_person"
+-- The compiled Gutter Runner claw child material (slot C3C6D99F ->
+-- 2569DCB7628B4F9E) parents 4F76323884D2753D, whose only non-stub payload in
+-- the whole game ships in this package's bundle. Versus sessions keep it
+-- resident; Adventure never loads it, so without this package both blade
+-- meshes bind no shader and draw nothing regardless of visibility state.
+local SHARED_MATERIAL_DEPENDENCY_PACKAGES = {
+    "resource_packages/common_shaders",
+}
 local state = {
     cosmetic_registered = false,
     hook_installed = false,
@@ -142,12 +150,34 @@ local function ensure_native_skaven_first_person_packages(config)
         end
     end
 
+    for _, package_name in ipairs(SHARED_MATERIAL_DEPENDENCY_PACKAGES) do
+        local package_available = Managers.package
+            and Application.can_get("package", package_name)
+
+        if package_available and not Managers.package:has_loaded(
+                package_name, NATIVE_SKAVEN_PACKAGE_REFERENCE) then
+            Managers.package:load(package_name, NATIVE_SKAVEN_PACKAGE_REFERENCE, nil, false)
+        end
+
+        -- Dependency packages carry shared materials/textures, not units, so
+        -- residency is package residency alone.
+        local loaded = package_available
+            and Managers.package:has_loaded(package_name, NATIVE_SKAVEN_PACKAGE_REFERENCE)
+        all_loaded = all_loaded and loaded
+
+        if not loaded then
+            mod:error("[pusfume] Shared material dependency package failed residency: %s",
+                package_name)
+        end
+    end
+
     state.native_skaven_packages_loaded = all_loaded
 
     if all_loaded and not state.native_skaven_packages_logged then
         state.native_skaven_packages_logged = true
-        mod:info("[pusfume] Native Skaven first-person packages resident: %d",
-            #NATIVE_SKAVEN_FIRST_PERSON_PACKAGES)
+        mod:info("[pusfume] Native Skaven first-person packages resident: %d (+%d shared material dependencies)",
+            #NATIVE_SKAVEN_FIRST_PERSON_PACKAGES,
+            #SHARED_MATERIAL_DEPENDENCY_PACKAGES)
     end
 
     return all_loaded
@@ -408,8 +438,15 @@ local function restore_first_person_weapons(extension)
 
         if not extension._pusfume_assassin_blades_logged then
             extension._pusfume_assassin_blades_logged = true
+            local shared_materials_resident = true
+            for _, package_name in ipairs(SHARED_MATERIAL_DEPENDENCY_PACKAGES) do
+                shared_materials_resident = shared_materials_resident
+                    and Managers.package ~= nil
+                    and Managers.package:has_loaded(
+                        package_name, NATIVE_SKAVEN_PACKAGE_REFERENCE) == true
+            end
             mod:info(
-                "[pusfume] Assassin blade presentation right=%s left=%s normal_groups=%s/%s meshes=%s/%s attachment_error=%s/%s camera_distance=%s/%s default_context=forced",
+                "[pusfume] Assassin blade presentation right=%s left=%s normal_groups=%s/%s meshes=%s/%s attachment_error=%s/%s camera_distance=%s/%s default_context=forced shared_materials=%s",
                 tostring(right_weapon_unit),
                 tostring(left_weapon_unit),
                 tostring(right_visibility_group),
@@ -419,7 +456,8 @@ local function restore_first_person_weapons(extension)
                 tostring(right_attachment_error),
                 tostring(left_attachment_error),
                 tostring(right_camera_distance),
-                tostring(left_camera_distance))
+                tostring(left_camera_distance),
+                tostring(shared_materials_resident))
         end
     else
         extension._pusfume_assassin_blades_logged = nil
@@ -2875,6 +2913,15 @@ end
 
 function M.shutdown(config)
     if state.native_skaven_packages_requested then
+        for index = #SHARED_MATERIAL_DEPENDENCY_PACKAGES, 1, -1 do
+            local package_name = SHARED_MATERIAL_DEPENDENCY_PACKAGES[index]
+
+            if Managers.package and Managers.package:has_loaded(
+                    package_name, NATIVE_SKAVEN_PACKAGE_REFERENCE) then
+                Managers.package:unload(package_name, NATIVE_SKAVEN_PACKAGE_REFERENCE)
+            end
+        end
+
         for index = #NATIVE_SKAVEN_FIRST_PERSON_PACKAGES, 1, -1 do
             local package_name = NATIVE_SKAVEN_FIRST_PERSON_PACKAGES[index]
 

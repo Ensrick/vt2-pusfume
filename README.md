@@ -299,6 +299,7 @@ game tooling present, the known-good native build is:
 py -m unittest discover -s tests -v
 .\tools\Test-PusfumeSource.ps1
 .\tools\Build-NativePusfume.ps1 -HeroPreview -IntegratedFur -SplicedGameChild `
+  -AssassinFirstPersonAnimations `
   -ModelFbx ".build\pusfume_handoff\pusfume_3p_authored_idle.fbx" `
   -AnimationFbx ".build\generated-native\pusfume_3p_retargeted_walk.fbx" `
   -IdleAnimationFbx ".build\generated-native\pusfume_3p_authored_idle_clip.fbx" `
