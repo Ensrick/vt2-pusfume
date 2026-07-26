@@ -98,6 +98,24 @@ local IDLE_ENTER_SPEED = 0.2
 local FIRST_PERSON_WEAPON_HIDE_REASON = "pusfume_hands_diagnostic"
 local PACKMASTER_WEAPON_HIDE_REASON = "catapulted"
 local ASSASSIN_ROLE = "gutter_runner"
+-- The native 1P claw units use a Versus spectral-glow material (panning
+-- fx/textures/tiling_clouds_03, pulse, HDR green tint) that draws no pixels
+-- in Adventure even while linked, whole-unit visible, and animating: the
+-- compiled units carry ViewportVisible|CullingAlwaysVisible, no visibility
+-- groups, and no state machine, and the parent material is engine-resident,
+-- so the remaining variable is the effect shader itself (issue #46,
+-- v0.6.80-84 live evidence). Present the self-contained metal _3p claw
+-- units as first-person proxies instead; the spectral 1P units stay wielded
+-- so weapon actions, sweeps, and damage are untouched.
+local ASSASSIN_BLADE_PROXY_REFERENCE = "pusfume_assassin_blade_proxies"
+local ASSASSIN_BLADE_PROXY_UNITS = {
+    right = "units/weapons/player/dark_pact/wpn_skaven_gutter_runner_claws/wpn_right_claw_3p",
+    left = "units/weapons/player/dark_pact/wpn_skaven_gutter_runner_claws/wpn_left_claw_3p",
+}
+local ASSASSIN_BLADE_ATTACH_NODES = {
+    right = "j_rightweaponattach",
+    left = "j_leftweaponattach",
+}
 local WARPFIRE_ITEM_KEY = "pusfume_warpfire_thrower"
 local INACTIVE_WARPFIRE_PARK_OFFSET =
     Vector3Box(Vector3(0, 0, -1000))
@@ -320,6 +338,55 @@ local function show_first_person_weapon_unit(unit)
     return uses_normal_group, mesh_count
 end
 
+local function ensure_assassin_blade_proxies(extension, animation_unit)
+    local proxies = extension._pusfume_assassin_blade_proxies
+    if not proxies then
+        proxies = {}
+        extension._pusfume_assassin_blade_proxies = proxies
+    end
+
+    local unit_spawner = Managers.state and Managers.state.unit_spawner
+    local spawned = 0
+    local linked = 0
+
+    for hand, unit_path in pairs(ASSASSIN_BLADE_PROXY_UNITS) do
+        local attach_node = ASSASSIN_BLADE_ATTACH_NODES[hand]
+        local attach_ready = animation_unit and Unit.alive(animation_unit)
+            and Unit.has_node(animation_unit, attach_node)
+        local proxy = proxies[hand]
+
+        if (not proxy or not Unit.alive(proxy))
+                and unit_spawner
+                and attach_ready
+                and Application.can_get("unit", unit_path) then
+            -- Pin each proxy package with a mod-owned reference so an item
+            -- swap's ProfileSynchronizer unload cannot strand a live unit
+            -- without its resources.
+            if Managers.package
+                    and Application.can_get("package", unit_path)
+                    and not Managers.package:has_loaded(
+                        unit_path, ASSASSIN_BLADE_PROXY_REFERENCE) then
+                Managers.package:load(
+                    unit_path, ASSASSIN_BLADE_PROXY_REFERENCE, nil, false)
+            end
+
+            proxy = unit_spawner:spawn_local_unit(unit_path)
+            proxies[hand] = proxy
+            spawned = spawned + 1
+        end
+
+        if proxy and Unit.alive(proxy) and attach_ready then
+            World.unlink_unit(extension.world, proxy)
+            World.link_unit(extension.world, proxy, 0, animation_unit,
+                Unit.node(animation_unit, attach_node))
+            Unit.set_unit_visibility(proxy, true)
+            linked = linked + 1
+        end
+    end
+
+    return spawned, linked
+end
+
 local function first_person_weapon_attachment_error(
         animation_unit, source_node, weapon_unit)
     if not animation_unit or not Unit.alive(animation_unit)
@@ -411,11 +478,13 @@ local function restore_first_person_weapons(extension)
             extension, animation_unit, "j_rightweaponattach")
         left_camera_distance = first_person_attachment_camera_distance(
             extension, animation_unit, "j_leftweaponattach")
+        local proxies_spawned, proxies_linked =
+            ensure_assassin_blade_proxies(extension, animation_unit)
 
         if not extension._pusfume_assassin_blades_logged then
             extension._pusfume_assassin_blades_logged = true
             mod:info(
-                "[pusfume] Assassin blade presentation right=%s left=%s normal_groups=%s/%s meshes=%s/%s attachment_error=%s/%s camera_distance=%s/%s default_context=forced",
+                "[pusfume] Assassin blade presentation right=%s left=%s normal_groups=%s/%s meshes=%s/%s attachment_error=%s/%s camera_distance=%s/%s default_context=forced proxies=%d/%d",
                 tostring(right_weapon_unit),
                 tostring(left_weapon_unit),
                 tostring(right_visibility_group),
@@ -425,7 +494,9 @@ local function restore_first_person_weapons(extension)
                 tostring(right_attachment_error),
                 tostring(left_attachment_error),
                 tostring(right_camera_distance),
-                tostring(left_camera_distance))
+                tostring(left_camera_distance),
+                proxies_spawned,
+                proxies_linked)
         end
     else
         extension._pusfume_assassin_blades_logged = nil
@@ -2361,6 +2432,17 @@ end
 local function destroy_dual_first_person_rig(extension)
     local skaven_base = extension._pusfume_skaven_first_person_unit
     local skaven_attachments = extension._pusfume_skaven_first_person_attachments
+    local blade_proxies = extension._pusfume_assassin_blade_proxies
+
+    if blade_proxies then
+        for _, blade_proxy in pairs(blade_proxies) do
+            if blade_proxy and Unit.alive(blade_proxy) then
+                World.unlink_unit(extension.world, blade_proxy)
+                Managers.state.unit_spawner:mark_for_deletion(blade_proxy)
+            end
+        end
+        extension._pusfume_assassin_blade_proxies = nil
+    end
 
     if skaven_attachments then
         for _, skaven_arms in pairs(skaven_attachments) do
@@ -2636,6 +2718,14 @@ local function install_first_person_hook(registry, config)
                     skaven_attachment == active_attachment and visible == true)
             end
             set_unit_visible(active_attachment, visible == true)
+            local blade_proxies = extension._pusfume_assassin_blade_proxies
+            if blade_proxies then
+                local blades_visible = visible == true
+                    and extension._pusfume_active_skaven_role == ASSASSIN_ROLE
+                for _, blade_proxy in pairs(blade_proxies) do
+                    set_unit_visible(blade_proxy, blades_visible)
+                end
+            end
             if extension._pusfume_active_first_person_rig ~= "skaven"
                     and not config.first_person_direct_link then
                 update_first_person_retarget(extension)
@@ -2880,6 +2970,13 @@ function M.animation_status()
 end
 
 function M.shutdown(config)
+    for _, unit_path in pairs(ASSASSIN_BLADE_PROXY_UNITS) do
+        if Managers.package and Managers.package:has_loaded(
+                unit_path, ASSASSIN_BLADE_PROXY_REFERENCE) then
+            Managers.package:unload(unit_path, ASSASSIN_BLADE_PROXY_REFERENCE)
+        end
+    end
+
     if state.native_skaven_packages_requested then
         for index = #NATIVE_SKAVEN_FIRST_PERSON_PACKAGES, 1, -1 do
             local package_name = NATIVE_SKAVEN_FIRST_PERSON_PACKAGES[index]

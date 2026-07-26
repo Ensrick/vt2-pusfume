@@ -206,6 +206,46 @@ class RuntimePresentationTests(unittest.TestCase):
             self.native,
         )
 
+    def test_assassin_blade_proxies_present_metal_3p_units(self):
+        # The native 1P claw units carry a Versus spectral-glow material that
+        # draws nothing in Adventure (issue #46, v0.6.80-84). The visible
+        # blades are the self-contained _3p units, spawned locally, linked to
+        # Janfon's weapon-attach nodes, package-pinned across item swaps, and
+        # following the active rig's visibility every frame.
+        self.assertIn("ASSASSIN_BLADE_PROXY_UNITS", self.native)
+        self.assertIn("wpn_right_claw_3p", self.native)
+        self.assertIn("wpn_left_claw_3p", self.native)
+        helper = self.native.split(
+            "local function ensure_assassin_blade_proxies", 1
+        )[1].split("local function first_person_weapon_attachment_error", 1)[0]
+        self.assertIn("unit_spawner:spawn_local_unit(unit_path)", helper)
+        self.assertIn(
+            "Managers.package:load(\n"
+            "                    unit_path, ASSASSIN_BLADE_PROXY_REFERENCE, nil, false)",
+            helper,
+        )
+        self.assertIn("World.link_unit(extension.world, proxy, 0, animation_unit,", helper)
+        presentation = self.native.split(
+            "local function restore_first_person_weapons", 1
+        )[1].split("local DONOR_PACKAGE_REFERENCE", 1)[0]
+        self.assertIn("ensure_assassin_blade_proxies(extension, animation_unit)", presentation)
+        self.assertIn("proxies=%d/%d", presentation)
+        update = self.native.split("_pusfume_assassin_blade_proxies\n", 2)[-1]
+        self.assertIn(
+            "extension._pusfume_active_skaven_role == ASSASSIN_ROLE",
+            self.native.split("local blades_visible = visible == true", 1)[1][:120],
+        )
+        destroy = self.native.split(
+            "local function destroy_dual_first_person_rig", 1
+        )[1].split("local function install_first_person_hook", 1)[0]
+        self.assertIn("blade_proxies", destroy)
+        self.assertIn("mark_for_deletion(blade_proxy)", destroy)
+        shutdown = self.native.split("function M.shutdown(config)", 1)[1]
+        self.assertIn(
+            "Managers.package:unload(unit_path, ASSASSIN_BLADE_PROXY_REFERENCE)",
+            shutdown,
+        )
+
     def test_shared_material_dependency_load_stays_retired(self):
         # Dead end (v0.6.83): Application.can_get("package",
         # "resource_packages/common_shaders") is false, so gating the loader

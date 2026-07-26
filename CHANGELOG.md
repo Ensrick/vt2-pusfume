@@ -10,6 +10,21 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Rejected v0.6.84 in live testing: both blades remained invisible on the
+  restored v0.6.82 presentation, with the log showing the driver armed,
+  `attachment_error=0/0` at the hands, and forced default-context meshes.
+  With unit flags (`ViewportVisible|CullingAlwaysVisible`, no visibility
+  groups, no state machine), node hierarchy (the blade mesh is a direct
+  child of the linked root), transform, and material residency all verified
+  good offline, the remaining variable is the material itself: the 1P claw
+  child is a Versus spectral-glow effect (panning `tiling_clouds_03`,
+  `pulse`, HDR green tint) that draws nothing in Adventure. v0.6.85 spawns
+  the self-contained metal `_3p` claw units as first-person blade proxies
+  linked to Janfon's `j_left/rightweaponattach` nodes, pins their packages
+  with a mod-owned reference across item swaps, follows the active rig's
+  visibility every frame, and reports `proxies=<spawned>/<linked>` in the
+  presentation diagnostic. The spectral 1P units stay wielded so weapon
+  actions, sweeps, and damage are untouched.
 - Built, locally deployed, and uploaded v0.6.84 from source commit `cbc9eb3`
   as friends-only Steam ManifestID `3860736927016602401` at 2026-07-25
   19:57:15 America/Chicago; Steam's Workshop log confirms `Uploaded new
