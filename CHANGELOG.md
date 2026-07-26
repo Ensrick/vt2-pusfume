@@ -10,6 +10,19 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Rejected v0.6.83 in live testing: block latched the hands, the stuck pose
+  survived switching to the Warpfire Thrower, and light attacks played no
+  animation. The live log shows the cause was v0.6.83 itself:
+  `Application.can_get("package", "resource_packages/common_shaders")` is
+  false, the new dependency gate poisoned `all_loaded`, and the entire native
+  first-person system (Skaven rig switch, role poses, and the Assassin
+  manual-time driver) never armed, so generic events ran unguarded. The
+  residency theory is also disproved: the working human-hand child material
+  parents `D97596A091982F4B`, whose only payload ships in that same
+  common_shaders bundle, so its content is engine-resident in Adventure.
+  v0.6.84 removes the dependency load and gate entirely, restoring the
+  v0.6.82 loader and presentation behavior, and records the dead end in
+  source and tests.
 - Built, locally deployed, and uploaded v0.6.83 from source commit `0478755`
   as friends-only Steam ManifestID `1508377919851841286` at 2026-07-25
   19:12:23 America/Chicago. Seven files deployed with VMBLauncher hash

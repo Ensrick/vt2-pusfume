@@ -111,10 +111,7 @@ class RuntimePresentationTests(unittest.TestCase):
             visibility_helper,
         )
         self.assertIn("attachment_error=%s/%s", helper)
-        self.assertIn(
-            "camera_distance=%s/%s default_context=forced shared_materials=%s",
-            helper,
-        )
+        self.assertIn("camera_distance=%s/%s default_context=forced", helper)
         self.assertIn("first_person_attachment_camera_distance(", helper)
         self.assertNotIn("Assassin hands-only prototype active", self.native)
         self.assertNotIn("hide_assassin_third_person_weapons", self.native)
@@ -209,27 +206,17 @@ class RuntimePresentationTests(unittest.TestCase):
             self.native,
         )
 
-    def test_assassin_blade_material_dependency_package_is_resident(self):
-        # The claw child material's parent (4F76323884D2753D) ships as a
-        # zero-byte stub in the claw bundles; its only payload lives in
-        # resource_packages/common_shaders, which Adventure never loads on its
-        # own. Without it both blades bind no shader and render invisible.
-        self.assertIn("SHARED_MATERIAL_DEPENDENCY_PACKAGES", self.native)
-        self.assertIn('"resource_packages/common_shaders",', self.native)
-        loader = self.native.split(
-            "local function ensure_native_skaven_first_person_packages", 1
-        )[1].split("local function unit_has_animation_event", 1)[0]
-        self.assertIn(
-            "for _, package_name in ipairs(SHARED_MATERIAL_DEPENDENCY_PACKAGES) do",
-            loader,
-        )
-        self.assertIn(
-            "Shared material dependency package failed residency", loader
-        )
-        shutdown = self.native.split("function M.shutdown(config)", 1)[1]
-        self.assertIn(
-            "for index = #SHARED_MATERIAL_DEPENDENCY_PACKAGES, 1, -1 do",
-            shutdown,
+    def test_shared_material_dependency_load_stays_retired(self):
+        # Dead end (v0.6.83): Application.can_get("package",
+        # "resource_packages/common_shaders") is false, so gating the loader
+        # on it disabled the entire first-person system. The bundle's shared
+        # material payloads are engine-resident in Adventure regardless (the
+        # working human-hand child parents D97596A091982F4B from that same
+        # bundle), so the load must never return.
+        self.assertNotIn("SHARED_MATERIAL_DEPENDENCY_PACKAGES", self.native)
+        self.assertNotIn(
+            'Managers.package:load("resource_packages/common_shaders"',
+            self.native,
         )
 
     def test_dual_rig_keeps_hero_camera_base_permanent(self):
