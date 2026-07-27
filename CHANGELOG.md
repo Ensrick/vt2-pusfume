@@ -10,6 +10,18 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- The v0.6.90 placement-chain telemetry delivered the verdict in one line:
+  `cam == base == rig` all ride with the player (the link chain was never
+  broken), while the hand's absolute world position sits at `(0.37, 0, 0)`
+  - the animation player composes tracked bones in the clip's model space
+  AT THE WORLD ORIGIN under blend type "normal", ignoring the unit's
+  placement. This also explains the single v0.6.82 sighting (the player
+  stood near the origin) and the mangled arms on other Versus weapons (the
+  parked crossfade kept posing unlinked bones at origin-space values that
+  fight the per-bone role links). v0.6.91 plays every assassin crossfade -
+  driver, stall reissue, and role-exit park - with blend type "offset",
+  which evaluates the clip relative to the current pose and therefore under
+  the unit's camera link.
 - Built, locally deployed, and uploaded v0.6.90 from source commit `d2a8379`
   as friends-only Steam ManifestID `6392949598140268440` at 2026-07-26
   18:32:26 America/Chicago under a live owner-bound ship claim (the

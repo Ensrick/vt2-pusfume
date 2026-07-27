@@ -112,6 +112,16 @@ class AnimationHandoffContractTests(unittest.TestCase):
             "                previous_clip.animation_unit, idle_clip.clip, 1, 0.05,",
             native,
         )
+        # Blend type is load-bearing: "normal" composes tracked bones at the
+        # WORLD ORIGIN regardless of the unit link (v0.6.90 roots telemetry:
+        # cam==base==rig at the player, hand at (0.37, 0, 0)). Every assassin
+        # crossfade must play "offset".
+        driver_and_park = native.split(
+            "local function play_custom_first_person_clip", 1)[1]
+        self.assertNotIn('clip.loop == true, "normal")', driver_and_park)
+        self.assertIn('clip.loop == true, "offset")', driver_and_park)
+        self.assertIn('true, "offset")', driver_and_park)
+        self.assertIn('false, "offset")', driver_and_park)
 
     def test_assassin_export_clears_saved_source_pose(self):
         exporter = self.read("tools/export_pusfume_1p_actions.py")

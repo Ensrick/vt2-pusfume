@@ -241,8 +241,13 @@ local function play_custom_first_person_clip(extension, event_name)
         mod:info("[pusfume] Janfon assassin manual-time driver enabled")
     end
 
+    -- Blend type is load-bearing: "normal" evaluates the tracked bones in
+    -- the clip's model space AT THE WORLD ORIGIN regardless of the unit's
+    -- link (v0.6.90 roots telemetry: cam==base==rig at the player while the
+    -- hand's world position sat at (0.37, 0, 0)). "offset" plays the clip
+    -- relative to the current pose, composing under the unit's placement.
     local clip_id = Unit.crossfade_animation(
-        animation_unit, clip.clip, 1, 0.08, clip.loop == true, "normal")
+        animation_unit, clip.clip, 1, 0.08, clip.loop == true, "offset")
     Unit.crossfade_animation_set_speed(animation_unit, clip_id, 0)
     Unit.crossfade_animation_set_time(animation_unit, clip_id, 0, true)
     local target_duration = ASSASSIN_CLIP_TARGET_DURATION[event_name]
@@ -338,7 +343,7 @@ local function update_custom_first_person_clip(extension, t)
             active.reissued = true
             active.id = Unit.crossfade_animation(
                 animation_unit, active.clip_resource, 1, 0.0,
-                false, "normal")
+                false, "offset")
             Unit.crossfade_animation_set_speed(animation_unit, active.id, 0)
             Unit.crossfade_animation_set_time(animation_unit, active.id, clip_time, true)
             mod:info(
@@ -2477,7 +2482,7 @@ local function switch_first_person_rig(extension, inventory_extension, role)
                 and Unit.alive(previous_clip.animation_unit) then
             local parked_id = Unit.crossfade_animation(
                 previous_clip.animation_unit, idle_clip.clip, 1, 0.05,
-                true, "normal")
+                true, "offset")
             Unit.crossfade_animation_set_speed(
                 previous_clip.animation_unit, parked_id, 0)
             Unit.crossfade_animation_set_time(
