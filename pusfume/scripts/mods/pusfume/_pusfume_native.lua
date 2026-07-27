@@ -237,13 +237,14 @@ local function play_custom_first_person_clip(extension, event_name)
     -- compiles with its own state machine (one state per authored clip,
     -- action-window speeds baked in), and state-machine playback evaluates
     -- in the unit's frame - the live-proven 3P recipe.
-    if not Unit.has_animation_state_machine(animation_unit)
+    if not extension._pusfume_assassin_controller_enabled
             or not Unit.has_animation_event(animation_unit, event_name) then
         if not extension._pusfume_assassin_event_gap_logged then
             extension._pusfume_assassin_event_gap_logged = true
             mod:info(
-                "[pusfume] Assassin controller missing event=%s sm=%s",
+                "[pusfume] Assassin controller missing event=%s enabled=%s sm=%s",
                 event_name,
+                tostring(extension._pusfume_assassin_controller_enabled),
                 tostring(Unit.has_animation_state_machine(animation_unit)))
         end
         return false
@@ -2147,7 +2148,13 @@ local function spawn_dual_first_person_rig(extension, config)
         apply_pusfume_voice_switch(arms)
         -- The compiled assassin controller must not boot into claws_idle
         -- under the per-bone-linked roles; it is enabled per role switch.
-        if Unit.has_animation_state_machine(arms) then
+        -- Availability must be remembered here: has_animation_state_machine
+        -- returns false for a DISABLED controller, so it cannot gate the
+        -- re-enable later (v0.6.95: sm=false in assassin mode).
+        extension._pusfume_assassin_controller_available =
+            Unit.has_animation_state_machine(arms)
+        extension._pusfume_assassin_controller_enabled = false
+        if extension._pusfume_assassin_controller_available then
             Unit.disable_animation_state_machine(arms)
         end
         skaven_attachments.packmaster = arms
@@ -2448,11 +2455,17 @@ local function switch_first_person_rig(extension, inventory_extension, role)
         -- otherwise boot into claws_idle and pose the bones the per-bone
         -- role links do not cover in every role (the all-weapons mangled
         -- hands regression). The controller runs ONLY in assassin mode.
-        if Unit.has_animation_state_machine(attachment_unit) then
-            if custom_assassin then
+        -- Toggle from the tracked flags: has_animation_state_machine
+        -- reports false while disabled, so it cannot drive this decision.
+        if extension._pusfume_assassin_controller_available then
+            if custom_assassin
+                    and not extension._pusfume_assassin_controller_enabled then
                 Unit.enable_animation_state_machine(attachment_unit)
-            else
+                extension._pusfume_assassin_controller_enabled = true
+            elseif not custom_assassin
+                    and extension._pusfume_assassin_controller_enabled then
                 Unit.disable_animation_state_machine(attachment_unit)
+                extension._pusfume_assassin_controller_enabled = false
             end
         end
 
@@ -2585,6 +2598,8 @@ local function destroy_dual_first_person_rig(extension)
     extension._pusfume_skaven_first_person_attachment = nil
     extension._pusfume_skaven_first_person_attachments = nil
     extension._pusfume_active_animation_unit = nil
+    extension._pusfume_assassin_controller_available = nil
+    extension._pusfume_assassin_controller_enabled = nil
 end
 
 local function install_first_person_hook(registry, config)
