@@ -10,6 +10,12 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, locally deployed, and uploaded v0.6.93 from source commit `94aeee4`
+  as friends-only Steam ManifestID `6051580796268700608` at 2026-07-26
+  21:06:02 America/Chicago under a live owner-bound ship claim; Steam's
+  Workshop log confirms `Uploaded new content` and the deploy is
+  hash-verified. 153 tests and full source preflight pass; live acceptance
+  remains pending.
 - Rejected v0.6.92 in live testing: the controller drove the clips
   (`sm=controller`, samples advancing) but the animated bones stayed at the
   world origin - byte-identical `hand=(0.37, 0, 0)` to the crossfade runs -
