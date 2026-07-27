@@ -2458,6 +2458,32 @@ if ($assassinFirstPersonAnimationsEnabled) {
     }
 
     Write-Host "Shifted and spliced $($assassinManifest.actions.Count) Assassin clips into the eye-relative frame"
+
+    # The runtime replays baked pose data (engine playback re-anchors this
+    # unit at the world origin - issue #46). Re-bake from the fresh
+    # eye-frame clips and fail if the committed module drifted.
+    $bakeTool = Join-Path $repoRoot "tools\bake_animation_poses.py"
+    $bakedModulePath = Join-Path $generatedRoot "pusfume_assassin_poses_check.lua"
+    $bakeArguments = @($bakeTool, "--", $compiledBonesPath, $compiledArmsUnitPath,
+        $bakedModulePath)
+    foreach ($action in $assassinManifest.actions) {
+        $actionName = [string]$action.action
+        $bakeArguments += "$actionName=" + (
+            Join-Path $generatedRoot "eyeframe_$actionName.animation")
+    }
+    $result = Invoke-HiddenPython $bakeArguments
+    Assert-HiddenToolSuccess $result "Assassin pose bake (FK-gated)"
+    $committedModulePath = Join-Path $repoRoot `
+        "pusfume\scripts\mods\pusfume\pusfume_assassin_poses.lua"
+    $freshBytes = [System.IO.File]::ReadAllBytes($bakedModulePath)
+    $committedBytes = [System.IO.File]::ReadAllBytes($committedModulePath)
+    if ($freshBytes.Length -ne $committedBytes.Length -or
+            [System.Convert]::ToBase64String($freshBytes) -ne
+            [System.Convert]::ToBase64String($committedBytes)) {
+        throw ("Committed pose module is stale. Copy " + $bakedModulePath +
+            " over pusfume\scripts\mods\pusfume\pusfume_assassin_poses.lua and rebuild.")
+    }
+    Write-Host "Baked Assassin pose module verified against the committed copy"
 }
 
 if (-not $NoDonorTextureShadow) {

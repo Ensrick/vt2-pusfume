@@ -386,18 +386,18 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn("local custom_event = event_1p or event", self.native)
         self.assertIn('mod:hook(WeaponUnitExtension, "_play_end_event_1p"', self.native)
 
-    def test_assassin_clips_use_one_controller_driver(self):
-        # The clips play through the arms unit's own state machine; the
-        # manual-time crossfade driver (and its state-machine disable) must
-        # never return - crossfade playback cannot follow the camera link.
+    def test_assassin_clips_use_one_pose_player(self):
+        # The clips replay from baked pose data (engine playback re-anchors
+        # this unit at the world origin); the compiled controller stays
+        # permanently disabled from spawn.
         self.assertIn("ASSASSIN_CLIP_TARGET_DURATION", self.native)
-        self.assertNotIn(
-            "Unit.disable_animation_state_machine(animation_unit)", self.native
-        )
         self.assertNotIn("_pusfume_assassin_disabled_state_machine_unit", self.native)
+        self.assertNotIn(
+            "Unit.enable_animation_state_machine(attachment_unit)", self.native
+        )
         self.assertIn("update_custom_first_person_clip(extension, t)", self.native)
         self.assertIn("previous.event == event_name and clip.loop == true", self.native)
-        self.assertIn("Janfon assassin controller driver enabled", self.native)
+        self.assertIn("Janfon assassin pose player enabled", self.native)
 
     def test_assassin_clips_target_janfon_attachment_not_skaven_base(self):
         switch = self.native.split(

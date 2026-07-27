@@ -117,10 +117,24 @@ class AnimationHandoffContractTests(unittest.TestCase):
             "local function play_custom_first_person_clip", 1)[1].split(
             "local function update_custom_first_person_clip", 1)[0]
         self.assertNotIn("Unit.crossfade_animation(", driver)
-        self.assertIn("Unit.animation_event(animation_unit, event_name)", driver)
+        # Engine playback (crossfades AND the state machine) re-anchors this
+        # unit's bones at the world origin; the clips replay from baked pose
+        # data through per-frame Lua control + World.update_unit, the one
+        # composition path proven live (v0.6.95).
+        self.assertNotIn("Unit.animation_event(animation_unit, event_name)", driver)
+        self.assertIn("assassin_poses and assassin_poses[event_name]", driver)
+        self.assertIn("pose_bones = pose_clip.bones,", driver)
+        update = native.split(
+            "local function update_custom_first_person_clip", 1)[1].split(
+            "local function update_first_person_weapon_pose", 1)[0]
+        self.assertIn("Quaternion.from_elements(", update)
+        self.assertIn("Quaternion.lerp(", update)
+        self.assertIn("World.update_unit(extension.world, active.animation_unit)", update)
         self.assertIn(
-            'Unit.has_animation_event(animation_unit, event_name)', driver
+            'mod:dofile("scripts/mods/pusfume/pusfume_assassin_poses")', native
         )
+        self.assertIn("Assassin pose bake (FK-gated)", self.read("tools/Build-NativePusfume.ps1"))
+        self.assertIn("Committed pose module is stale", self.read("tools/Build-NativePusfume.ps1"))
         build2 = self.read("tools/Build-NativePusfume.ps1")
         self.assertIn("pusfume_1p_versus_arms.state_machine", build2)
         self.assertIn('default_state = "base/claws_idle"', build2)
