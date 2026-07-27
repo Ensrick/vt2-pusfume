@@ -10,6 +10,12 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, locally deployed, and uploaded v0.6.91 from source commit `becbf1e`
+  as friends-only Steam ManifestID `8765890159733793013` at 2026-07-26
+  19:42:56 America/Chicago under a live owner-bound ship claim; Steam's
+  Workshop log confirms `Uploaded new content` and the deploy is
+  hash-verified. 153 tests and full source preflight pass; live acceptance
+  remains pending.
 - The v0.6.90 placement-chain telemetry delivered the verdict in one line:
   `cam == base == rig` all ride with the player (the link chain was never
   broken), while the hand's absolute world position sits at `(0.37, 0, 0)`
