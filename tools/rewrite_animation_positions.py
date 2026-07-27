@@ -69,9 +69,33 @@ def unit_rest_by_name_hash(path):
     return rests
 
 
-def rewrite(animation_path, bones_path, unit_path, output_path):
+def read_bone_names(path):
+    data = pathlib.Path(path).read_bytes()
+    bone_count, lod_count = struct.unpack_from("<II", data, 0)
+    blob = data[8 + bone_count * 4 + lod_count * 4:]
+    return [n.decode() for n in blob.split(b"\x00") if n][:bone_count]
+
+
+def rewrite(animation_path, bones_path, unit_path, output_path, shift=None):
+    """Rewrite position samples in place.
+
+    Default mode replaces every position with the unit rest. With
+    shift=("bone_name", (dx, dy, dz)) only that bone's positions are
+    offset by the delta; all other samples are preserved. Used to move
+    Janfon's floor-origin spine chain into the eye-relative frame the
+    camera-linked unit needs (issue #46).
+    """
     bone_hashes = read_bones(bones_path)
     rests = unit_rest_by_name_hash(unit_path)
+
+    shift_index = None
+    shift_delta = None
+    if shift is not None:
+        names = read_bone_names(bones_path)
+        shift_name, shift_delta = shift
+        if shift_name not in names:
+            raise SystemExit(f"shift bone not in bones table: {shift_name}")
+        shift_index = names.index(shift_name)
 
     missing = [
         "%08X" % bone_hash
@@ -105,17 +129,36 @@ def rewrite(animation_path, bones_path, unit_path, output_path):
     rewritten_sync = 0
     rewritten_keys = 0
 
+    def unpack_position(at):
+        x, y, z = struct.unpack_from("<HHH", data, at)
+        step = PACKED_STEP
+        return (x * step - PACKED_RANGE, y * step - PACKED_RANGE,
+                z * step - PACKED_RANGE)
+
+    def replacement_for(bone_index, current):
+        if shift_index is None:
+            return rests[bone_hashes[bone_index]]
+        if bone_index != shift_index:
+            return None
+        return (current[0] + shift_delta[0], current[1] + shift_delta[1],
+                current[2] + shift_delta[2])
+
     sync = u16(offset)
     offset += 2
     if sync == SYNC_ITEM:
         for bone_index in range(num_bones):
-            data[offset:offset + 6] = pack_position(rests[bone_hashes[bone_index]])
-            rewritten_sync += 1
+            replacement = replacement_for(bone_index, unpack_position(offset))
+            if replacement is not None:
+                data[offset:offset + 6] = pack_position(replacement)
+                rewritten_sync += 1
             offset += 6 + 4 + 6
     elif sync == UNPACKED_SYNC_ITEM:
         for bone_index in range(num_bones):
-            struct.pack_into("<fff", data, offset, *rests[bone_hashes[bone_index]])
-            rewritten_sync += 1
+            current = struct.unpack_from("<fff", data, offset)
+            replacement = replacement_for(bone_index, current)
+            if replacement is not None:
+                struct.pack_into("<fff", data, offset, *replacement)
+                rewritten_sync += 1
             offset += 12 + 16 + 12
     else:
         raise SystemExit(f"unknown sync item {sync}")
@@ -131,17 +174,21 @@ def rewrite(animation_path, bones_path, unit_path, output_path):
             if item_type == POSITION_KEY_ITEM:
                 if bone_id >= num_bones:
                     raise SystemExit(f"position key for bone {bone_id}")
-                data[offset + 4:offset + 10] = pack_position(
-                    rests[bone_hashes[bone_id]])
-                rewritten_keys += 1
+                replacement = replacement_for(
+                    bone_id, unpack_position(offset + 4))
+                if replacement is not None:
+                    data[offset + 4:offset + 10] = pack_position(replacement)
+                    rewritten_keys += 1
             offset += 4 + (4 if item_type == ROTATION_KEY_ITEM else 6)
         elif item_type == UNPACKED_POSITION_KEY_ITEM:
             bone_id = u16(offset + 2)
             if bone_id >= num_bones:
                 raise SystemExit(f"unpacked position key for bone {bone_id}")
-            struct.pack_into(
-                "<fff", data, offset + 8, *rests[bone_hashes[bone_id]])
-            rewritten_keys += 1
+            current = struct.unpack_from("<fff", data, offset + 8)
+            replacement = replacement_for(bone_id, current)
+            if replacement is not None:
+                struct.pack_into("<fff", data, offset + 8, *replacement)
+                rewritten_keys += 1
             offset += 2 + 2 + 4 + 12
         elif item_type == UNPACKED_ROTATION_KEY_ITEM:
             offset += 2 + 2 + 4 + 16
@@ -164,12 +211,23 @@ def rewrite(animation_path, bones_path, unit_path, output_path):
 
 
 def main():
-    arguments = sys.argv[1:]
-    if arguments and arguments[0] == "--":
-        arguments = arguments[1:]
+    shift = None
+    arguments = []
+    for value in sys.argv[1:]:
+        if value == "--":
+            continue
+        if value.startswith("--shift="):
+            # --shift=j_spine1:0,0,-1.48
+            bone_name, delta_text = value[len("--shift="):].split(":", 1)
+            delta = tuple(float(v) for v in delta_text.split(","))
+            if len(delta) != 3:
+                raise SystemExit("shift delta must be dx,dy,dz")
+            shift = (bone_name, delta)
+            continue
+        arguments.append(value)
     if len(arguments) != 4:
         raise SystemExit(__doc__)
-    return rewrite(*arguments)
+    return rewrite(*arguments, shift=shift)
 
 
 if __name__ == "__main__":

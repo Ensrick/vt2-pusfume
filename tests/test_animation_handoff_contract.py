@@ -106,22 +106,30 @@ class AnimationHandoffContractTests(unittest.TestCase):
         # absolute roots telemetry instead.
         self.assertNotIn("base_spine - rig_spine", native)
         self.assertIn("roots: cam=%s base=%s rig=%s hand=%s", native)
-        self.assertIn("local idle_clip = type(clips) == \"table\" and clips.claws_idle", native)
+        # Crossfade playback cannot follow the camera link: "normal" composes
+        # tracked bones at the world origin and "offset" bakes one
+        # world-anchored pose (v0.6.90/91 roots telemetry). The clips play
+        # through the arms unit's own state machine (the live-proven 3P
+        # recipe), the build authors that controller with one state per clip
+        # and action-window speeds, and the compiled clips are shifted into
+        # the eye-relative frame before splicing.
+        driver = native.split(
+            "local function play_custom_first_person_clip", 1)[1].split(
+            "local function update_custom_first_person_clip", 1)[0]
+        self.assertNotIn("Unit.crossfade_animation(", driver)
+        self.assertIn("Unit.animation_event(animation_unit, event_name)", driver)
         self.assertIn(
-            "Unit.crossfade_animation(\n"
-            "                previous_clip.animation_unit, idle_clip.clip, 1, 0.05,",
-            native,
+            'Unit.has_animation_event(animation_unit, event_name)', driver
         )
-        # Blend type is load-bearing: "normal" composes tracked bones at the
-        # WORLD ORIGIN regardless of the unit link (v0.6.90 roots telemetry:
-        # cam==base==rig at the player, hand at (0.37, 0, 0)). Every assassin
-        # crossfade must play "offset".
-        driver_and_park = native.split(
-            "local function play_custom_first_person_clip", 1)[1]
-        self.assertNotIn('clip.loop == true, "normal")', driver_and_park)
-        self.assertIn('clip.loop == true, "offset")', driver_and_park)
-        self.assertIn('true, "offset")', driver_and_park)
-        self.assertIn('false, "offset")', driver_and_park)
+        build2 = self.read("tools/Build-NativePusfume.ps1")
+        self.assertIn("pusfume_1p_versus_arms.state_machine", build2)
+        self.assertIn('default_state = "base/claws_idle"', build2)
+        self.assertIn('root_driving = "ignore"', build2)
+        self.assertIn("--shift=j_spine1:0,0,-1.48", build2)
+        self.assertIn(
+            '$requiredCompiledResources += "units/pusfume/pusfume_1p_versus_arms,state_machine,"',
+            build2,
+        )
 
     def test_assassin_export_clears_saved_source_pose(self):
         exporter = self.read("tools/export_pusfume_1p_actions.py")

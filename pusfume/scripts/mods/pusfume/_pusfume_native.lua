@@ -231,31 +231,35 @@ local function play_custom_first_person_clip(extension, event_name)
         return true
     end
 
-    if not extension._pusfume_assassin_manual_driver then
-        if Unit.has_animation_state_machine(animation_unit) then
-            Unit.disable_animation_state_machine(animation_unit)
-            extension._pusfume_assassin_disabled_state_machine_unit =
-                animation_unit
+    -- Manual crossfade playback cannot follow the camera link: "normal"
+    -- composes tracked bones at the world origin and "offset" bakes one
+    -- world-anchored pose (v0.6.90/91 roots telemetry). The arms unit now
+    -- compiles with its own state machine (one state per authored clip,
+    -- action-window speeds baked in), and state-machine playback evaluates
+    -- in the unit's frame - the live-proven 3P recipe.
+    if not Unit.has_animation_state_machine(animation_unit)
+            or not Unit.has_animation_event(animation_unit, event_name) then
+        if not extension._pusfume_assassin_event_gap_logged then
+            extension._pusfume_assassin_event_gap_logged = true
+            mod:info(
+                "[pusfume] Assassin controller missing event=%s sm=%s",
+                event_name,
+                tostring(Unit.has_animation_state_machine(animation_unit)))
         end
-        extension._pusfume_assassin_manual_driver = true
-        mod:info("[pusfume] Janfon assassin manual-time driver enabled")
+        return false
     end
 
-    -- Blend type is load-bearing: "normal" evaluates the tracked bones in
-    -- the clip's model space AT THE WORLD ORIGIN regardless of the unit's
-    -- link (v0.6.90 roots telemetry: cam==base==rig at the player while the
-    -- hand's world position sat at (0.37, 0, 0)). "offset" plays the clip
-    -- relative to the current pose, composing under the unit's placement.
-    local clip_id = Unit.crossfade_animation(
-        animation_unit, clip.clip, 1, 0.08, clip.loop == true, "offset")
-    Unit.crossfade_animation_set_speed(animation_unit, clip_id, 0)
-    Unit.crossfade_animation_set_time(animation_unit, clip_id, 0, true)
+    if not extension._pusfume_assassin_manual_driver then
+        extension._pusfume_assassin_manual_driver = true
+        mod:info("[pusfume] Janfon assassin controller driver enabled")
+    end
+
+    Unit.animation_event(animation_unit, event_name)
     local target_duration = ASSASSIN_CLIP_TARGET_DURATION[event_name]
         or clip.duration
     extension._pusfume_assassin_clip = {
         animation_unit = animation_unit,
         event = event_name,
-        id = clip_id,
         duration = clip.duration,
         loop = clip.loop == true,
         next_sample = 0.1,
@@ -264,12 +268,11 @@ local function play_custom_first_person_clip(extension, event_name)
         target_duration = target_duration,
         hand_travel = 0,
         previous_hand = nil,
-        reissued = false,
         clip_resource = clip.clip,
     }
     mod:info(
-        "[pusfume] Janfon assassin 1P clip event=%s clip=%s id=%s duration=%.3f target=%.3f rate=%.3f loop=%s",
-        event_name, clip.clip, tostring(clip_id), clip.duration or 0,
+        "[pusfume] Janfon assassin 1P clip event=%s clip=%s duration=%.3f target=%.3f rate=%.3f loop=%s",
+        event_name, clip.clip, clip.duration or 0,
         target_duration, clip.duration / target_duration,
         tostring(clip.loop == true))
 
@@ -283,6 +286,8 @@ local function update_custom_first_person_clip(extension, t)
         return
     end
 
+    -- The state machine owns playback time now; elapsed/clip_time remain
+    -- diagnostic estimates of where the controller should be.
     local elapsed = math.max(0, t - active.started_at)
     local clip_time = elapsed * active.playback_rate
     if active.loop then
@@ -290,8 +295,6 @@ local function update_custom_first_person_clip(extension, t)
     else
         clip_time = math.min(clip_time, active.duration)
     end
-    Unit.crossfade_animation_set_time(
-        active.animation_unit, active.id, clip_time, true)
 
     -- v0.6.89's spine anchor is retired: its incremental correction ran away
     -- (view_cam ramped to -1000 m) while the rendered hands never moved,
@@ -333,28 +336,11 @@ local function update_custom_first_person_clip(extension, t)
         else
             active.previous_hand = Vector3Box(relative_hand)
         end
-
-        -- Self-heal once per clip: a non-loop clip half way through with under
-        -- a centimetre of relative hand motion is a dead crossfade; reissue it.
-        if not active.loop and not active.reissued
-                and active.clip_resource
-                and clip_time >= 0.5 * active.duration
-                and active.hand_travel < 0.01 then
-            active.reissued = true
-            active.id = Unit.crossfade_animation(
-                animation_unit, active.clip_resource, 1, 0.0,
-                false, "offset")
-            Unit.crossfade_animation_set_speed(animation_unit, active.id, 0)
-            Unit.crossfade_animation_set_time(animation_unit, active.id, clip_time, true)
-            mod:info(
-                "[pusfume] Janfon assassin clip pose stalled; reissued crossfade event=%s travel=%.5f clip_time=%.3f",
-                active.event, active.hand_travel, clip_time)
-        end
     end
 
     if elapsed >= active.next_sample and active.next_sample <= 0.7 then
-        local sm_state = extension._pusfume_assassin_disabled_state_machine_unit
-                and "manual" or "native"
+        local sm_state = Unit.has_animation_state_machine(animation_unit)
+                and "controller" or "missing"
         local function fmt(vector)
             return vector and string.format("(%.2f, %.2f, %.2f)",
                 vector.x, vector.y, vector.z) or "n/a"
@@ -373,10 +359,10 @@ local function update_custom_first_person_clip(extension, t)
             and Unit.world_position(
                 animation_unit, Unit.node(animation_unit, "j_righthand"))
         mod:info(
-            "[pusfume] Janfon assassin sample event=%s elapsed=%.3f clip_time=%.3f/%.3f bone_mode=%s hand_travel=%.4f sm=%s reissued=%s view_hand=%s view_cam=%s view_spine=%s roots: cam=%s base=%s rig=%s hand=%s",
+            "[pusfume] Janfon assassin sample event=%s elapsed=%.3f clip_time=%.3f/%.3f bone_mode=%s hand_travel=%.4f sm=%s view_hand=%s view_cam=%s view_spine=%s roots: cam=%s base=%s rig=%s hand=%s",
             active.event, elapsed, clip_time, active.duration,
             Unit.animation_bone_mode(animation_unit),
-            active.hand_travel or 0, sm_state, tostring(active.reissued),
+            active.hand_travel or 0, sm_state,
             fmt(view_hand), fmt(view_cam), fmt(view_spine),
             fmt(camera_root), fmt(base_root), fmt(rig_root), fmt(hand_world))
         active.next_sample = active.next_sample + 0.2
@@ -2463,34 +2449,18 @@ local function switch_first_person_rig(extension, inventory_extension, role)
     extension._pusfume_active_first_person_rig = rig_name
     extension._pusfume_active_skaven_role = role
     if role ~= "gutter_runner" and extension._pusfume_assassin_manual_driver then
-        local disabled_unit =
-            extension._pusfume_assassin_disabled_state_machine_unit
-        if disabled_unit and Unit.alive(disabled_unit) then
-            Unit.enable_animation_state_machine(disabled_unit)
-        end
-
-        -- A crossfade left running on the SM-less attachment keeps posing the
-        -- bones the per-bone role links do not cover (fingertips, helpers),
-        -- stretching the mesh between the linked and clip-held bones on the
-        -- next role. Park the layer on the idle clip's first frame instead.
+        -- Return the controller to its idle state so the per-bone role links
+        -- of the next weapon fight a neutral pose, not a mid-attack one.
         local previous_clip = extension._pusfume_assassin_clip
-        local clips = installed_config
-            and installed_config.assassin_first_person_clips
-        local idle_clip = type(clips) == "table" and clips.claws_idle
-        if previous_clip and idle_clip
-                and previous_clip.animation_unit
-                and Unit.alive(previous_clip.animation_unit) then
-            local parked_id = Unit.crossfade_animation(
-                previous_clip.animation_unit, idle_clip.clip, 1, 0.05,
-                true, "offset")
-            Unit.crossfade_animation_set_speed(
-                previous_clip.animation_unit, parked_id, 0)
-            Unit.crossfade_animation_set_time(
-                previous_clip.animation_unit, parked_id, 0, true)
+        if previous_clip and previous_clip.animation_unit
+                and Unit.alive(previous_clip.animation_unit)
+                and Unit.has_animation_state_machine(previous_clip.animation_unit)
+                and Unit.has_animation_event(
+                    previous_clip.animation_unit, "claws_idle") then
+            Unit.animation_event(previous_clip.animation_unit, "claws_idle")
         end
 
         extension._pusfume_assassin_manual_driver = nil
-        extension._pusfume_assassin_disabled_state_machine_unit = nil
         extension._pusfume_assassin_clip = nil
     end
     if use_skaven then

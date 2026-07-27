@@ -633,6 +633,75 @@ tolerance = {
         $assassinAnimationRecipe | Set-Content -LiteralPath `
             (Join-Path $animationRoot "$actionName.animation") -Encoding utf8
     }
+
+    # Manual crossfade playback cannot follow the camera link: blend type
+    # "normal" composes tracked bones at the world origin and "offset" bakes
+    # a world-anchored pose once (v0.6.90/91 roots telemetry). State-machine
+    # playback evaluates in the unit's frame - the live-proven 3P recipe -
+    # so the arms unit gets a controller with one state per authored clip.
+    # Attack speeds bake the same action-window compression the manual
+    # driver used (authored duration / target duration).
+    $assassinStateSettings = [ordered]@{
+        "claws_equip"                     = @{ loop = "false"; speed = "1" }
+        "claws_idle"                      = @{ loop = "true";  speed = "1" }
+        "claws_run"                       = @{ loop = "true";  speed = "1" }
+        "claws_block"                     = @{ loop = "true";  speed = "1" }
+        "claws_light_attack_right_first"  = @{ loop = "false"; speed = "2.81" }
+        "claws_light_attack_right_second" = @{ loop = "false"; speed = "2.81" }
+        "claws_light_attack_stab_left"    = @{ loop = "false"; speed = "2.571" }
+        "claws_light_attack_stab_left_hit" = @{ loop = "false"; speed = "2.571" }
+        "claws_light_attack_last"         = @{ loop = "false"; speed = "1.571" }
+    }
+    $smEvents = ($assassinStateSettings.Keys | ForEach-Object { "    $_ = {}" }) -join "`n"
+    $smStates = foreach ($stateName in $assassinStateSettings.Keys) {
+        $setting = $assassinStateSettings[$stateName]
+        $transitions = foreach ($eventName in $assassinStateSettings.Keys) {
+            @"
+                    {
+                        blend_time = 0.08
+                        event = "$eventName"
+                        mode = "direct"
+                        on_beat = ""
+                        to = "base/$eventName"
+                    }
+"@
+        }
+        @"
+            {
+                animations = [
+                    "units/pusfume/anims/$stateName"
+                ]
+                loop_animation = $($setting.loop)
+                name = "base/$stateName"
+                randomization_type = "every_loop"
+                root_driving = "ignore"
+                speed = "$($setting.speed)"
+                state_type = "regular"
+                transitions = [
+$($transitions -join "`n")
+                ]
+                weights = [
+                    "1.0"
+                ]
+            }
+"@
+    }
+    @"
+events = {
+$smEvents
+}
+layers = [
+    {
+        default_state = "base/claws_idle"
+        states = [
+$($smStates -join "`n")
+        ]
+    }
+]
+ragdolls = {}
+variables = {}
+bones = "units/pusfume/pusfume_1p_versus_arms"
+"@ | Set-Content -LiteralPath (Join-Path $unitRoot "pusfume_1p_versus_arms.state_machine") -Encoding utf8
 }
 
 @'
@@ -1695,8 +1764,13 @@ renderables = {
 '@ | Set-Content -LiteralPath (Join-Path $unitRoot "pusfume_1p_arms.unit") -Encoding utf8
 }
 if ($versusFirstPersonEnabled) {
-    @'
-materials = {
+    $versusArmsStateMachineLine = if ($assassinFirstPersonAnimationsEnabled) {
+        "animation_state_machine = `"units/pusfume/pusfume_1p_versus_arms`"`n"
+    } else {
+        ""
+    }
+    @"
+$($versusArmsStateMachineLine)materials = {
     p_main = "materials/pusfume/pusfume_body"
 }
 renderables = {
@@ -1710,7 +1784,7 @@ renderables = {
         viewport_visible = true
     }
 }
-'@ | Set-Content -LiteralPath (Join-Path $unitRoot "pusfume_1p_versus_arms.unit") -Encoding utf8
+"@ | Set-Content -LiteralPath (Join-Path $unitRoot "pusfume_1p_versus_arms.unit") -Encoding utf8
 }
 
 $heroPreviewEnabled = if ($HeroPreview) { "true" } else { "false" }
@@ -1876,10 +1950,16 @@ $versusFirstPersonUnitPackageEntry
 "@ | Add-Content -LiteralPath (Join-Path $stageMod `
     "resource_packages\pusfume\pusfume.package") -Encoding utf8
 
+$assassinStateMachinePackageEntry = if ($assassinFirstPersonAnimationsEnabled) {
+    "    `"units/pusfume/pusfume_1p_versus_arms`""
+} else {
+    ""
+}
 @"
 
 state_machine = [
     "units/pusfume/pusfume_3p"
+$assassinStateMachinePackageEntry
 ]
 
 bones = [
@@ -1946,6 +2026,7 @@ if ($assassinFirstPersonAnimationsEnabled) {
     foreach ($action in $assassinManifest.actions) {
         $requiredCompiledResources += "units/pusfume/anims/$($action.action),animation,"
     }
+    $requiredCompiledResources += "units/pusfume/pusfume_1p_versus_arms,state_machine,"
 }
 foreach ($resource in $requiredCompiledResources) {
     if (-not $processedBundlesText.Contains(",$resource")) {
@@ -2314,6 +2395,69 @@ if ($SplicedGameChild) {
 
         Write-Host "Spliced native Skaven fur payload (256 bytes, Pusfume maps) into $($furSplicedInto[0])"
     }
+}
+
+if ($assassinFirstPersonAnimationsEnabled) {
+    # Janfon's clips are floor-origin: j_spine1 sits at +1.09 local while the
+    # arms unit roots at the CAMERA, hoisting the whole chain an eye height
+    # above the view. Shift only j_spine1's position samples down to the
+    # eye-relative frame (target spine ~-0.39 below the eye, measured from
+    # the correct v0.6.91 offset capture) and splice the adjusted clips back
+    # into the bundle. Offline FK on the result must put the hands in view.
+    $assassinSpliceTool = Join-Path $repoRoot "tools\splice_bundle_resource.py"
+    $rewriteTool = Join-Path $repoRoot "tools\rewrite_animation_positions.py"
+    $assassinDebugIndexText = Get-Content -LiteralPath (
+        Join-Path $stageRoot ".temp\pusfumeV2\compile\debug_file_index.sjson") -Raw
+
+    $compiledPathFor = {
+        param($resourcePath)
+        $match = [regex]::Match(
+            $assassinDebugIndexText,
+            '"(data/[^"\r\n]+)"\s*=\s*"' + [regex]::Escape($resourcePath) + '"')
+        if (-not $match.Success) {
+            throw "Compiled debug index omitted $resourcePath"
+        }
+        Join-Path $stageRoot (
+            ".temp\pusfumeV2\compile\" + $match.Groups[1].Value.Replace('/', '\'))
+    }
+
+    $compiledBonesPath = & $compiledPathFor "units/pusfume/pusfume_1p_versus_arms.bones"
+    $compiledArmsUnitPath = & $compiledPathFor "units/pusfume/pusfume_1p_versus_arms.unit"
+
+    foreach ($action in $assassinManifest.actions) {
+        $actionName = [string]$action.action
+        $compiledClipPath = & $compiledPathFor "units/pusfume/anims/$actionName.animation"
+        $shiftedClipPath = Join-Path $generatedRoot "eyeframe_$actionName.animation"
+
+        $result = Invoke-HiddenPython @(
+            $rewriteTool, "--shift=j_spine1:0,0,-1.48", "--",
+            $compiledClipPath, $compiledBonesPath,
+            $compiledArmsUnitPath, $shiftedClipPath)
+        Assert-HiddenToolSuccess $result "Assassin eye-frame shift for $actionName"
+
+        $clipSplicedInto = @()
+        foreach ($bundleFile in (Get-ChildItem -LiteralPath $bundleRoot -Filter *.mod_bundle -File)) {
+            $result = Invoke-HiddenPython @(
+                $assassinSpliceTool, $bundleFile.FullName, "--type", "animation",
+                "--name", "units/pusfume/anims/$actionName",
+                "--payload", $shiftedClipPath, "--dry-run")
+            if ($result.ExitCode -eq 0) {
+                $result = Invoke-HiddenPython @(
+                    $assassinSpliceTool, $bundleFile.FullName, "--type", "animation",
+                    "--name", "units/pusfume/anims/$actionName",
+                    "--payload", $shiftedClipPath)
+                Assert-HiddenToolSuccess $result `
+                    "Assassin clip splice ($actionName) on $($bundleFile.Name)"
+                $clipSplicedInto += $bundleFile.Name
+            }
+        }
+
+        if ($clipSplicedInto.Count -ne 1) {
+            throw "Expected clip $actionName in exactly 1 bundle, spliced $($clipSplicedInto.Count)"
+        }
+    }
+
+    Write-Host "Shifted and spliced $($assassinManifest.actions.Count) Assassin clips into the eye-relative frame"
 }
 
 if (-not $NoDonorTextureShadow) {

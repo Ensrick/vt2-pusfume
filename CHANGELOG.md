@@ -10,6 +10,19 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Rejected v0.6.91 in live testing with the decisive symptom pair: the hands
+  finally RENDERED at a correct view pose but froze at their spawn-time
+  world position ("offset" blend bakes one world-anchored pose and never
+  re-evaluates), separating from the camera as the player moves. Neither
+  crossfade blend mode can follow the camera link, so v0.6.92 plays the
+  clips the way the game's own first-person weapons do: the arms unit now
+  compiles with its own animation controller (one state per authored clip,
+  action-window speeds baked in, root driving ignored so the camera link
+  stays authoritative) and the runtime drives it with Unit.animation_event.
+  Janfon's floor-origin spine chain is shifted into the eye-relative frame
+  at the compiled-clip level (j_spine1 -1.48 m, spliced into the bundle),
+  and the offline FK gate passed on the exact spliced payloads: hands at
+  (+-0.5, 0.33, -0.26) and spine at -0.39 in view space.
 - Built, locally deployed, and uploaded v0.6.91 from source commit `becbf1e`
   as friends-only Steam ManifestID `8765890159733793013` at 2026-07-26
   19:42:56 America/Chicago under a live owner-bound ship claim; Steam's
