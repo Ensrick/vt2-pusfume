@@ -10,6 +10,19 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- v0.6.95 live testing delivered the composition milestone: the arms render
+  at the camera and follow it (the World.update_unit per-frame
+  recomposition works), but they froze at bind pose. The log shows
+  `Assassin controller missing event=claws_equip sm=false`:
+  Unit.has_animation_state_machine returns false for a DISABLED controller,
+  so the spawn-time disable made the assassin-mode re-enable unreachable.
+  v0.6.96 remembers controller availability in an explicit flag at spawn,
+  toggles enable/disable per role switch from tracked state, and gates the
+  event driver on the tracked enabled flag. Uploaded from source commit
+  `03cf82a` as friends-only Steam ManifestID `2904910490069009993` at
+  2026-07-26 21:46:28 America/Chicago (Workshop log confirms `Uploaded new
+  content`; deploy hash-verified; 153 tests and full preflight pass); live
+  acceptance remains pending.
 - Built, locally deployed, and uploaded v0.6.95 from source commit `7e5a438`
   as friends-only Steam ManifestID `461953217897653348` at 2026-07-26
   21:32:57 America/Chicago under a live owner-bound ship claim; Steam's
