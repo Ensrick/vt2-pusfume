@@ -10,6 +10,13 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, locally deployed, and uploaded v0.6.92 from source commit `43f8ec2`
+  as friends-only Steam ManifestID `1097708716216213446` at 2026-07-26
+  20:44:29 America/Chicago under a live owner-bound ship claim; Steam's
+  Workshop log confirms `Uploaded new content` and the deploy is
+  hash-verified. All nine clips shifted and spliced into the eye-relative
+  frame; the offline FK gate passed on the exact spliced payloads; 153
+  tests and full source preflight pass; live acceptance remains pending.
 - Rejected v0.6.91 in live testing with the decisive symptom pair: the hands
   finally RENDERED at a correct view pose but froze at their spawn-time
   world position ("offset" blend bakes one world-anchored pose and never
