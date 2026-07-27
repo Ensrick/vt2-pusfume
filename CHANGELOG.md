@@ -10,6 +10,20 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- v0.6.99 live feedback: claws still rotated wrong on the hands.
+  v0.6.100 mounts the blade proxies with Janfon's own measured
+  transforms instead of an identity link on the weapon-attach nodes:
+  his authoring blend contains the real 1P claw units (their compiled
+  node hashes 6C931F84/378EFAB9 and 08E753B6/A504FC1A name his
+  reference objects) CHILD_OF-constrained to j_righthand/j_lefthand,
+  and the mount offsets are constant across every clip (verified at
+  f1/f50 to 6 decimals). The proxies now link to the hands and take
+  those local poses; the world-pose retarget guarantees the engine's
+  node frames reproduce Blender's pose-bone frames, so the measured
+  offsets apply without conversion. [assumed] the _3p proxy units share
+  the 1P units' internal mesh frame - if a residual skew survives, the
+  next step is extracting wpn_right_claw_3p and folding in the 1P-to-3P
+  frame delta (#46).
 - v0.6.98 live result: arms VISIBLE and ANIMATED (scene-graph restore
   confirmed - chain=9<-8<-7<-6<-5<-3<-0, 52 nodes restored). Two residual
   defects reported: claw blades misaligned with the hands, and idle hands

@@ -119,9 +119,26 @@ local ASSASSIN_BLADE_PROXY_UNITS = {
     right = "units/weapons/player/dark_pact/wpn_skaven_gutter_runner_claws/wpn_right_claw_3p",
     left = "units/weapons/player/dark_pact/wpn_skaven_gutter_runner_claws/wpn_left_claw_3p",
 }
+-- Janfon's authoring blend carries the real 1P claw units (their node
+-- hashes 6C931F84/378EFAB9 and 08E753B6/A504FC1A name his reference
+-- objects) mounted on the HANDS via CHILD_OF constraints. These are his
+-- measured mount transforms, constant across every clip (verified at
+-- f1/f50 to 6 decimals). The world-pose retarget makes the engine's
+-- node frames reproduce Blender's pose-bone frames, so the offsets
+-- apply directly to the linked proxy's node 0.
 local ASSASSIN_BLADE_ATTACH_NODES = {
-    right = "j_rightweaponattach",
-    left = "j_leftweaponattach",
+    right = "j_righthand",
+    left = "j_lefthand",
+}
+local ASSASSIN_BLADE_LOCAL_MOUNTS = {
+    right = {
+        position = Vector3Box(0.104271, -0.016062, 0.037408),
+        rotation = { 0.708989, 0.701328, 0.073952, 0.002054 },
+    },
+    left = {
+        position = Vector3Box(0.078467, -0.010458, -0.064624),
+        rotation = { -0.120460, -0.086264, -0.709592, 0.688860 },
+    },
 }
 local WARPFIRE_ITEM_KEY = "pusfume_warpfire_thrower"
 local INACTIVE_WARPFIRE_PARK_OFFSET =
@@ -607,6 +624,13 @@ local function ensure_assassin_blade_proxies(extension, animation_unit)
             World.unlink_unit(extension.world, proxy)
             World.link_unit(extension.world, proxy, 0, animation_unit,
                 Unit.node(animation_unit, attach_node))
+            local mount = ASSASSIN_BLADE_LOCAL_MOUNTS[hand]
+            if mount then
+                Unit.set_local_position(proxy, 0, mount.position:unbox())
+                Unit.set_local_rotation(proxy, 0, Quaternion.from_elements(
+                    mount.rotation[1], mount.rotation[2],
+                    mount.rotation[3], mount.rotation[4]))
+            end
             Unit.set_unit_visibility(proxy, true)
             linked = linked + 1
         end

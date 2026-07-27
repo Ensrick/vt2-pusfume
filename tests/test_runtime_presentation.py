@@ -253,6 +253,16 @@ class RuntimePresentationTests(unittest.TestCase):
             helper,
         )
         self.assertIn("World.link_unit(extension.world, proxy, 0, animation_unit,", helper)
+        # The blades mount on the HANDS with Janfon's measured CHILD_OF
+        # transforms (his blend carries the real 1P claw units as
+        # references), not identity on the weapon-attach nodes.
+        self.assertIn("ASSASSIN_BLADE_LOCAL_MOUNTS", self.native)
+        self.assertIn('right = "j_righthand",', self.native)
+        self.assertIn('left = "j_lefthand",', self.native)
+        self.assertIn(
+            "Unit.set_local_position(proxy, 0, mount.position:unbox())", helper)
+        self.assertIn(
+            "Unit.set_local_rotation(proxy, 0, Quaternion.from_elements(", helper)
         presentation = self.native.split(
             "local function restore_first_person_weapons", 1
         )[1].split("local DONOR_PACKAGE_REFERENCE", 1)[0]
