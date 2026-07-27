@@ -57,10 +57,48 @@ class AnimationHandoffContractTests(unittest.TestCase):
         self.assertIn("maximum_pose_delta", exporter)
         self.assertIn("sanitize_pose_transforms", exporter)
         self.assertIn("preparation.rebind_to_donor_rest", exporter)
-        self.assertIn("parent_space_delta", exporter)
+        # WORLD-POSE matching, not rest-frame basis transport: transporting
+        # local deltas between rest frames only preserves the pose when the
+        # rests are identical, and the FBX-imported authoring rig's
+        # reconstructed bone axes differ from the donor rest (v0.6.98
+        # shipped a silent 0.18 m hand drift). The retarget must compose
+        # parents-first against the source's evaluated pose and hard-gate
+        # the world error.
+        self.assertNotIn("parent_space_delta", exporter)
+        self.assertIn("MAXIMUM_RETARGET_WORLD_ERROR = 0.05", exporter)
+        self.assertIn("maximum_world_error = max(", exporter)
+        self.assertIn("retarget drifted %.4f m from the authored pose", exporter)
+        self.assertIn(
+            "sorted(\n        target.pose.bones,"
+            " key=lambda pose_bone: len(pose_bone.parent_recursive)\n    )",
+            exporter)
+        self.assertIn('"maximum_world_error": maximum_world_error,', exporter)
         self.assertIn("maximum_vertex_displacement", exporter)
         self.assertIn("MAXIMUM_POSED_VERTEX_DISPLACEMENT", exporter)
-        self.assertIn('TRANSFORM_PROPERTIES = ("location", "scale")', exporter)
+        # Scale channels only: pose LOCATION is authored data. Janfon
+        # translates both upper-arm sockets a constant ~0.19 m to frame
+        # the hands; removing location channels splayed every clip wide
+        # (v0.6.8x-98).
+        self.assertIn('TRANSFORM_PROPERTIES = ("scale",)', exporter)
+        self.assertIn("target_pose.location = offset", exporter)
+        self.assertIn('data_path="location", frame=frame, group=pose_bone.name',
+                      exporter)
+        self.assertIn("def scale_action_locations", exporter)
+        self.assertIn("scale_action_locations(target_action, 100.0)", exporter)
+        self.assertIn("scale_action_locations(target_action, 0.01)", exporter)
+        self.assertIn('"authored_end_pose": authored_end_pose,', exporter)
+        # The compiled clips are FK-checked against the authored
+        # end-of-clip hand (eye-frame shifted; the settled pose survives
+        # compile rotation culling that flattens mid-swing peaks) - the
+        # gate that would have caught the arm-splay corruption at build
+        # time.
+        bake = self.read("tools/bake_animation_poses.py")
+        self.assertIn("EXPECTED_HAND_TOLERANCE = 0.06", bake)
+        self.assertIn('argument.startswith("--expect=")', bake)
+        self.assertIn("fidelity gate failed", bake)
+        build_expect = self.read("tools/Build-NativePusfume.ps1")
+        self.assertIn('"--expect={0}:{1},{2},{3}"', build_expect)
+        self.assertIn("$authoredMid.j_righthand", build_expect)
         self.assertIn('"maximum_removed_delta"', exporter)
         self.assertIn('"removed_channels"', exporter)
         self.assertIn("action.frame_range", exporter)

@@ -10,6 +10,36 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- v0.6.98 live result: arms VISIBLE and ANIMATED (scene-graph restore
+  confirmed - chain=9<-8<-7<-6<-5<-3<-0, 52 nodes restored). Two residual
+  defects reported: claw blades misaligned with the hands, and idle hands
+  sitting at the screen edge. Measured root cause of both: Janfon poses
+  BOTH upper arms with a constant (-0.194, -0.099, +-0.024) socket
+  TRANSLATION that frames the hands on camera, and the exporter's
+  sanitize step deleted every pose location channel (its own audit said
+  maximum_removed_delta=0.19379 all along) - the arms snapped back to
+  their rest sockets, splaying every clip 0.18 m wide (authored idle
+  right hand x=0.33 compiled to 0.51) and skewing the weapon-attach
+  frames the blades ride. Proven by bisection: two different retarget
+  algorithms produced byte-identical wide FBXs, so the corruption
+  preceded the retarget; the channel scan sorted by VALUE (not
+  animation span) found the constant offsets. v0.6.99 ships pose
+  locations end to end (sanitize keeps location channels, the retarget
+  transports them via parents-first world-pose matching gated at
+  MAXIMUM_RETARGET_WORLD_ERROR=0.05, the FBX export counter-scales
+  location fcurves through the proven 100x/0.01 pair, the pose module
+  bakes them as static positions) and adds the end-to-end fidelity
+  gate: the compiled end-of-clip j_righthand must FK within 0.06 m of
+  the authored pose recorded in the export manifest, or the build
+  fails. (The gate reads the settled end pose because compile
+  rotation-key culling flattens fast mid-swing peaks - measured on
+  claws_equip: authored forward thrust y=0.556 compiles to a 0.40
+  plateau while the endpoints match authored within 2 cm. If equip and
+  attack swings read as damped in-game, the next lever is the rotation
+  tolerance in the assassin .animation recipe, not the pose pipeline.)
+  Blade proxies stay the _3p units - the 1P claw units are a pinned
+  dead end (Versus spectral-glow material draws nothing in Adventure,
+  v0.6.80-84) (#46).
 - v0.6.98 fixes the root cause of every origin-welded build since v0.6.90,
   found by dissecting vanilla: `World.link_unit` DESTROYS the target
   node's scene-graph parent, and Fatshark's own GearUtils saves each

@@ -35,8 +35,18 @@ ACTION_NAMES = (
 )
 EXPECTED_BONES = 99
 FPS = 30
-TRANSFORM_PROPERTIES = ("location", "scale")
+# Scale channels only. Pose LOCATION is part of Janfon's authored pose:
+# both upper arms carry a constant (-0.194, -0.099, +-0.024) socket
+# translation that frames the hands on camera; removing location
+# channels (the v0.6.8x-98 recipe) snapped the arms back to their rest
+# sockets and splayed every clip 0.18 m wide.
+TRANSFORM_PROPERTIES = ("scale",)
 MAXIMUM_POSED_VERTEX_DISPLACEMENT = 1.5
+# Hard gate on retarget fidelity: the retargeted skeleton's bone heads
+# must land within this distance of Janfon's evaluated pose, every bone,
+# every frame. The v0.6.98 rest-frame transport drifted j_righthand by
+# 0.18 m (authored idle x=0.33 compiled to 0.51) and shipped silently.
+MAXIMUM_RETARGET_WORLD_ERROR = 0.05
 
 
 def arguments_after_separator():
@@ -121,7 +131,12 @@ def nla_action_ranges(armature):
 
 
 def sanitize_pose_transforms(armature, action):
-    """Remove Blender-only pose translation/scale from Janfon's VT2 clips."""
+    """Remove Blender-only pose scale from Janfon's VT2 clips.
+
+    Location channels stay: they carry authored pose data (the constant
+    upper-arm socket translations) and the position pipeline ships them
+    through the compiled clips into the runtime pose module.
+    """
     removed = []
     for layer in action.layers:
         for strip in layer.strips:
@@ -206,30 +221,58 @@ def retarget_action(source, target, mesh, action, rest_points, authored_range):
     maximum_pose_delta = 0.0
     maximum_vertex_displacement = 0.0
     maximum_vertex_radius = 0.0
+    maximum_world_error = 0.0
+    # WORLD-POSE matching, parents before children. Transporting each
+    # bone's local basis between rest frames (the v0.6.98 recipe) only
+    # preserves the pose when both rests are identical; the FBX-imported
+    # authoring rig's reconstructed bone axes differ from the donor rest,
+    # and the per-joint error compounded down the arm chain into a 0.18 m
+    # hand drift. Instead compose the target pose analytically so every
+    # bone's model-space orientation equals Janfon's evaluated pose.
+    ordered_bones = sorted(
+        target.pose.bones, key=lambda pose_bone: len(pose_bone.parent_recursive)
+    )
+    authored_end_pose = None
     for frame in range(frame_start, frame_end + 1):
         bpy.context.scene.frame_set(frame)
-        for pose_bone in target.pose.bones:
-            pose_bone.matrix_basis = Matrix.Identity(4)
-
-        for bone_name in source_rest:
-            source_basis = source.pose.bones[bone_name].matrix_basis
-            parent_space_delta = (
-                source_rest[bone_name]
-                @ source_basis
-                @ source_rest[bone_name].inverted()
+        bpy.context.view_layer.update()
+        source_pose = {
+            bone_name: source.pose.bones[bone_name].matrix.copy()
+            for bone_name in source_rest
+        }
+        composed = {}
+        for pose_bone in ordered_bones:
+            bone_name = pose_bone.name
+            parent = pose_bone.parent
+            parent_matrix = (
+                composed[parent.name] if parent else Matrix.Identity(4)
             )
-            target_basis = (
-                target_rest[bone_name].inverted()
-                @ parent_space_delta
-                @ target_rest[bone_name]
+            frame_matrix = parent_matrix @ target_rest[bone_name]
+            full_basis = frame_matrix.inverted() @ source_pose[bone_name]
+            rotation = full_basis.to_quaternion().normalized()
+            offset = full_basis.translation.copy()
+            composed[bone_name] = (
+                frame_matrix
+                @ Matrix.Translation(offset)
+                @ rotation.to_matrix().to_4x4()
             )
             target_pose = target.pose.bones[bone_name]
             target_pose.rotation_mode = "QUATERNION"
-            target_pose.location = (0.0, 0.0, 0.0)
+            target_pose.location = offset
             target_pose.scale = (1.0, 1.0, 1.0)
-            target_pose.rotation_quaternion = target_basis.to_quaternion()
+            target_pose.rotation_quaternion = rotation
 
         bpy.context.view_layer.update()
+        maximum_world_error = max(
+            maximum_world_error,
+            max(
+                (
+                    target.pose.bones[bone_name].matrix.translation
+                    - source_pose[bone_name].translation
+                ).length
+                for bone_name in source_rest
+            ),
+        )
         if first_pose is None:
             first_pose = {
                 bone.name: bone.matrix.copy() for bone in target.pose.bones
@@ -262,6 +305,20 @@ def retarget_action(source, target, mesh, action, rest_points, authored_range):
             pose_bone.keyframe_insert(
                 data_path="rotation_quaternion", frame=frame, group=pose_bone.name
             )
+            pose_bone.keyframe_insert(
+                data_path="location", frame=frame, group=pose_bone.name
+            )
+
+        if frame == frame_end:
+            # The settled end pose is the fidelity reference: fast clips
+            # (equip, attacks) lose mid-swing peaks to compile rotation
+            # culling, but systematic pose corruption shifts every frame
+            # including the settled one.
+            authored_end_pose = {
+                "frame": frame,
+                "j_righthand": list(source_pose["j_righthand"].translation),
+                "j_lefthand": list(source_pose["j_lefthand"].translation),
+            }
 
     target_action = target.animation_data and target.animation_data.action
     if target_action is None:
@@ -277,13 +334,42 @@ def retarget_action(source, target, mesh, action, rest_points, authored_range):
             "Action %s leaves the first-person envelope: %.6f m"
             % (action.name, maximum_vertex_displacement)
         )
+    if maximum_world_error > MAXIMUM_RETARGET_WORLD_ERROR:
+        raise RuntimeError(
+            "Action %s retarget drifted %.4f m from the authored pose"
+            % (action.name, maximum_world_error)
+        )
+    print(
+        "[retarget-fidelity] action=%s maximum_world_error=%.5f m"
+        % (action.name, maximum_world_error)
+    )
 
     return target_action, {
+        "authored_end_pose": authored_end_pose,
         "maximum_pose_delta": maximum_pose_delta,
         "maximum_vertex_displacement": maximum_vertex_displacement,
         "maximum_vertex_radius": maximum_vertex_radius,
+        "maximum_world_error": maximum_world_error,
         "transform_audit": transform_audit,
     }, frame_start, frame_end, keyed_start
+
+
+def scale_action_locations(action, factor):
+    # Pose location values ride the same 100x/0.01 counter-scale pair as
+    # the rest skeleton: the FBX writer emits bone translations as
+    # rest + pose offset in scene units, so an unscaled pose offset would
+    # compile at 1/100 while the rest compiles true.
+    scaled = 0
+    for curve in action_fcurves(action):
+        if curve.data_path.rsplit(".", 1)[-1] != "location":
+            continue
+        for point in curve.keyframe_points:
+            point.co[1] *= factor
+            point.handle_left[1] *= factor
+            point.handle_right[1] *= factor
+        curve.update()
+        scaled += 1
+    return scaled
 
 
 def scale_armature_bone_positions(target, factor):
@@ -321,6 +407,7 @@ def export_action(
         for bone in target.data.bones
     }
     scale_armature_bone_positions(target, 100.0)
+    scale_action_locations(target_action, 100.0)
     try:
         bpy.ops.object.select_all(action="DESELECT")
         target.select_set(True)
@@ -344,6 +431,7 @@ def export_action(
             bake_anim_simplify_factor=0.0,
         )
     finally:
+        scale_action_locations(target_action, 0.01)
         scale_armature_bone_positions(target, 0.01)
 
     maximum_restore_delta = max(

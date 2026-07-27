@@ -2466,10 +2466,23 @@ if ($assassinFirstPersonAnimationsEnabled) {
     $bakedModulePath = Join-Path $generatedRoot "pusfume_assassin_poses_check.lua"
     $bakeArguments = @($bakeTool, "--", $compiledBonesPath, $compiledArmsUnitPath,
         $bakedModulePath)
+    $invariant = [Globalization.CultureInfo]::InvariantCulture
     foreach ($action in $assassinManifest.actions) {
         $actionName = [string]$action.action
         $bakeArguments += "$actionName=" + (
             Join-Path $generatedRoot "eyeframe_$actionName.animation")
+        # End-to-end fidelity gate: the exporter records Janfon's authored
+        # end-of-clip j_righthand (floor frame); the compiled clips live in
+        # the eye frame (j_spine1 shifted 0,0,-1.48 above), so shift the
+        # expectation the same way before handing it to the FK gate.
+        $authoredMid = $action.retarget_audit.authored_end_pose
+        if ($authoredMid -and $authoredMid.j_righthand) {
+            $hand = $authoredMid.j_righthand
+            $bakeArguments += ("--expect={0}:{1},{2},{3}" -f $actionName,
+                ([double]$hand[0]).ToString("R", $invariant),
+                ([double]$hand[1]).ToString("R", $invariant),
+                ([double]$hand[2] - 1.48).ToString("R", $invariant))
+        }
     }
     $result = Invoke-HiddenPython $bakeArguments
     Assert-HiddenToolSuccess $result "Assassin pose bake (FK-gated)"

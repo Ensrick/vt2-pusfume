@@ -7,8 +7,10 @@ composition path proven live (v0.6.95) is per-frame Lua control of the
 unit followed by World.update_unit. This tool therefore bakes the compiled
 clips into plain pose data the runtime replays bone by bone.
 
-Positions in these clips are static (one key per bone); rotations carry
-the motion. The module stores, per clip: duration, per-bone static local
+Positions in these clips are static or near-static (Janfon's authored
+pose translations, e.g. the upper-arm socket offsets, plus a small
+animated spine sway that collapses to its last key); rotations carry the
+motion. The module stores, per clip: duration, per-bone static local
 position, and per-bone sparse rotation keys (time + quaternion) that the
 runtime nlerps between.
 
@@ -216,8 +218,27 @@ def fk_hand(names, hashes, unit_path, positions, rotations, t):
     return world_pos[hand_index]
 
 
+EXPECTED_HAND_TOLERANCE = 0.06
+
+
 def main():
     arguments = [a for a in sys.argv[1:] if a != "--"]
+    # --expect=CLIP:x,y,z pins the compiled mid-clip j_righthand world
+    # position (already shifted into the eye frame by the caller) against
+    # Janfon's authored pose. This is the end-to-end fidelity gate: the
+    # v0.6.8x-98 exports silently splayed the arms 0.18 m wide and every
+    # per-stage audit passed.
+    expected_hands = {}
+    remaining = []
+    for argument in arguments:
+        if argument.startswith("--expect="):
+            spec = argument[len("--expect="):]
+            clip_name, coordinates = spec.split(":", 1)
+            expected_hands[clip_name] = tuple(
+                float(value) for value in coordinates.split(","))
+        else:
+            remaining.append(argument)
+    arguments = remaining
     if len(arguments) < 4:
         raise SystemExit(__doc__)
     bones_path, unit_path, output_path = arguments[:3]
@@ -240,6 +261,22 @@ def main():
         total_keys = sum(len(keys) for keys in rotations.values())
         print(f"BAKE {clip_name}: duration={duration:.3f} rot_keys={total_keys} "
               f"fk_hand=({hand[0]:.3f}, {hand[1]:.3f}, {hand[2]:.3f})")
+        expected = expected_hands.get(clip_name)
+        if expected:
+            # Compare the settled END pose: fast clips lose mid-swing
+            # peaks to compile rotation culling, but systematic pose
+            # corruption shifts every frame including the settled one.
+            end_hand = fk_hand(names, hashes, unit_path, positions,
+                               rotations, duration)
+            distance = math.sqrt(sum(
+                (a - b) ** 2 for a, b in zip(end_hand, expected)))
+            print(f"EXPECT {clip_name}: end_fk=({end_hand[0]:.3f}, "
+                  f"{end_hand[1]:.3f}, {end_hand[2]:.3f}) authored=({expected[0]:.3f}, "
+                  f"{expected[1]:.3f}, {expected[2]:.3f}) error={distance:.4f} m")
+            if distance > EXPECTED_HAND_TOLERANCE:
+                raise SystemExit(
+                    f"{clip_name}: compiled end-of-clip hand {distance:.4f} m from "
+                    f"the authored pose - fidelity gate failed")
         lines.append(f"    {clip_name} = {{")
         lines.append(f"        duration = {duration:.6f},")
         lines.append("        bones = {")
