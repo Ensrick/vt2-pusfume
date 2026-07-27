@@ -583,6 +583,27 @@ local function show_first_person_weapon_unit(unit)
     return uses_normal_group, mesh_count
 end
 
+local function hide_first_person_weapon_unit(unit)
+    if not unit or not Unit.alive(unit) then
+        return false, 0
+    end
+
+    local uses_normal_group = Unit.has_visibility_group(unit, "normal")
+    local mesh_count = Unit.num_meshes(unit)
+
+    if uses_normal_group then
+        Unit.set_visibility(unit, "normal", false)
+    else
+        Unit.set_unit_visibility(unit, false)
+    end
+
+    for mesh_index = 0, mesh_count - 1 do
+        Unit.set_mesh_visibility(unit, mesh_index, false, "default")
+    end
+
+    return uses_normal_group, mesh_count
+end
+
 local function ensure_assassin_blade_proxies(extension, animation_unit)
     local proxies = extension._pusfume_assassin_blade_proxies
     if not proxies then
@@ -717,10 +738,14 @@ local function restore_first_person_weapons(extension)
     local left_camera_distance
 
     if extension._pusfume_active_skaven_role == ASSASSIN_ROLE then
+        -- The wielded item units are action carriers only; the visible
+        -- blades are the proxies at Janfon's measured hand mounts. Showing
+        -- both renders two claw sets (v0.6.100 live report - the copies
+        -- were coincident until the measured mounts separated them).
         right_visibility_group, right_meshes =
-            show_first_person_weapon_unit(right_weapon_unit)
+            hide_first_person_weapon_unit(right_weapon_unit)
         left_visibility_group, left_meshes =
-            show_first_person_weapon_unit(left_weapon_unit)
+            hide_first_person_weapon_unit(left_weapon_unit)
         local animation_unit = extension._pusfume_active_animation_unit
         right_attachment_error = first_person_weapon_attachment_error(
             animation_unit, "j_rightweaponattach", right_weapon_unit)
@@ -736,7 +761,7 @@ local function restore_first_person_weapons(extension)
         if not extension._pusfume_assassin_blades_logged then
             extension._pusfume_assassin_blades_logged = true
             mod:info(
-                "[pusfume] Assassin blade presentation right=%s left=%s normal_groups=%s/%s meshes=%s/%s attachment_error=%s/%s camera_distance=%s/%s default_context=forced proxies=%d/%d",
+                "[pusfume] Assassin blade presentation right=%s left=%s normal_groups=%s/%s meshes=%s/%s attachment_error=%s/%s camera_distance=%s/%s wielded=hidden proxies=%d/%d",
                 tostring(right_weapon_unit),
                 tostring(left_weapon_unit),
                 tostring(right_visibility_group),
@@ -752,6 +777,10 @@ local function restore_first_person_weapons(extension)
         end
     else
         extension._pusfume_assassin_blades_logged = nil
+        -- Undo any assassin-mode hide that survived a role switch on the
+        -- same wielded units (idempotent when they respawned).
+        show_first_person_weapon_unit(right_weapon_unit)
+        show_first_person_weapon_unit(left_weapon_unit)
     end
 
     local first_person_unit = extension.first_person_unit

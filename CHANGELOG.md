@@ -10,6 +10,16 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- v0.6.100 live feedback: TWO claw sets render and neither is obviously
+  the right one. The second set is the wielded item's own 1P units:
+  assassin mode force-showed them (a v0.6.8x belt-and-suspenders from
+  when they drew nothing), and they sat exactly under the
+  identity-linked proxies until v0.6.100's measured mounts moved the
+  proxies to Janfon's placement, splitting the two sets apart. v0.6.101
+  hides the wielded units in assassin mode (they remain the action
+  carriers; the proxies at Janfon's mounts are the intended visible
+  blades - log shows `wielded=hidden proxies=2/2`) and re-shows them in
+  every other role (#46).
 - v0.6.99 live feedback: claws still rotated wrong on the hands.
   v0.6.100 mounts the blade proxies with Janfon's own measured
   transforms instead of an identity link on the weapon-attach nodes:

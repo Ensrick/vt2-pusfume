@@ -89,15 +89,28 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn("recovered_hidden=%s", helper)
         self.assertIn("restore_first_person_weapons(extension)", self.native)
 
-    def test_assassin_blades_follow_janfon_attachment_and_remain_visible(self):
+    def test_assassin_blades_hide_wielded_and_present_proxies(self):
+        # The wielded item units are action carriers only; the visible
+        # blades are the proxies at Janfon's measured hand mounts.
+        # Force-showing the wielded units rendered TWO claw sets
+        # (v0.6.100 live report - the copies were coincident until the
+        # measured mounts separated them). In assassin mode the wielded
+        # units hide; every other role re-shows them.
         helper = self.native.split("local function restore_first_person_weapons", 1)[1].split(
             "local DONOR_PACKAGE_REFERENCE", 1
         )[0]
         self.assertIn(
             "extension._pusfume_active_skaven_role == ASSASSIN_ROLE", helper
         )
-        self.assertIn("show_first_person_weapon_unit(right_weapon_unit)", helper)
-        self.assertIn("show_first_person_weapon_unit(left_weapon_unit)", helper)
+        assassin_branch = helper.split(
+            "extension._pusfume_active_skaven_role == ASSASSIN_ROLE", 1)[1].split(
+            "else", 1)[0]
+        self.assertIn("hide_first_person_weapon_unit(right_weapon_unit)", assassin_branch)
+        self.assertIn("hide_first_person_weapon_unit(left_weapon_unit)", assassin_branch)
+        self.assertNotIn("show_first_person_weapon_unit(", assassin_branch)
+        non_assassin = helper.split("_pusfume_assassin_blades_logged = nil", 1)[1]
+        self.assertIn("show_first_person_weapon_unit(right_weapon_unit)", non_assassin)
+        self.assertIn("show_first_person_weapon_unit(left_weapon_unit)", non_assassin)
         self.assertIn("Assassin blade presentation", helper)
         visibility_helper = self.native.split(
             "local function show_first_person_weapon_unit", 1
@@ -110,8 +123,14 @@ class RuntimePresentationTests(unittest.TestCase):
             'Unit.set_mesh_visibility(unit, mesh_index, true, "default")',
             visibility_helper,
         )
+        self.assertIn("local function hide_first_person_weapon_unit", visibility_helper)
+        self.assertIn('Unit.set_visibility(unit, "normal", false)', visibility_helper)
+        self.assertIn(
+            'Unit.set_mesh_visibility(unit, mesh_index, false, "default")',
+            visibility_helper,
+        )
         self.assertIn("attachment_error=%s/%s", helper)
-        self.assertIn("camera_distance=%s/%s default_context=forced", helper)
+        self.assertIn("camera_distance=%s/%s wielded=hidden", helper)
         self.assertIn("first_person_attachment_camera_distance(", helper)
         self.assertNotIn("Assassin hands-only prototype active", self.native)
         self.assertNotIn("hide_assassin_third_person_weapons", self.native)
