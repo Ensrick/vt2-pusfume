@@ -10,6 +10,19 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Rejected v0.6.93 in live testing (still invisible; telemetry shows the
+  directly-driven rig root at the camera while the animated bones stay
+  latched at the spawn origin). v0.6.94 adds the engine's own recipe for
+  units riding moving transforms - `World.update_unit` immediately after
+  the per-frame reposition (the pattern linker_transportation_extension,
+  projectile_linker_extension, and the camera rigs use) - so the moved
+  transform reaches the animation composition the same frame.
+- Fixed the launch-wide mangled Versus hands the v0.6.92 controller
+  introduced: the arms unit's compiled state machine booted into
+  claws_idle in EVERY role and posed the bones the per-bone role links do
+  not cover. v0.6.95 disables the controller at spawn and in every
+  non-assassin role (per-bone links own the pose again, the pre-controller
+  behavior) and enables it only while the Assassin Blades are wielded.
 - Built, locally deployed, and uploaded v0.6.93 from source commit `94aeee4`
   as friends-only Steam ManifestID `6051580796268700608` at 2026-07-26
   21:06:02 America/Chicago under a live owner-bound ship claim; Steam's

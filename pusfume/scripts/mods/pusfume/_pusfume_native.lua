@@ -297,6 +297,14 @@ local function update_custom_first_person_clip(extension, t)
             Unit.world_position(drive_camera, 0))
         Unit.set_local_rotation(active.animation_unit, 0,
             Unit.world_rotation(drive_camera, 0))
+        -- Force the moved transform through the unit's animation/scene
+        -- composition immediately - the engine's own recipe for units riding
+        -- moving transforms (linker_transportation_extension,
+        -- projectile_linker_extension, camera rigs all call this after
+        -- repositioning). Without it the animated pose keeps composing in
+        -- the stale frame (v0.6.93: rig root at the camera, bones at the
+        -- spawn origin).
+        World.update_unit(extension.world, active.animation_unit)
     end
 
     -- The state machine owns playback time now; elapsed/clip_time remain
@@ -2137,6 +2145,11 @@ local function spawn_dual_first_person_rig(extension, config)
 
         set_unit_visible(arms, false)
         apply_pusfume_voice_switch(arms)
+        -- The compiled assassin controller must not boot into claws_idle
+        -- under the per-bone-linked roles; it is enabled per role switch.
+        if Unit.has_animation_state_machine(arms) then
+            Unit.disable_animation_state_machine(arms)
+        end
         skaven_attachments.packmaster = arms
     end
 
@@ -2431,6 +2444,18 @@ local function switch_first_person_rig(extension, inventory_extension, role)
             == "table"
 
     if use_skaven then
+        -- The arms unit compiles with the assassin controller, which would
+        -- otherwise boot into claws_idle and pose the bones the per-bone
+        -- role links do not cover in every role (the all-weapons mangled
+        -- hands regression). The controller runs ONLY in assassin mode.
+        if Unit.has_animation_state_machine(attachment_unit) then
+            if custom_assassin then
+                Unit.enable_animation_state_machine(attachment_unit)
+            else
+                Unit.disable_animation_state_machine(attachment_unit)
+            end
+        end
+
         AttachmentUtils.unlink(extension.world, attachment_unit)
         if custom_assassin then
             -- The animation player composes tracked bones in the unit's own
