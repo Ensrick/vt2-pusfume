@@ -10,6 +10,26 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Rejected v0.6.97 in live testing (invisible). The log proves the build
+  and the pose player ran (`loading v0.6.97-dev`, `Janfon assassin pose
+  player enabled`, every clip event fires with `pose_player=true` at the
+  right rates) and the roots telemetry isolates the failure to one fact:
+  node 0 and the rig root track the camera through 10+ meters of movement
+  (`cam=base=rig` from (-19.00,-0.25,7.49) to (-10.66,10.85,9.82)) while
+  j_righthand stays welded at (0.37,0.00,0.00) - the world origin - and
+  CONSTANT even as clips change. So the per-frame
+  Unit.set_local_rotation writes never reach the composed pose either:
+  since the compiled controller entered the unit (v0.6.92, `43f8ec2`),
+  the animation player owns the bones, one evaluation left them frozen in
+  an origin-anchored pose, and Unit.disable_animation_state_machine
+  freezes that pose without returning the bones to scene-graph
+  composition under node 0. The v0.6.95 float (visible bind pose
+  following the camera) worked because the controller never evaluated
+  before the disable. Lesson: on this unit, ASM presence plus any
+  evaluation permanently severs bones from both node-0 drive and Lua
+  local writes; the next build must ship a unit compiled WITHOUT
+  `animation_state_machine` so the scene graph owns the bones end to end
+  (#46).
 - Rejected v0.6.96 in live testing (invisible from the first frame):
   enabling the compiled controller re-anchors every animated bone at the
   world origin, completing the measured set - crossfade "normal",
