@@ -10,6 +10,23 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Rejected v0.6.96 in live testing (invisible from the first frame):
+  enabling the compiled controller re-anchors every animated bone at the
+  world origin, completing the measured set - crossfade "normal",
+  crossfade "offset", and state-machine playback all compose this unit at
+  the origin, while per-frame Lua control plus World.update_unit composes
+  at the camera (the v0.6.95 float). v0.6.97 therefore replays the clips
+  from baked pose data: tools/bake_animation_poses.py converts the
+  compiled eye-frame clips into a committed Lua module (static per-bone
+  positions plus sparse rotation keys, FK-gated - every clip's hands sit
+  in view at mid-clip), the runtime nlerps rotations bone by bone each
+  frame through the proven composition path, the compiled controller stays
+  permanently disabled, and the build re-bakes and byte-compares the
+  module every run (the gate caught a clip-ordering mismatch on its first
+  execution). Uploaded from source commit `74f10a9` as friends-only Steam
+  ManifestID `5806784255201159050` at 2026-07-26 22:15:38 America/Chicago
+  (Workshop log confirms `Uploaded new content`; deploy hash-verified;
+  153 tests and full preflight pass); live acceptance remains pending.
 - v0.6.95 live testing delivered the composition milestone: the arms render
   at the camera and follow it (the World.update_unit per-frame
   recomposition works), but they froze at bind pose. The log shows
