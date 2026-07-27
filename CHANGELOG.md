@@ -10,6 +10,14 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Built, locally deployed, and uploaded v0.6.95 from source commit `7e5a438`
+  as friends-only Steam ManifestID `461953217897653348` at 2026-07-26
+  21:32:57 America/Chicago under a live owner-bound ship claim; Steam's
+  Workshop log confirms `Uploaded new content` and the deploy is
+  hash-verified. v0.6.94 (ManifestID `1344500248047933654`, an interim with
+  only the World.update_unit change) was superseded within minutes and
+  never live-tested. 153 tests and full source preflight pass; live
+  acceptance remains pending.
 - Rejected v0.6.93 in live testing (still invisible; telemetry shows the
   directly-driven rig root at the camera while the animated bones stay
   latched at the spawn origin). v0.6.94 adds the engine's own recipe for
