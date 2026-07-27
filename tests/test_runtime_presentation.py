@@ -408,9 +408,15 @@ class RuntimePresentationTests(unittest.TestCase):
             "custom_assassin\n        and attachment_unit or first_person_unit",
             switch,
         )
+        # The assassin attachment stays UNLINKED: the animation player
+        # composes tracked bones in the unit's own directly-set world
+        # transform and ignores scene-graph links (v0.6.90/92 roots
+        # telemetry), so the per-frame update mirrors the camera directly.
         self.assertIn(
-            "extension.world, attachment_unit, 0, first_person_unit, 0",
-            switch,
+            "World.unlink_unit(extension.world, attachment_unit)", switch
+        )
+        self.assertIn(
+            "Unit.world_position(extension.first_person_unit, 0)", switch
         )
         self.assertIn(
             "AttachmentNodeLinking.skaven_first_person_attachment", switch

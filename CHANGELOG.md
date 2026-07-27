@@ -10,6 +10,17 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Rejected v0.6.92 in live testing: the controller drove the clips
+  (`sm=controller`, samples advancing) but the animated bones stayed at the
+  world origin - byte-identical `hand=(0.37, 0, 0)` to the crossfade runs -
+  and the user's freecam (which does not hide first-person units) confirmed
+  nothing renders at the player. Conclusion: the animation player composes
+  tracked bones in the unit's own directly-set world transform and ignores
+  the scene-graph link entirely; playback API was never the variable.
+  Fatshark's own first-person unit is never linked - the extension
+  teleports it to the camera every frame. v0.6.93 adopts exactly that: the
+  assassin attachment is left unlinked and its transform is mirrored from
+  the camera in the per-frame update.
 - Built, locally deployed, and uploaded v0.6.92 from source commit `43f8ec2`
   as friends-only Steam ManifestID `1097708716216213446` at 2026-07-26
   20:44:29 America/Chicago under a live owner-bound ship claim; Steam's

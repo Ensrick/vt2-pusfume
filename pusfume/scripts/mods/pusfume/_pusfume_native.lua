@@ -286,6 +286,19 @@ local function update_custom_first_person_clip(extension, t)
         return
     end
 
+    -- The unit is unlinked in assassin mode: mirror the camera transform
+    -- directly every frame, because the animation player composes tracked
+    -- bones in the unit's own directly-set world transform and ignores the
+    -- scene-graph link (v0.6.90/92 roots telemetry). This is the same
+    -- mechanism vanilla uses for its first-person unit.
+    local drive_camera = extension.first_person_unit
+    if drive_camera and Unit.alive(drive_camera) then
+        Unit.set_local_position(active.animation_unit, 0,
+            Unit.world_position(drive_camera, 0))
+        Unit.set_local_rotation(active.animation_unit, 0,
+            Unit.world_rotation(drive_camera, 0))
+    end
+
     -- The state machine owns playback time now; elapsed/clip_time remain
     -- diagnostic estimates of where the controller should be.
     local elapsed = math.max(0, t - active.started_at)
@@ -2420,15 +2433,19 @@ local function switch_first_person_rig(extension, inventory_extension, role)
     if use_skaven then
         AttachmentUtils.unlink(extension.world, attachment_unit)
         if custom_assassin then
-            -- The custom clips are compiled against Janfon's 99-bone unit, not
-            -- Fatshark's 59-bone Skaven camera base. Link only the root so the
-            -- attachment keeps camera authority while its own clip drives all
-            -- remaining bones.
-            World.link_unit(
-                extension.world, attachment_unit, 0, first_person_unit, 0)
-            Unit.set_local_position(attachment_unit, 0, Vector3.zero())
-            Unit.set_local_rotation(
-                attachment_unit, 0, Quaternion.identity())
+            -- The animation player composes tracked bones in the unit's own
+            -- directly-set world transform, not the scene-graph link
+            -- (v0.6.90/92 roots telemetry: linked rig root rides with the
+            -- camera while every animated bone stays at the spawn origin).
+            -- Fatshark's first-person unit is never linked either - the
+            -- extension teleports it to the camera each frame. Do the same:
+            -- leave the attachment unlinked and drive its transform directly
+            -- from the camera in the per-frame update below.
+            World.unlink_unit(extension.world, attachment_unit)
+            Unit.set_local_position(attachment_unit, 0,
+                Unit.world_position(extension.first_person_unit, 0))
+            Unit.set_local_rotation(attachment_unit, 0,
+                Unit.world_rotation(extension.first_person_unit, 0))
         elseif not link_shared_first_person_nodes(
                 extension.world,
                 first_person_unit,
