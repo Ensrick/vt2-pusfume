@@ -145,6 +145,31 @@ class AnimationHandoffContractTests(unittest.TestCase):
             build2,
         )
 
+    def test_assassin_rig_restores_scene_graph_after_unlinking(self):
+        # World.link_unit DESTROYS the target node's scene-graph parent;
+        # vanilla GearUtils saves parent + local pose before every per-bone
+        # link and restores both after unlinking (gear_utils.lua 300-327).
+        # Our per-bone role links never restored, so every linked bone was
+        # orphaned (world = local) - the root cause of the v0.6.90-97
+        # origin welding. The backup is captured on the FIRST (pristine)
+        # link pass and restored on assassin entry after the unlink.
+        native = self.read("pusfume/scripts/mods/pusfume/_pusfume_native.lua")
+        self.assertIn(
+            'local scene_graph_backups = setmetatable({}, { __mode = "k" })',
+            native)
+        self.assertIn("Unit.scene_graph_parent(unit, index)", native)
+        self.assertIn("Matrix4x4Box(Unit.local_pose(unit, index))", native)
+        self.assertIn("Unit.scene_graph_link(unit, entry.index, entry.parent)", native)
+        self.assertIn("Unit.set_local_pose(unit, entry.index, entry.pose:unbox())", native)
+        self.assertIn("if not scene_graph_backups[target] then", native)
+        assassin_branch = native.split("if custom_assassin then", 1)[1]
+        self.assertIn(
+            'restore_first_person_scene_graph(attachment_unit, "assassin-entry")',
+            assassin_branch.split("elseif", 1)[0])
+        # The parent-chain probe makes rooted-vs-orphaned measurable live.
+        self.assertIn("local function scene_graph_chain(unit, node_name)", native)
+        self.assertIn('scene_graph_chain(animation_unit, "j_righthand")', native)
+
     def test_assassin_export_clears_saved_source_pose(self):
         exporter = self.read("tools/export_pusfume_1p_actions.py")
         duplicate = exporter.split(

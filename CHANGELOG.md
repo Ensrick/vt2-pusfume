@@ -10,6 +10,21 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- v0.6.98 fixes the root cause of every origin-welded build since v0.6.90,
+  found by dissecting vanilla: `World.link_unit` DESTROYS the target
+  node's scene-graph parent, and Fatshark's own GearUtils saves each
+  node's parent + local pose before every per-bone link and restores both
+  after unlinking (gear_utils.lua 300-327). Our per-bone role links (run
+  at spawn and on every role switch) never restored, so every linked bone
+  has been orphaned from the arms unit's scene graph since the first
+  frame of every session - world = local, j_righthand welded at its rest
+  offset (0.37,0,0), immune to node-0 drive and to Lua bone writes, and
+  every "engine playback composes at the origin" observation was really
+  orphaned parentless nodes composing as their own roots. The fix mirrors
+  the GearUtils contract: capture each attachment unit's scene-graph
+  parents + local poses on its first (pristine) link pass, restore them
+  on assassin entry after unlinking, and log the j_righthand parent chain
+  (clip starts + samples) so rooted-vs-orphaned is measurable live (#46).
 - Rejected v0.6.97 in live testing (invisible). The log proves the build
   and the pose player ran (`loading v0.6.97-dev`, `Janfon assassin pose
   player enabled`, every clip event fires with `pose_player=true` at the

@@ -211,6 +211,71 @@ local function play_first_person_pose(extension, event_name)
     return false
 end
 
+-- World.link_unit DESTROYS the target node's scene-graph parent: after
+-- unlinking, the node is a scene-graph root (world = local, welded near
+-- the origin). Vanilla saves parent + local pose before every per-bone
+-- link and restores both after unlinking (GearUtils.link_units /
+-- GearUtils.restore_scene_graph). Mirror that contract here, keyed by
+-- unit; captured once per unit on its FIRST link pass (the unit is
+-- pristine then - a later capture would save already-orphaned parents).
+local scene_graph_backups = setmetatable({}, { __mode = "k" })
+
+local function capture_first_person_scene_graph(unit, node_linking)
+    local backup = {}
+    for _, link_data in ipairs(node_linking) do
+        local target_node = link_data.target
+        local target_exists = type(target_node) ~= "string"
+            or Unit.has_node(unit, target_node)
+        if target_exists then
+            local index = type(target_node) == "string"
+                and Unit.node(unit, target_node) or target_node
+            local parent = Unit.scene_graph_parent(unit, index)
+            if parent then
+                backup[#backup + 1] = {
+                    index = index,
+                    parent = parent,
+                    pose = Matrix4x4Box(Unit.local_pose(unit, index)),
+                }
+            end
+        end
+    end
+    return backup
+end
+
+local function restore_first_person_scene_graph(unit, label)
+    local backup = unit and scene_graph_backups[unit]
+    if not backup or not Unit.alive(unit) then
+        mod:info(
+            "[pusfume] First-person scene graph restore skipped label=%s backup=%s",
+            tostring(label), tostring(backup ~= nil))
+        return 0
+    end
+    for _, entry in ipairs(backup) do
+        Unit.scene_graph_link(unit, entry.index, entry.parent)
+        Unit.set_local_pose(unit, entry.index, entry.pose:unbox())
+    end
+    mod:info(
+        "[pusfume] First-person scene graph restored label=%s nodes=%d",
+        tostring(label), #backup)
+    return #backup
+end
+
+local function scene_graph_chain(unit, node_name)
+    if not Unit.has_node(unit, node_name) then
+        return "no-node"
+    end
+    local chain = {}
+    local node = Unit.node(unit, node_name)
+    for _ = 1, 24 do
+        chain[#chain + 1] = tostring(node)
+        node = Unit.scene_graph_parent(unit, node)
+        if not node then
+            break
+        end
+    end
+    return table.concat(chain, "<-")
+end
+
 local ASSASSIN_CLIP_TARGET_DURATION = {
     claws_equip = 1.1,
     claws_light_attack_right_first = 0.7,
@@ -238,12 +303,14 @@ local function play_custom_first_person_clip(extension, event_name)
         return true
     end
 
-    -- Every engine playback path re-anchors this unit's animated bones at
-    -- the world origin (measured live: crossfade "normal" v0.6.90,
-    -- crossfade "offset" v0.6.91, state-machine v0.6.92/96). The one
-    -- composition path proven live (v0.6.95) is per-frame Lua control of
-    -- the unit followed by World.update_unit, so the clips replay from
-    -- baked pose data (tools/bake_animation_poses.py, FK-gated at build).
+    -- v0.6.90-97 all failed for ONE reason, found in v0.6.98: the per-bone
+    -- World.link_unit role links orphan every linked bone from the unit's
+    -- own scene graph (world = local), and nothing restored the parents
+    -- after unlinking, so "engine playback composes at the origin" was
+    -- really orphaned nodes composing with no parents. The rig switch now
+    -- restores the captured scene graph on assassin entry; the clips
+    -- replay from baked pose data (tools/bake_animation_poses.py,
+    -- FK-gated at build) through per-frame local writes + camera drive.
     local pose_clip = assassin_poses and assassin_poses[event_name]
     if not pose_clip then
         if not extension._pusfume_assassin_event_gap_logged then
@@ -295,10 +362,11 @@ local function play_custom_first_person_clip(extension, event_name)
         pose_bones = pose_clip.bones,
     }
     mod:info(
-        "[pusfume] Janfon assassin 1P clip event=%s duration=%.3f target=%.3f rate=%.3f loop=%s pose_player=true",
+        "[pusfume] Janfon assassin 1P clip event=%s duration=%.3f target=%.3f rate=%.3f loop=%s pose_player=true chain=%s",
         event_name, pose_clip.duration or 0,
         target_duration, pose_clip.duration / target_duration,
-        tostring(clip.loop == true))
+        tostring(clip.loop == true),
+        scene_graph_chain(animation_unit, "j_righthand"))
 
     return true
 end
@@ -442,12 +510,13 @@ local function update_custom_first_person_clip(extension, t)
             and Unit.world_position(
                 animation_unit, Unit.node(animation_unit, "j_righthand"))
         mod:info(
-            "[pusfume] Janfon assassin sample event=%s elapsed=%.3f clip_time=%.3f/%.3f bone_mode=%s hand_travel=%.4f sm=%s view_hand=%s view_cam=%s view_spine=%s roots: cam=%s base=%s rig=%s hand=%s",
+            "[pusfume] Janfon assassin sample event=%s elapsed=%.3f clip_time=%.3f/%.3f bone_mode=%s hand_travel=%.4f sm=%s view_hand=%s view_cam=%s view_spine=%s roots: cam=%s base=%s rig=%s hand=%s chain=%s",
             active.event, elapsed, clip_time, active.duration,
             Unit.animation_bone_mode(animation_unit),
             active.hand_travel or 0, sm_state,
             fmt(view_hand), fmt(view_cam), fmt(view_spine),
-            fmt(camera_root), fmt(base_root), fmt(rig_root), fmt(hand_world))
+            fmt(camera_root), fmt(base_root), fmt(rig_root), fmt(hand_world),
+            scene_graph_chain(animation_unit, "j_righthand"))
         active.next_sample = active.next_sample + 0.2
     end
 end
@@ -2112,6 +2181,14 @@ local function link_shared_first_person_nodes(world, source, target,
         return false
     end
 
+    if not scene_graph_backups[target] then
+        local backup = capture_first_person_scene_graph(target, node_linking)
+        scene_graph_backups[target] = backup
+        mod:info(
+            "[pusfume] First-person scene graph captured label=%s nodes=%d",
+            tostring(label), #backup)
+    end
+
     -- AttachmentUtils.link can be wrapped by other mods with an all-or-nothing
     -- missing-node guard. Janfon intentionally omits unused fingertip nodes,
     -- so link each shared pair through Stingray's primitive instead.
@@ -2519,15 +2596,18 @@ local function switch_first_person_rig(extension, inventory_extension, role)
         -- regression). Assassin clips replay from baked pose data instead.
         AttachmentUtils.unlink(extension.world, attachment_unit)
         if custom_assassin then
-            -- The animation player composes tracked bones in the unit's own
-            -- directly-set world transform, not the scene-graph link
-            -- (v0.6.90/92 roots telemetry: linked rig root rides with the
-            -- camera while every animated bone stays at the spawn origin).
-            -- Fatshark's first-person unit is never linked either - the
-            -- extension teleports it to the camera each frame. Do the same:
-            -- leave the attachment unlinked and drive its transform directly
-            -- from the camera in the per-frame update below.
+            -- ROOT CAUSE of every origin-welded build (v0.6.90-97): the
+            -- per-bone World.link_unit role links orphan each linked bone
+            -- from the unit's own scene graph, and unlinking alone leaves
+            -- them orphaned (world = local; j_righthand welded at its rest
+            -- offset (0.37,0,0) while node 0 rode the camera). Restore the
+            -- captured parents + local poses (GearUtils.restore_scene_graph
+            -- contract), then drive the whole unit from the camera per
+            -- frame like Fatshark's own unlinked first-person unit.
             World.unlink_unit(extension.world, attachment_unit)
+            restore_first_person_scene_graph(attachment_unit, "assassin-entry")
+            mod:info("[pusfume] Assassin hand chain post-restore=%s (single node = orphaned, ...<-0 = rooted)",
+                scene_graph_chain(attachment_unit, "j_righthand"))
             Unit.set_local_position(attachment_unit, 0,
                 Unit.world_position(extension.first_person_unit, 0))
             Unit.set_local_rotation(attachment_unit, 0,
