@@ -11,6 +11,19 @@ architecture and reproduction contract are in
 
 ## Latest shipment
 
+- 2026-07-29 local: v0.6.101 LIVE RESULT / v0.6.102 SHIPPED
+  `[unverified]` - push-attacking with Assassin Blades crashed when vanilla
+  `ActionPushStagger` sent `hitreaction_defend_reset` directly to Janfon's
+  controllerless 1P attachment. Stingray asserted before gameplay could
+  continue. v0.6.102 tags only that manually posed Pusfume attachment and
+  suppresses direct C-API animation events while it has no state machine;
+  push fatigue, networking, damage, and baked pose playback remain unchanged.
+  Source `ab1c94c`; source-preflight green; final friends-only Workshop
+  ManifestID `5203548178623836175`; eight live files are SHA-256-identical to
+  complete staging at `177,858,043` bytes. The superseded intermediate
+  ManifestID `5907968298429943322` omitted the Assassin build switches and is
+  explicitly rejected. The final build includes Janfon's 160-bone hero hands,
+  99-bone Skaven hands, and all nine authored Assassin clips.
 - 2026-07-22 local: v0.6.66 LIVE RESULT / v0.6.67 SHIPPED `[unverified]` -
   Janfon's Assassin equip clip sampled correctly through about `0.706 s`, then
   vanilla `WeaponUnitExtension.start_action` bypassed the existing guards and

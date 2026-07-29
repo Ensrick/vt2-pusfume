@@ -4,6 +4,26 @@ Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.67-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
+## v0.6.102 Assassin push test
+
+Test source implementation commit `ab1c94c`, friends-only Workshop ManifestID
+`5203548178623836175`. All eight live files are SHA-256-identical to the
+complete staging build at `177,858,043` bytes. The final build includes
+Janfon's 160-bone hero hands, 99-bone Skaven hands, and all nine Assassin
+clips. Do not test ManifestID `5907968298429943322`; it is superseded.
+
+1. Equip `Assassin Blades (Janfon Prototype)` and verify one visible claw set.
+2. Hold block, then perform a push and immediate push-attack.
+3. Repeat the block/push/push-attack sequence three times.
+4. Perform a full light chain, switch ranged, then switch back to the claws.
+5. Quit normally and retain the newest console log.
+
+The test passes only if no crash occurs, the claws remain visible and aligned,
+and Janfon's hands return to idle after each action. The log should contain
+`Suppressed unsafe controllerless 1P animation
+event=hitreaction_defend_reset`; any Lua error or Stingray assertion fails the
+candidate.
+
 The v0.6.50 native-weight transfer retained the separation and introduced
 finger strings. v0.6.51 restored Janfon's authored weights and corrected the
 placement, but its isolated native-human 1P material rendered black and shiny.

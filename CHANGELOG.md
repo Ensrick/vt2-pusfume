@@ -19,7 +19,12 @@ request rather than in release notes.
   that controllerless Pusfume attachment and suppresses direct C-API animation
   events sent to it. Push gameplay, fatigue, networking, damage profiles, and
   Janfon's baked pose playback are unchanged. The first suppressed event name
-  is logged for live verification (#46).
+  is logged for live verification. Implementation source commit `ab1c94c`;
+  final friends-only Workshop ManifestID `5203548178623836175`; all eight live
+  files are SHA-256-identical to the complete staging build at `177,858,043`
+  bytes. The earlier same-version ManifestID `5907968298429943322` is rejected
+  and superseded because its build invocation omitted both Janfon Assassin
+  switches (#46).
 - v0.6.100 live feedback: TWO claw sets render and neither is obviously
   the right one. The second set is the wielded item's own 1P units:
   assassin mode force-showed them (a v0.6.8x belt-and-suspenders from
