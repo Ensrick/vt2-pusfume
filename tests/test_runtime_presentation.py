@@ -461,6 +461,26 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn("action_settings.looping_anim = true", hook)
         self.assertIn("action_settings.looping_anim = previous_looping", hook)
 
+    def test_controllerless_assassin_guard_covers_direct_push_reset(self):
+        guard = self.native.split(
+            'mod:hook("Unit", "animation_event"', 1
+        )[1].split('mod:hook(PlayerUnitFirstPerson, "init"', 1)[0]
+        self.assertIn("state.controllerless_first_person_units[unit]", guard)
+        self.assertIn("not Unit.has_animation_state_machine(unit)", guard)
+        self.assertIn("return func(unit, event_name, ...)", guard)
+        self.assertIn("Suppressed unsafe controllerless 1P animation event", guard)
+        # Cover hitreaction_defend_reset and future direct cosmetic events
+        # instead of accumulating another brittle event-name allowlist.
+        self.assertNotIn('event_name == "hitreaction_defend_reset"', guard)
+
+        switch = self.native.split(
+            "local function switch_first_person_rig", 1
+        )[1].split("local function prepare_first_person_rig_for_wield", 1)[0]
+        self.assertIn(
+            "state.controllerless_first_person_units[attachment_unit] = true",
+            switch,
+        )
+
     def test_animation_guard_checks_the_active_rig_not_only_the_camera_base(self):
         guard = self.native.split(
             "local function skip_missing_first_person_event", 1

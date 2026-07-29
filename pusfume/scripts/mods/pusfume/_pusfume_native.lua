@@ -97,6 +97,8 @@ local state = {
     inactive_warpfire_units = setmetatable({}, { __mode = "k" }),
     inactive_warpfire_transforms = setmetatable({}, { __mode = "k" }),
     particle_suppressed_units = setmetatable({}, { __mode = "k" }),
+    controllerless_first_person_units = setmetatable({}, { __mode = "k" }),
+    suppressed_controllerless_events = {},
     locomotion_events_available = false,
 }
 
@@ -2649,6 +2651,10 @@ local function switch_first_person_rig(extension, inventory_extension, role)
         -- regression). Assassin clips replay from baked pose data instead.
         AttachmentUtils.unlink(extension.world, attachment_unit)
         if custom_assassin then
+            -- This attachment is animated by the baked Lua pose player and
+            -- intentionally has no Stingray state machine. Tag it before any
+            -- weapon action can send a direct cosmetic event to it.
+            state.controllerless_first_person_units[attachment_unit] = true
             -- ROOT CAUSE of every origin-welded build (v0.6.90-97): the
             -- per-bone World.link_unit role links orphan each linked bone
             -- from the unit's own scene graph, and unlinking alone leaves
@@ -2795,6 +2801,31 @@ local function install_first_person_hook(registry, config)
     if not PlayerUnitFirstPerson then
         return false
     end
+
+    -- Some vanilla weapon actions bypass PlayerUnitFirstPerson and call the
+    -- Stingray C API directly. ActionPushStagger does this with
+    -- hitreaction_defend_reset; sending any event to Janfon's manually driven
+    -- Assassin attachment hard-asserts because it deliberately has no active
+    -- state machine. Swallow events only for explicitly tagged Pusfume units.
+    mod:hook("Unit", "animation_event", function(func, unit, event_name, ...)
+        if state.controllerless_first_person_units[unit]
+                and unit
+                and Unit.alive(unit)
+                and not Unit.has_animation_state_machine(unit) then
+            local event_key = tostring(event_name)
+
+            if not state.suppressed_controllerless_events[event_key] then
+                state.suppressed_controllerless_events[event_key] = true
+                mod:info(
+                    "[pusfume] Suppressed unsafe controllerless 1P animation event=%s",
+                    event_key)
+            end
+
+            return
+        end
+
+        return func(unit, event_name, ...)
+    end)
 
     mod:hook(PlayerUnitFirstPerson, "init", function(func, extension,
             extension_init_context, unit, extension_init_data)

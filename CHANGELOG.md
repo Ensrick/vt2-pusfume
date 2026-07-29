@@ -10,6 +10,16 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- v0.6.101 live result: push-attacking with the Assassin claws crashed in
+  `ActionPushStagger.client_owner_start_action`. Fatshark directly sent
+  `hitreaction_defend_reset` to Janfon's manually driven first-person
+  attachment, bypassing the existing `PlayerUnitFirstPerson` and
+  `WeaponUnitExtension` guards; Stingray then asserted because that unit
+  intentionally has no active state machine. v0.6.102 explicitly tags only
+  that controllerless Pusfume attachment and suppresses direct C-API animation
+  events sent to it. Push gameplay, fatigue, networking, damage profiles, and
+  Janfon's baked pose playback are unchanged. The first suppressed event name
+  is logged for live verification (#46).
 - v0.6.100 live feedback: TWO claw sets render and neither is obviously
   the right one. The second set is the wielded item's own 1P units:
   assassin mode force-showed them (a v0.6.8x belt-and-suspenders from
