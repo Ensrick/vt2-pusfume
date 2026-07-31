@@ -31,6 +31,7 @@ def create_fixture(texture_path, reset_factory=True):
     child_specs = (
         ("j_leftarm", (0.2, 0.0, 0.5), (0.7, 0.0, 0.8)),
         ("j_rightarm", (-0.2, 0.0, 0.5), (-0.7, 0.0, 0.8)),
+        ("j_leftforearm", (0.7, 0.0, 0.8), (1.1, 0.0, 0.8)),
         ("j_test1", (0.0, 0.0, 0.5), (0.0, 0.2, 1.0)),
         ("j_test2", (0.0, 0.0, 0.5), (0.0, -0.2, 1.0)),
     )
@@ -39,6 +40,9 @@ def create_fixture(texture_path, reset_factory=True):
         bone.head = head
         bone.tail = tail
         bone.parent = root
+        if name == "j_leftforearm":
+            bone.parent = armature_data.edit_bones["j_leftarm"]
+            bone.use_connect = True
     bpy.ops.object.mode_set(mode="OBJECT")
 
     mesh_data = bpy.data.meshes.new("fixture_body")
@@ -199,6 +203,79 @@ def test_pose_mirroring(armature, settings, operators, live_mirror):
     bpy.ops.object.mode_set(mode="OBJECT")
 
 
+def test_ik_bridge(armature, settings, ik_bridge):
+    bpy.ops.object.select_all(action="DESELECT")
+    armature.hide_set(False)
+    armature.select_set(True)
+    bpy.context.view_layer.objects.active = armature
+    baseline = ik_bridge.rest_signature(armature)
+
+    if bpy.ops.vt2.create_ik_control_rig() != {"FINISHED"}:
+        raise RuntimeError("Could not create the IK-safe animator rig")
+    control = settings.ik_control_rig
+    if control is None or settings.ik_game_rig != armature:
+        raise RuntimeError("IK bridge did not pair the control and VT2 game rigs")
+
+    # Deliberately make the animator skeleton incompatible as a game skeleton.
+    # The evaluated poses must still bake back without changing the VT2 rest rig.
+    bpy.context.view_layer.objects.active = control
+    bpy.ops.object.mode_set(mode="EDIT")
+    upper = control.data.edit_bones["j_leftarm"]
+    forearm = control.data.edit_bones["j_leftforearm"]
+    upper.tail = (0.65, 0.1, 0.95)
+    forearm.head = upper.tail
+    forearm.tail = (1.25, 0.1, 0.95)
+    forearm.parent = upper
+    forearm.use_connect = True
+    bpy.ops.object.mode_set(mode="POSE")
+
+    target = bpy.data.objects.new("fixture_ik_target", None)
+    bpy.context.scene.collection.objects.link(target)
+    target.location = (1.0, 0.1, 0.9)
+    target.keyframe_insert("location", frame=1)
+    target.location = (0.35, 0.8, 1.15)
+    target.keyframe_insert("location", frame=10)
+    constraint = control.pose.bones["j_leftforearm"].constraints.new("IK")
+    constraint.target = target
+    constraint.chain_count = 2
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+    control.animation_data_create()
+    action = bpy.data.actions.new("fixture_ik")
+    control.animation_data.action = action
+    root = control.pose.bones["j_root"]
+    root.rotation_mode = "QUATERNION"
+    root.rotation_quaternion = (1.0, 0.0, 0.0, 0.0)
+    root.keyframe_insert("rotation_quaternion", frame=1)
+    root.keyframe_insert("rotation_quaternion", frame=10)
+    settings.ik_source_action = action
+    settings.ik_output_name = "fixture_ik_VT2"
+
+    if bpy.ops.vt2.bake_ik_to_game_rig() != {"FINISHED"}:
+        raise RuntimeError("Could not bake the evaluated IK motion to the VT2 rig")
+    if settings.clip_action is None or settings.clip_action.name != "fixture_ik_VT2":
+        raise RuntimeError("IK bake did not create and select its export Action")
+
+    differences = ik_bridge.compare_rest_signatures(
+        baseline, ik_bridge.rest_signature(armature)
+    )
+    if differences:
+        raise RuntimeError(f"IK bridge changed the VT2 rest skeleton: {differences}")
+    bpy.context.scene.frame_set(1)
+    first = armature.pose.bones["j_leftforearm"].matrix.copy()
+    bpy.context.scene.frame_set(10)
+    last = armature.pose.bones["j_leftforearm"].matrix.copy()
+    if matrix_error(first, last) < 0.01:
+        raise RuntimeError("Baked VT2 arm did not follow the IK target")
+    settings.ik_control_rig = None
+    settings.ik_game_rig = None
+    bpy.data.objects.remove(control, do_unlink=True)
+    bpy.data.objects.remove(target, do_unlink=True)
+    armature.hide_set(False)
+    armature.select_set(True)
+    bpy.context.view_layer.objects.active = armature
+
+
 def main(repo_root, output_root, installed=False):
     if installed:
         vt2_content_tools = importlib.import_module(
@@ -213,12 +290,16 @@ def main(repo_root, output_root, installed=False):
         live_mirror = importlib.import_module(
             "bl_ext.user_default.vt2_content_tools.live_mirror"
         )
+        ik_bridge = importlib.import_module(
+            "bl_ext.user_default.vt2_content_tools.ik_bridge"
+        )
     else:
         sys.path.insert(0, str(Path(repo_root) / "blender_addon"))
         vt2_content_tools = importlib.import_module("vt2_content_tools")
         validation = importlib.import_module("vt2_content_tools.validation")
         operators = importlib.import_module("vt2_content_tools.operators")
         live_mirror = importlib.import_module("vt2_content_tools.live_mirror")
+        ik_bridge = importlib.import_module("vt2_content_tools.ik_bridge")
 
     output_root = Path(output_root)
     texture_path = output_root.parent / f"{output_root.name}-source" / "fixture_df.png"
@@ -239,9 +320,13 @@ def main(repo_root, output_root, installed=False):
     test_pose_mirroring(
         bpy.data.objects["fixture_rig"], settings, operators, live_mirror
     )
+    test_ik_bridge(bpy.data.objects["fixture_rig"], settings, ik_bridge)
+    settings.clip_action = bpy.data.actions["fixture_idle"]
+    settings.clip_name = "idle"
 
     bpy.ops.object.select_all(action="DESELECT")
     armature.select_set(True)
+    armature.hide_set(False)
     bpy.context.view_layer.objects.active = armature
     settings.scope = "SELECTED"
     selected_names = {obj.name for obj in validation.export_objects(bpy.context, settings.scope)}
@@ -297,6 +382,7 @@ def main(repo_root, output_root, installed=False):
                 "files": sorted(expected),
                 "pre_repair_errors": before["summary"]["errors"],
                 "pose_mirror": "automatic bidirectional live mirror with Auto Key",
+                "ik_bridge": "altered control rest and evaluated IK baked to immutable VT2 rest",
                 "warnings": after["summary"]["warnings"],
             },
             sort_keys=True,

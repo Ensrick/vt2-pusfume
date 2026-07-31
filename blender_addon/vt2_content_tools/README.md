@@ -19,6 +19,9 @@ Pusfume native-character pipeline and exports predictable FBX handoffs.
 - Seamless live Pose Mode mirroring for VT2 `j_left*`/`j_right*` names without
   renaming bones. Transform either selected side; X reflection and destination
   keyframes follow automatically when Blender Auto Key is enabled.
+- A non-destructive IK bridge that gives animators a freely editable control
+  rig, bakes its evaluated motion onto an immutable VT2 deform rig, and blocks
+  export handoff if that rig's rest skeleton changed.
 
 ## Boundary
 

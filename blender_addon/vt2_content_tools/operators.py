@@ -13,6 +13,7 @@ import bpy
 from mathutils import Matrix
 
 from . import core
+from . import ik_bridge
 from . import validation
 
 
@@ -417,6 +418,80 @@ class VT2_OT_mirror_pose(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class VT2_OT_create_ik_control_rig(bpy.types.Operator):
+    bl_idname = "vt2.create_ik_control_rig"
+    bl_label = "Create Animator Rig Copy"
+    bl_description = (
+        "Duplicate the selected VT2 armature for IK authoring while recording "
+        "an immutable rest-skeleton baseline"
+    )
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        return (
+            context.mode == "OBJECT"
+            and context.object is not None
+            and context.object.type == "ARMATURE"
+        )
+
+    def execute(self, context):
+        settings = context.scene.vt2_content_tools
+        game_rig = context.object
+        try:
+            control, baseline = ik_bridge.create_control_rig(context, game_rig)
+        except Exception as error:
+            self.report({"ERROR"}, f"Could not create IK bridge: {error}")
+            return {"CANCELLED"}
+        settings.ik_game_rig = game_rig
+        settings.ik_control_rig = control
+        if control.animation_data and control.animation_data.action:
+            settings.ik_source_action = control.animation_data.action
+        self.report(
+            {"INFO"},
+            f"Created {control.name}; protected {len(baseline)} VT2 rest bones",
+        )
+        return {"FINISHED"}
+
+
+class VT2_OT_bake_ik_to_game_rig(bpy.types.Operator):
+    bl_idname = "vt2.bake_ik_to_game_rig"
+    bl_label = "Bake IK to VT2 Rig"
+    bl_description = (
+        "Bake the evaluated animator-rig pose by bone name onto the untouched "
+        "VT2 rest skeleton"
+    )
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        settings = context.scene.vt2_content_tools
+        action = settings.ik_source_action
+        if action is None and settings.ik_control_rig and settings.ik_control_rig.animation_data:
+            action = settings.ik_control_rig.animation_data.action
+        try:
+            result = ik_bridge.bake_control_action(
+                context,
+                settings.ik_control_rig,
+                settings.ik_game_rig,
+                action,
+                settings.ik_output_name,
+            )
+        except Exception as error:
+            self.report({"ERROR"}, f"IK bake blocked: {error}")
+            return {"CANCELLED"}
+
+        settings.clip_action = result["action"]
+        settings.clip_name = core.safe_name(result["action"].name)
+        self.report(
+            {"INFO"},
+            (
+                f"Baked {result['bones']} bones across {result['frames']} frames; "
+                f"maximum position error {result['maximum_position_error']:.2g} m"
+            ),
+        )
+        return {"FINISHED"}
+
+
 class VT2_OT_export_handoff(bpy.types.Operator):
     bl_idname = "vt2.export_handoff"
     bl_label = "Export VT2 Handoff"
@@ -503,5 +578,7 @@ CLASSES = (
     VT2_OT_repair_weights,
     VT2_OT_tag_material,
     VT2_OT_mirror_pose,
+    VT2_OT_create_ik_control_rig,
+    VT2_OT_bake_ik_to_game_rig,
     VT2_OT_export_handoff,
 )

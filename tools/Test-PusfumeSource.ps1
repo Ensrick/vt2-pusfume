@@ -38,6 +38,7 @@ $addonRoot = Join-Path $repoRoot "blender_addon\vt2_content_tools"
 $addonInitPath = Join-Path $addonRoot "__init__.py"
 $addonManifestPath = Join-Path $addonRoot "blender_manifest.toml"
 $addonCorePath = Join-Path $addonRoot "core.py"
+$addonIkBridgePath = Join-Path $addonRoot "ik_bridge.py"
 $addonLiveMirrorPath = Join-Path $addonRoot "live_mirror.py"
 $addonOperatorsPath = Join-Path $addonRoot "operators.py"
 $addonUiPath = Join-Path $addonRoot "ui.py"
@@ -56,6 +57,7 @@ $packageText = Get-Content -LiteralPath $packagePath -Raw
 $addonInitText = Get-Content -LiteralPath $addonInitPath -Raw
 $addonManifestText = Get-Content -LiteralPath $addonManifestPath -Raw
 $addonCoreText = Get-Content -LiteralPath $addonCorePath -Raw
+$addonIkBridgeText = Get-Content -LiteralPath $addonIkBridgePath -Raw
 $addonLiveMirrorText = Get-Content -LiteralPath $addonLiveMirrorPath -Raw
 $addonOperatorsText = Get-Content -LiteralPath $addonOperatorsPath -Raw
 $addonUiText = Get-Content -LiteralPath $addonUiPath -Raw
@@ -82,6 +84,7 @@ Test-Condition ($configText -match 'visibility\s*=\s*"friends"') "Workshop visib
 Test-Condition ($configText -match 'published_id\s*=\s*3764954245L') "Workshop identity" "3764954245"
 Test-Condition ((Test-Path -LiteralPath (Join-Path $addonRoot "__init__.py")) -and `
     (Test-Path -LiteralPath (Join-Path $addonRoot "core.py")) -and `
+    (Test-Path -LiteralPath (Join-Path $addonRoot "ik_bridge.py")) -and `
     (Test-Path -LiteralPath (Join-Path $addonRoot "live_mirror.py")) -and `
     (Test-Path -LiteralPath (Join-Path $addonRoot "properties.py")) -and `
     (Test-Path -LiteralPath (Join-Path $addonRoot "ui.py")) -and `
@@ -107,6 +110,12 @@ Test-Condition ($addonOperatorsText -match 'class VT2_OT_mirror_pose' -and `
     $addonOperatorsText -match 'mirrored_rest\.inverted_safe\(\)' -and `
     $addonBlenderTestText -match 'pose_mirror.*automatic bidirectional') `
     "Blender content tools" "VT2 j_left/j_right poses are rest-corrected and tested in both directions"
+Test-Condition ($addonOperatorsText -match 'class VT2_OT_create_ik_control_rig' -and `
+    $addonOperatorsText -match 'class VT2_OT_bake_ik_to_game_rig' -and `
+    $addonIkBridgeText -match 'compare_rest_signatures' -and `
+    $addonIkBridgeText -match 'target_from_control' -and `
+    $addonBlenderTestText -match 'test_ik_bridge') `
+    "Blender content tools" "IK control motion bakes onto a guarded immutable VT2 rest rig"
 Test-Condition ((Test-Path -LiteralPath (Join-Path $addonRoot "live_mirror.py")) -and `
     $addonLiveMirrorText -match 'def apply_live_pose_mirror' -and `
     $addonLiveMirrorText -match 'mirrored_partner_name' -and `

@@ -3,6 +3,10 @@
 import bpy
 
 
+def _armature_object(_settings, obj):
+    return obj is not None and obj.type == "ARMATURE"
+
+
 class VT2ContentToolsSettings(bpy.types.PropertyGroup):
     asset_name: bpy.props.StringProperty(
         name="Asset Name",
@@ -113,6 +117,28 @@ class VT2ContentToolsSettings(bpy.types.PropertyGroup):
             "Pose Mode and honor Blender Auto Key"
         ),
         default=False,
+    )
+    ik_game_rig: bpy.props.PointerProperty(
+        name="VT2 Game Rig",
+        description="Untouched deform/export armature whose rest skeleton must not change",
+        type=bpy.types.Object,
+        poll=_armature_object,
+    )
+    ik_control_rig: bpy.props.PointerProperty(
+        name="Animator Rig",
+        description="Separate armature containing Janfon's controls, IK, and authored motion",
+        type=bpy.types.Object,
+        poll=_armature_object,
+    )
+    ik_source_action: bpy.props.PointerProperty(
+        name="Control Action",
+        description="Action evaluated on the animator rig and baked to the VT2 game rig",
+        type=bpy.types.Action,
+    )
+    ik_output_name: bpy.props.StringProperty(
+        name="Baked Action",
+        description="Name of the new Action created on the untouched VT2 game rig",
+        default="pusfume_clip_VT2",
     )
     last_errors: bpy.props.IntProperty(default=0, options={"HIDDEN"})
     last_warnings: bpy.props.IntProperty(default=0, options={"HIDDEN"})

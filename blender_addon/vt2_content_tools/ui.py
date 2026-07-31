@@ -46,6 +46,16 @@ class VT2_PT_content_tools(bpy.types.Panel):
         if settings.live_mirror_enabled:
             mirror.label(text="Move either side; X mirror and Auto Key are automatic.", icon="INFO")
 
+        ik = layout.box()
+        ik.label(text="IK Bridge", icon="CONSTRAINT_BONE")
+        ik.label(text="Keep the VT2 deform rig untouched.", icon="INFO")
+        ik.operator("vt2.create_ik_control_rig", icon="DUPLICATE")
+        ik.prop(settings, "ik_game_rig")
+        ik.prop(settings, "ik_control_rig")
+        ik.prop_search(settings, "ik_source_action", bpy.data, "actions")
+        ik.prop(settings, "ik_output_name")
+        ik.operator("vt2.bake_ik_to_game_rig", icon="ACTION_TWEAK")
+
         export = layout.box()
         export.label(text="Export", icon="EXPORT")
         export.prop(settings, "export_mode")

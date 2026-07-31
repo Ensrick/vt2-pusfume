@@ -13,6 +13,7 @@ REQUIRED_FILES = {
     "__init__.py",
     "blender_manifest.toml",
     "core.py",
+    "ik_bridge.py",
     "live_mirror.py",
     "operators.py",
     "properties.py",

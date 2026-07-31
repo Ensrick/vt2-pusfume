@@ -1,7 +1,7 @@
 # VT2 Content Tools for Blender 5.2
 
 VT2 Content Tools is the supported no-Maya authoring path for Janfon's Pusfume
-models and animations. Release `0.5.0` is acceptance-tested against **Blender
+models and animations. Release `0.6.0` is acceptance-tested against **Blender
 5.2.0 LTS** on Windows. Its extension manifest permits Blender 4.3 or newer,
 but 5.2.0 LTS is the project's primary tested version.
 
@@ -17,11 +17,11 @@ Build the installable package from the repository root:
 py -3 tools\package_blender_addon.py
 ```
 
-This writes `.build/dist/vt2_content_tools-0.5.0.zip`. In Blender 5.2:
+This writes `.build/dist/vt2_content_tools-0.6.0.zip`. In Blender 5.2:
 
 1. Open **Edit > Preferences > Get Extensions**.
 2. Open the menu and choose **Install from Disk**.
-3. Select `vt2_content_tools-0.4.0.zip`.
+3. Select `vt2_content_tools-0.6.0.zip`.
 4. Open the 3D Viewport and press `N` to show the sidebar.
 5. Select the **VT2** tab.
 
@@ -73,6 +73,30 @@ matrices, and orientation must still be compared with the compiled donor, and
 custom deform bones require explicit retarget/link behavior. Dynamic bone
 names alone do not install VT2 physics; the compiled unit also needs matching
 physics/flow metadata.
+
+### IK without changing the VT2 skeleton
+
+Do not make the VT2 deform/export armature IK-friendly. Select that untouched
+armature in Object Mode and choose **Create Animator Rig Copy** under **IK
+Bridge**. The extension records the game rig's bone names, hierarchy, connected
+flags, heads, tails, and complete rest matrices, then creates a separate
+`_CTRL` copy. Janfon may reconnect, resize, reposition, or reorient bones on
+that copy and may add IK targets, pole targets, helper bones, drivers, and
+constraints there.
+
+Animate only the control rig. Choose its Action, give the output Action a name,
+and select **Bake IK to VT2 Rig**. Every frame is evaluated after Blender's IK
+and constraints. Matching bone poses are transformed into the untouched game
+rig's object space, solved parents-first against its original rest matrices,
+and keyed as root motion plus quaternion bone rotation. Control-rig bone scale
+blocks the bake rather than contaminating the game skeleton. Extra control
+bones are ignored; a missing VT2 bone blocks the bake.
+
+The operation checks the stored baseline before baking and checks it again
+afterward. It refuses to continue if the game rig's bones, hierarchy, rest
+orientation, length, position, or connectivity changed. It also measures the
+baked pose against the evaluated control pose. Export the newly selected baked
+Action from the game rig only; never export the `_CTRL` rig.
 
 ## VT2 pose mirroring
 
@@ -138,7 +162,7 @@ Run the normal tests, package validation, and the real Blender 5.2 fixture:
 py -3 -m unittest discover -s tests -v
 py -3 tools\package_blender_addon.py
 & "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" `
-  --command extension validate .build\dist\vt2_content_tools-0.5.0.zip
+  --command extension validate .build\dist\vt2_content_tools-0.6.0.zip
 & "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" `
   --background --factory-startup --disable-autoexec `
   --python tools\test_vt2_content_tools_blender.py -- `
@@ -147,8 +171,10 @@ py -3 tools\package_blender_addon.py
 
 The fixture intentionally creates five weights per vertex. A passing run must
 detect that failure, repair it to four normalized weights, seamlessly mirror a
-VT2 arm pair from either side with Auto Key propagation, reach zero errors, and produce both FBXs
-plus the handoff JSON under Blender `5.2.0 LTS`.
+VT2 arm pair from either side with Auto Key propagation, alter a duplicate
+armature's rest bones, drive it through evaluated IK, bake it onto an unchanged
+VT2 rest skeleton, reach zero errors, and produce both FBXs plus the handoff
+JSON under Blender `5.2.0 LTS`.
 
 ## Provenance boundary
 
