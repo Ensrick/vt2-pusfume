@@ -16,7 +16,11 @@ param(
     [string]$TextureSource = ".build\pusfume_handoff\textures conv",
     [string]$GameBundleDir = "C:\Program Files (x86)\Steam\steamapps\common\Warhammer Vermintide 2\bundle",
     [string]$UnpackerExe = "C:\Tools\vt2_bundle_unpacker\target\release\unpacker.exe",
-    [string]$VmbLauncherExe = "C:\Users\danjo\source\repos\vermintide-2-tweaker\tools\vmb-launcher\bin\Release\net9.0-windows\win-x64\publish\VMBLauncher.exe",
+    # Pusfume is not a vermintide-2-tweaker monorepo mod: launcher builds with
+    # the PublicationReceiptGate (v0.6+) hard-bind upload authority to that
+    # repo's ship.ps1 receipts and can never authorize this item. Direct
+    # `upload` for the friends-only prototype requires the pre-gate baseline.
+    [string]$VmbLauncherExe = "C:\Users\danjo\source\repos\vmb-launcher-baseline-056-20260726\bin\Release\net9.0-windows\win-x64\publish\VMBLauncher.exe",
     [string]$VmbLauncherSettings = ".build\vmb-pusfume-settings.json",
     [switch]$LegacyFur,
     [switch]$IntegratedFur,
@@ -471,6 +475,14 @@ $vmbLauncherCandidate = if ([IO.Path]::IsPathRooted($VmbLauncherExe)) {
     $VmbLauncherExe
 } else {
     Join-Path $repoRoot $VmbLauncherExe
+}
+# The monorepo launcher checkout is machine-local and relocates; honor the
+# canonical VT2_SHIP_VMB_LAUNCHER override when the configured path is gone.
+if (-not (Test-Path $vmbLauncherCandidate)) {
+    $launcherOverride = $env:VT2_SHIP_VMB_LAUNCHER
+    if (-not [string]::IsNullOrWhiteSpace($launcherOverride) -and (Test-Path $launcherOverride)) {
+        $vmbLauncherCandidate = $launcherOverride
+    }
 }
 $vmbLauncherPath = (Resolve-Path $vmbLauncherCandidate).Path
 $vmbLauncherSettingsPath = if ([IO.Path]::IsPathRooted($VmbLauncherSettings)) {

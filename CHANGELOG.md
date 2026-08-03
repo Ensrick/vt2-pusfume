@@ -10,6 +10,20 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- v0.6.102 live report: Weapon Tweaker's dev hold-pose tuner could not move
+  the Assassin blades, blocking claw offset tuning. Root cause: the tuner
+  resolves `equipment.*_hand_wielded_unit`, but in assassin mode those wielded
+  units are intentionally HIDDEN action carriers (v0.6.101, log
+  `wielded=hidden proxies=2/2`); the visible blades are Pusfume's own proxy
+  units at Janfon's measured mounts, which no external tool can reach.
+  v0.6.103 adds a mod-owned live tuner: `/pusfume_blade
+  <right|left|both> <x> <y> <z> [pitch yaw roll]` composes metre offsets and
+  Euler-XYZ degree deltas over Janfon's baseline mounts and re-applies to the
+  live proxies immediately; `/pusfume_blade_dump` prints a bake-ready
+  `ASSASSIN_BLADE_LOCAL_MOUNTS` snippet (absolute position + composed
+  quaternion) to the log; `/pusfume_blade_reset` restores the baseline. Tuning
+  deltas survive proxy relinks and slot switches because the mount writer now
+  reads them at every link (#46).
 - v0.6.101 live result: push-attacking with the Assassin claws crashed in
   `ActionPushStagger.client_owner_start_action`. Fatshark directly sent
   `hitreaction_defend_reset` to Janfon's manually driven first-person

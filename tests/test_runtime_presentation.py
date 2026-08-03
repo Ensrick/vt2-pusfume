@@ -278,10 +278,17 @@ class RuntimePresentationTests(unittest.TestCase):
         self.assertIn("ASSASSIN_BLADE_LOCAL_MOUNTS", self.native)
         self.assertIn('right = "j_righthand",', self.native)
         self.assertIn('left = "j_lefthand",', self.native)
-        self.assertIn(
-            "Unit.set_local_position(proxy, 0, mount.position:unbox())", helper)
-        self.assertIn(
-            "Unit.set_local_rotation(proxy, 0, Quaternion.from_elements(", helper)
+        # The mount writer composes /pusfume_blade tuning deltas over the
+        # measured baseline, so live nudges survive relinks and slot switches.
+        self.assertIn("apply_assassin_blade_mount(proxy, hand)", helper)
+        mount_writer = self.native.split(
+            "local function apply_assassin_blade_mount", 1
+        )[1].split("local function ensure_assassin_blade_proxies", 1)[0]
+        self.assertIn("mount.position:unbox()", mount_writer)
+        self.assertIn("Quaternion.from_elements(", mount_writer)
+        self.assertIn("Quaternion.from_euler_angles_xyz(", mount_writer)
+        self.assertIn("Unit.set_local_position(proxy, 0, position)", mount_writer)
+        self.assertIn("Unit.set_local_rotation(proxy, 0, rotation)", mount_writer)
         presentation = self.native.split(
             "local function restore_first_person_weapons", 1
         )[1].split("local DONOR_PACKAGE_REFERENCE", 1)[0]

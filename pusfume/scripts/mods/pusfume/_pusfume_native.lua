@@ -100,6 +100,12 @@ local state = {
     controllerless_first_person_units = setmetatable({}, { __mode = "k" }),
     suppressed_controllerless_events = {},
     locomotion_events_available = false,
+    blade_tuning_commands_installed = false,
+    assassin_blade_live_proxies = nil,
+    assassin_blade_mount_tuning = {
+        right = { offset = { 0, 0, 0 }, euler = { 0, 0, 0 } },
+        left = { offset = { 0, 0, 0 }, euler = { 0, 0, 0 } },
+    },
 }
 
 local WALK_ENTER_SPEED = 0.5
@@ -606,12 +612,39 @@ local function hide_first_person_weapon_unit(unit)
     return uses_normal_group, mesh_count
 end
 
+-- Janfon's measured mounts are the baseline; /pusfume_blade tuning deltas
+-- compose on top so live nudges survive proxy relinks and slot switches.
+local function apply_assassin_blade_mount(proxy, hand)
+    local mount = ASSASSIN_BLADE_LOCAL_MOUNTS[hand]
+    if not mount then
+        return
+    end
+
+    local tuning = state.assassin_blade_mount_tuning[hand]
+    local position = mount.position:unbox()
+    local rotation = Quaternion.from_elements(
+        mount.rotation[1], mount.rotation[2],
+        mount.rotation[3], mount.rotation[4])
+
+    if tuning then
+        position = position + Vector3(
+            tuning.offset[1], tuning.offset[2], tuning.offset[3])
+        rotation = Quaternion.multiply(rotation,
+            Quaternion.from_euler_angles_xyz(
+                tuning.euler[1], tuning.euler[2], tuning.euler[3]))
+    end
+
+    Unit.set_local_position(proxy, 0, position)
+    Unit.set_local_rotation(proxy, 0, rotation)
+end
+
 local function ensure_assassin_blade_proxies(extension, animation_unit)
     local proxies = extension._pusfume_assassin_blade_proxies
     if not proxies then
         proxies = {}
         extension._pusfume_assassin_blade_proxies = proxies
     end
+    state.assassin_blade_live_proxies = proxies
 
     local unit_spawner = Managers.state and Managers.state.unit_spawner
     local spawned = 0
@@ -647,13 +680,7 @@ local function ensure_assassin_blade_proxies(extension, animation_unit)
             World.unlink_unit(extension.world, proxy)
             World.link_unit(extension.world, proxy, 0, animation_unit,
                 Unit.node(animation_unit, attach_node))
-            local mount = ASSASSIN_BLADE_LOCAL_MOUNTS[hand]
-            if mount then
-                Unit.set_local_position(proxy, 0, mount.position:unbox())
-                Unit.set_local_rotation(proxy, 0, Quaternion.from_elements(
-                    mount.rotation[1], mount.rotation[2],
-                    mount.rotation[3], mount.rotation[4]))
-            end
+            apply_assassin_blade_mount(proxy, hand)
             Unit.set_unit_visibility(proxy, true)
             linked = linked + 1
         end
@@ -1299,6 +1326,119 @@ local function install_material_probe_command(config)
         end)
 
     state.material_probe_command_installed = true
+end
+
+-- The visible Assassin blades are mod-owned proxies at Janfon's measured hand
+-- mounts; the engine's wielded claw units stay hidden as action carriers. No
+-- external tool (the wt hold-pose tuner resolves the hidden wielded units)
+-- can move them, so blade placement tunes through these commands instead.
+local function reapply_assassin_blade_mounts()
+    local proxies = state.assassin_blade_live_proxies
+    local applied = 0
+
+    if proxies then
+        for hand, proxy in pairs(proxies) do
+            if proxy and Unit.alive(proxy) then
+                apply_assassin_blade_mount(proxy, hand)
+                applied = applied + 1
+            end
+        end
+    end
+
+    return applied
+end
+
+local function install_blade_tuning_commands()
+    if state.blade_tuning_commands_installed then
+        return
+    end
+
+    mod:command("pusfume_blade",
+        "Tune Assassin blade mounts: <right|left|both> <x> <y> <z> [pitch yaw roll]",
+        function(hand, x, y, z, pitch, yaw, roll)
+            hand = string.lower(tostring(hand or ""))
+            x, y, z = tonumber(x), tonumber(y), tonumber(z)
+            pitch, yaw, roll = tonumber(pitch), tonumber(yaw), tonumber(roll)
+
+            if (hand ~= "right" and hand ~= "left" and hand ~= "both")
+                    or not x or not y or not z then
+                mod:echo("Usage: /pusfume_blade <right|left|both> <x> <y> <z> [pitch yaw roll]")
+                mod:echo("Offsets are metres over Janfon's mount; rotation is degrees (Euler XYZ).")
+                return
+            end
+
+            local hands = hand == "both" and { "right", "left" } or { hand }
+
+            for _, tuned_hand in ipairs(hands) do
+                local tuning = state.assassin_blade_mount_tuning[tuned_hand]
+                tuning.offset[1], tuning.offset[2], tuning.offset[3] = x, y, z
+                if pitch or yaw or roll then
+                    tuning.euler[1] = pitch or 0
+                    tuning.euler[2] = yaw or 0
+                    tuning.euler[3] = roll or 0
+                end
+            end
+
+            local applied = reapply_assassin_blade_mounts()
+
+            mod:echo("Pusfume blade tuning %s offset=(%.3f, %.3f, %.3f) rot=(%.1f, %.1f, %.1f) live_proxies=%d",
+                hand, x, y, z, pitch or 0, yaw or 0, roll or 0, applied)
+            mod:info("[pusfume] Blade tuning set hand=%s offset=(%.4f, %.4f, %.4f) euler=(%.2f, %.2f, %.2f) live_proxies=%d",
+                hand, x, y, z, pitch or 0, yaw or 0, roll or 0, applied)
+
+            if applied == 0 then
+                mod:echo("No live blade proxies - equip the Assassin claws first.")
+            end
+        end)
+
+    mod:command("pusfume_blade_dump",
+        "Print bake-ready Assassin blade mount values.", function()
+            mod:info("-- ==== pusfume blade mount dump ====")
+            mod:info("local ASSASSIN_BLADE_LOCAL_MOUNTS = {")
+            for _, hand in ipairs({ "right", "left" }) do
+                local mount = ASSASSIN_BLADE_LOCAL_MOUNTS[hand]
+                local tuning = state.assassin_blade_mount_tuning[hand]
+                local position = mount.position:unbox()
+                local rotation = Quaternion.from_elements(
+                    mount.rotation[1], mount.rotation[2],
+                    mount.rotation[3], mount.rotation[4])
+
+                position = position + Vector3(
+                    tuning.offset[1], tuning.offset[2], tuning.offset[3])
+                rotation = Quaternion.multiply(rotation,
+                    Quaternion.from_euler_angles_xyz(
+                        tuning.euler[1], tuning.euler[2], tuning.euler[3]))
+
+                local qx, qy, qz, qw = Quaternion.to_elements(rotation)
+                mod:info("    %s = {", hand)
+                mod:info("        position = Vector3Box(%.6f, %.6f, %.6f),",
+                    position[1], position[2], position[3])
+                mod:info("        rotation = { %.6f, %.6f, %.6f, %.6f },",
+                    qx, qy, qz, qw)
+                mod:info("    },")
+                mod:echo("%s: offset=(%.3f, %.3f, %.3f) rot=(%.1f, %.1f, %.1f)",
+                    hand, tuning.offset[1], tuning.offset[2], tuning.offset[3],
+                    tuning.euler[1], tuning.euler[2], tuning.euler[3])
+            end
+            mod:info("}")
+            mod:info("-- ==== end blade mount dump ====")
+            mod:echo("Bake-ready mounts written to the log.")
+        end)
+
+    mod:command("pusfume_blade_reset",
+        "Reset Assassin blade mounts to Janfon's measured baseline.", function()
+            for _, tuning in pairs(state.assassin_blade_mount_tuning) do
+                tuning.offset[1], tuning.offset[2], tuning.offset[3] = 0, 0, 0
+                tuning.euler[1], tuning.euler[2], tuning.euler[3] = 0, 0, 0
+            end
+
+            local applied = reapply_assassin_blade_mounts()
+
+            mod:echo("Pusfume blade mounts reset to baseline (live_proxies=%d).", applied)
+            mod:info("[pusfume] Blade tuning reset live_proxies=%d", applied)
+        end)
+
+    state.blade_tuning_commands_installed = true
 end
 
 local function apply_donor_material(extension, config)
@@ -3223,6 +3363,7 @@ function M.install(registry, config)
     install_dialogue_voice_hook(registry)
     install_probe_hook()
     install_material_probe_command(config)
+    install_blade_tuning_commands()
 
     if state.hero_preview_enabled and not install_preview_package_filter(config) then
         state.hero_preview_enabled = false

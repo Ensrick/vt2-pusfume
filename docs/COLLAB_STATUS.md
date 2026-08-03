@@ -11,6 +11,17 @@ architecture and reproduction contract are in
 
 ## Latest shipment
 
+- 2026-08-03 local: v0.6.102 LIVE RESULT / v0.6.103 SHIPPED
+  `[unverified]` - Weapon Tweaker's dev hold-pose tuner could not move the
+  Assassin blades: it resolves the equipment's wielded units, which assassin
+  mode hides as action carriers; the visible blades are Pusfume's proxies at
+  Janfon's measured mounts. v0.6.103 adds the mod-owned live tuner
+  (`/pusfume_blade`, `/pusfume_blade_dump`, `/pusfume_blade_reset`) composing
+  deltas over the baseline mounts. Ship note: the relocated monorepo launcher
+  (receipt-gated, bound to `Ensrick/vermintide-2-tweaker`) can never authorize
+  this repo's upload; the pipeline now pins the pre-gate baseline launcher
+  v0.5.6. Workshop ManifestID `6073798130686377196`; 8 live files
+  hash-verified against staging.
 - 2026-07-29 local: v0.6.101 LIVE RESULT / v0.6.102 SHIPPED
   `[unverified]` - push-attacking with Assassin Blades crashed when vanilla
   `ActionPushStagger` sent `hitreaction_defend_reset` directly to Janfon's

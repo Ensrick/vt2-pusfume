@@ -4,6 +4,22 @@ Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.67-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
+## v0.6.103 Assassin blade tuning test
+
+Test Workshop ManifestID `6073798130686377196`. Purpose: find the correct
+claw offsets, which Weapon Tweaker cannot do (its tuner moves the hidden
+wielded units, not the visible proxy blades).
+
+1. Equip `Assassin Blades (Janfon Prototype)` and confirm one visible claw set.
+2. Run `/pusfume_blade right 0 0 0.05` - the right blade should jump 5 cm
+   up its hand axis immediately.
+3. Tune both hands with `/pusfume_blade <right|left|both> <x> <y> <z>
+   [pitch yaw roll]` (metres, degrees) until the claws sit right; values
+   survive weapon switches and re-equips.
+4. Run `/pusfume_blade_dump` - chat confirms, and the log receives a
+   bake-ready mount block. Send me the tuned numbers or the log.
+5. `/pusfume_blade_reset` restores Janfon's baseline if tuning goes wrong.
+
 ## v0.6.102 Assassin push test
 
 Test source implementation commit `ab1c94c`, friends-only Workshop ManifestID
