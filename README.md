@@ -323,13 +323,16 @@ VMBLauncher, or `ugc_tool` separately for Pusfume.
 See [LIVE_TEST_CHECKLIST.md](docs/LIVE_TEST_CHECKLIST.md) for the in-game pass,
 [CAREER_SYSTEM.md](docs/CAREER_SYSTEM.md) for the reverse-engineered career
 architecture, and [ASSET_PIPELINE.md](docs/ASSET_PIPELINE.md) for Janfon's art
-handoff. Janfon's source-referenced production inventory is maintained in the
+handoff. The donor-audited physics workflow is in
+[RAGDOLL_PIPELINE.md](docs/RAGDOLL_PIPELINE.md). Janfon's source-referenced
+production inventory is maintained in the
 [Pusfume Career Asset Checklist](outputs/pusfume-career-assets/Pusfume_Career_Asset_Checklist.xlsx).
 
 Active work is tracked in [native integration issue #6](https://github.com/Ensrick/vt2-pusfume/issues/6),
 [career-kit issue #15](https://github.com/Ensrick/vt2-pusfume/issues/15),
 [localization issue #17](https://github.com/Ensrick/vt2-pusfume/issues/17),
 [whisker rendering issue #18](https://github.com/Ensrick/vt2-pusfume/issues/18),
+[ragdoll issue #49](https://github.com/Ensrick/vt2-pusfume/issues/49),
 [native integration PR #11](https://github.com/Ensrick/vt2-pusfume/pull/11),
 and [career-kit draft PR #16](https://github.com/Ensrick/vt2-pusfume/pull/16).
 

@@ -4,6 +4,9 @@ Commit only original or authorized assets. Keep extracted game assets outside th
 
 The confirmed private build and its publication boundary are documented in
 [NATIVE_CHARACTER_MILESTONE.md](NATIVE_CHARACTER_MILESTONE.md).
+Ragdoll authoring has a separate donor-audited workflow in
+[RAGDOLL_PIPELINE.md](RAGDOLL_PIPELINE.md); an FBX rigid-body preview is not a
+complete VT2 ragdoll resource.
 
 Recommended handoff layout:
 

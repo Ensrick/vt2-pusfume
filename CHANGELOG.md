@@ -10,6 +10,12 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- Document the donor-audited Pusfume ragdoll pipeline, including the one-owner
+  linked-child safety gate, immutable export-rig rule, compiled unit/state
+  machine inspection, Blender 5.2 handoff requirements, offline validation,
+  host/client live-test matrix, and known unknowns. Add a read-only compiled
+  ragdoll audit tool and regression checks for the critical physics contract
+  (#49).
 - v0.6.102 live report: Weapon Tweaker's dev hold-pose tuner could not move
   the Assassin blades, blocking claw offset tuning. Root cause: the tuner
   resolves `equipment.*_hand_wielded_unit`, but in assassin mode those wielded
