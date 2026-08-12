@@ -1,0 +1,102 @@
+{
+  "atlas_size": 4096,
+  "force_opaque_suffixes": [
+    "df"
+  ],
+  "tiles": {
+    "body": {
+      "origin": [0, 0],
+      "size": [2048, 4096],
+      "grid": [1, 1],
+      "center": [0, 0],
+      "inset": 8,
+      "sources": {
+        "df": "pusfume_body_new_df",
+        "nm": "skaven_body_nm",
+        "s": "skaven_body_s"
+      }
+    },
+    "eye": {
+      "origin": [2048, 0],
+      "size": [512, 512],
+      "grid": [3, 3],
+      "center": [1, 1],
+      "inset": 0,
+      "sources": {
+        "df": "pusfume_eyenormal",
+        "nm": null,
+        "s": null
+      }
+    },
+    "ammo_a": {
+      "origin": [2048, 1536],
+      "size": [512, 512],
+      "grid": [3, 3],
+      "center": [1, 1],
+      "inset": 0,
+      "sources": {
+        "df": "generic_cloth_dirty_df",
+        "nm": "generic_cloth_dirty_nm",
+        "s": "generic_cloth_dirty_s"
+      }
+    },
+    "ammo_b": {
+      "origin": [3584, 1536],
+      "size": [512, 512],
+      "grid": [1, 1],
+      "center": [0, 0],
+      "inset": 8,
+      "sources": {
+        "df": "pup_ammo_box_limited_df",
+        "nm": "pup_ammo_box_limited_nm",
+        "s": "pup_ammo_box_limited_s"
+      }
+    },
+    "globadier": {
+      "origin": [2048, 3072],
+      "size": [1024, 1024],
+      "grid": [1, 1],
+      "center": [0, 0],
+      "inset": 8,
+      "sources": {
+        "df": "globadier_outfit_df",
+        "nm": "globadier_outfit_nm",
+        "s": "globadier_outfit_s"
+      }
+    },
+    "metal": {
+      "origin": [3072, 3072],
+      "size": [512, 512],
+      "grid": [1, 1],
+      "center": [0, 0],
+      "inset": 8,
+      "sources": {
+        "df": "wpn_skaven_set_df",
+        "nm": "wpn_skaven_set_nm",
+        "s": "wpn_skaven_set_s"
+      }
+    },
+    "armor": {
+      "origin": [3584, 3072],
+      "size": [512, 512],
+      "grid": [1, 1],
+      "center": [0, 0],
+      "inset": 8,
+      "sources": {
+        "df": "stormvermin_outfit_df",
+        "nm": "stormvermin_outfit_nm",
+        "s": "stormvermin_outfit_s"
+      }
+    }
+  },
+  "materials": {
+    "p_main": {"tile": "body", "repeat": false},
+    "p_eye": {"tile": "eye", "repeat": true},
+    "p_eye_g": {"tile": "eye", "repeat": true},
+    "p_ammo_box_limited_a": {"tile": "ammo_a", "repeat": true},
+    "p_ammo_box_limited_b": {"tile": "ammo_b", "repeat": true},
+    "p_glob": {"tile": "globadier", "repeat": true},
+    "p_metal": {"tile": "metal", "repeat": false},
+    "p_armor": {"tile": "armor", "repeat": false}
+  }
+}

@@ -6,6 +6,7 @@ local loadout_validator
 M.CAREER_NAME = "pusfume"
 M.DONOR_CAREER_NAME = "dr_ranger"
 M.PROFILE_NAME = "dwarf_ranger"
+M.NATIVE_SKIN_NAME = nil
 M.SUPPORTED_MECHANISMS = {
     adventure = true,
 }
@@ -165,6 +166,10 @@ function M.find_career_index()
     end
 end
 
+function M.set_native_skin(skin_name)
+    M.NATIVE_SKIN_NAME = skin_name
+end
+
 function M.register()
     fassert(CareerSettings and CareerSettings[M.DONOR_CAREER_NAME], "Pusfume donor career is unavailable.")
     fassert(CareerSettingsOriginal, "CareerSettingsOriginal is unavailable.")
@@ -192,6 +197,7 @@ function M.register()
     career.override_available_for_mechanism = available_for_mechanism
     career.character_state_list = build_state_list(profile.base_character_states, career.additional_character_states_list)
     career.camera_state_list = build_state_list(profile.base_camera_states, career.additional_camera_states_list)
+    career.base_skin = M.NATIVE_SKIN_NAME or CareerSettings[M.DONOR_CAREER_NAME].base_skin
 
     CareerSettingsOriginal[M.CAREER_NAME] = deep_clone(career)
 

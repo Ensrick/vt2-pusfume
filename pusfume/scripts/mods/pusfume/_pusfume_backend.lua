@@ -8,7 +8,39 @@ local status = {
     installed = false,
     runtime_guard_count = 0,
     runtime_guards_installed = false,
+    used_empty_loadout_fallback = false,
 }
+
+local function expose_donor_loadout(self, loadouts, registry)
+    if type(loadouts) ~= "table" then
+        return loadouts
+    end
+
+    local donor_loadout = loadouts[registry.DONOR_CAREER_NAME]
+
+    -- Other loadout mods can replace the cloned return table after our hook.
+    -- Consult the authoritative stores before installing an iterable fallback.
+    if type(donor_loadout) ~= "table" and type(self._default_loadout_overrides) == "table" then
+        donor_loadout = self._default_loadout_overrides[registry.DONOR_CAREER_NAME]
+    end
+
+    if type(donor_loadout) ~= "table" and type(self._loadouts) == "table" then
+        donor_loadout = self._loadouts[registry.DONOR_CAREER_NAME]
+    end
+
+    if type(donor_loadout) ~= "table" then
+        donor_loadout = {}
+
+        if not status.used_empty_loadout_fallback then
+            status.used_empty_loadout_fallback = true
+            mod:warning("[pusfume] Donor loadout table was unavailable; installed an empty UI-safe alias")
+        end
+    end
+
+    loadouts[registry.CAREER_NAME] = donor_loadout
+
+    return loadouts
+end
 
 local function alias_career(career_name, registry)
     if career_name == registry.CAREER_NAME then
@@ -24,6 +56,35 @@ local function hook_career_first(class_name, method_name, registry)
     end)
 
     status.hook_count = status.hook_count + 1
+end
+
+function M.refresh_runtime_aliases(registry)
+    local backend_manager = Managers and Managers.backend
+    local item_interface = backend_manager and backend_manager._interfaces
+        and backend_manager._interfaces.items
+
+    if not item_interface then
+        return false
+    end
+
+    local stores = {
+        "_loadouts",
+        "_bot_loadouts",
+        "_career_loadouts",
+        "_selected_career_custom_loadouts",
+        "_default_loadouts",
+        "_default_loadout_overrides",
+    }
+
+    for _, store_name in ipairs(stores) do
+        local store = item_interface[store_name]
+
+        if type(store) == "table" and store[registry.DONOR_CAREER_NAME] ~= nil then
+            store[registry.CAREER_NAME] = store[registry.DONOR_CAREER_NAME]
+        end
+    end
+
+    return true
 end
 
 function M.loadout_status(registry)
@@ -57,6 +118,8 @@ function M.loadout_status(registry)
 end
 
 function M.install_runtime_guards(registry)
+    M.refresh_runtime_aliases(registry)
+
     if status.runtime_guards_installed then
         return true
     end
@@ -106,22 +169,14 @@ function M.install(registry)
     mod:hook("BackendInterfaceItemPlayfab", "get_loadout", function(func, self, ...)
         local loadouts = func(self, ...)
 
-        if type(loadouts) == "table" and loadouts[registry.DONOR_CAREER_NAME] then
-            loadouts[registry.CAREER_NAME] = loadouts[registry.DONOR_CAREER_NAME]
-        end
-
-        return loadouts
+        return expose_donor_loadout(self, loadouts, registry)
     end)
     status.hook_count = status.hook_count + 1
 
     mod:hook("BackendInterfaceItemPlayfab", "get_bot_loadout", function(func, self, ...)
         local loadouts = func(self, ...)
 
-        if type(loadouts) == "table" and loadouts[registry.DONOR_CAREER_NAME] then
-            loadouts[registry.CAREER_NAME] = loadouts[registry.DONOR_CAREER_NAME]
-        end
-
-        return loadouts
+        return expose_donor_loadout(self, loadouts, registry)
     end)
     status.hook_count = status.hook_count + 1
 

@@ -2,6 +2,11 @@
 
 This guide maps the career system in Vermintide 2 source version 6.11.3 and translates it into a runtime-mod implementation plan for Pusfume. Research was verified against upstream commit `c5e4968b` (`Added Version 6.11.3 06-02-26`). Paths refer to the local `Vermintide-2-Source-Code` checkout. The game source is research material and is not copied into this repository.
 
+The career-registration analysis below is complemented by the
+[live-confirmed native character milestone](NATIVE_CHARACTER_MILESTONE.md),
+which documents the successful model, animation, material, build, and
+deployment path.
+
 ## Executive summary
 
 A career is not one self-contained class. It is a name shared across several registries that are normally assembled during game startup:

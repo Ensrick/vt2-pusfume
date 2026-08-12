@@ -13,4 +13,21 @@
 | Derived content | Rendered from Janfon's Pusfume model, which combines adapted VT2 Skaven visual assets with original skin base-color and eye work |
 | Distribution scope | Transformed UI render only; raw extracted VT2 textures are not committed |
 
-The image is an interim menu preview, not a playable runtime model. Replace it only with a creator-approved render or with a compiled `.bsi`/`.unit` integration that has passed deformation testing.
+The image remains the source-safe fallback preview. The private native build now replaces it at runtime with a live-confirmed compiled Pusfume unit.
+
+## Private native placeholder
+
+| Field | Value |
+| --- | --- |
+| Creator | Janfon / `notfuegonasus` with adapted VT2 Skaven source assets |
+| Handoff date | 2026-07-15 |
+| Repository status | Private/untracked under `.build/pusfume_handoff` |
+| Original work | Pusfume skin base color and eyes; integration and atlas reconstruction by the project |
+| Derived content | Placeholder mesh, armature, most textures, and game child material binding derive from installed VT2 content |
+| Current distribution | Friends-only Workshop development item `3764954245` |
+| Public-release status | Not approved; provenance and redistribution review required |
+
+ManifestID `2405082174877027150` is the first live-confirmed native baseline.
+It visibly deforms, renders the reconstructed atlas, plays idle/walk, and does
+not retain the donor green emissive effect. This technical success does not
+change the asset's publication restrictions.

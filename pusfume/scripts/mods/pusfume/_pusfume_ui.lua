@@ -18,8 +18,10 @@ local state = {
     modern_card_seen = false,
     modern_hook_installed = false,
     preview_hook_installed = false,
+    previewer_purity_installed = false,
     preview_widget_seen = false,
     donor_preview_suppressed = false,
+    native_preview_enabled = false,
     selection_seen = false,
     target_column = nil,
 }
@@ -306,7 +308,98 @@ local function install_legacy_hooks(registry)
     state.legacy_hook_installed = true
 end
 
-local function install_preview_hooks(registry)
+local function install_previewer_purity_hooks(registry, native)
+    if state.previewer_purity_installed or not MenuWorldPreviewer then
+        return
+    end
+
+    -- One hook covers every menu surface that previews a career through
+    -- MenuWorldPreviewer (character selection AND the inventory hero view):
+    -- when the previewed career is Pusfume, force the native skin instead of
+    -- the equipped donor Ranger skin (the inventory surface resolved the
+    -- equipped loadout skin and therefore spawned Bardin), and flag the
+    -- previewer so its weapon and ammo units stay hidden.
+    mod:hook(MenuWorldPreviewer, "request_spawn_hero_unit", function(func, previewer,
+            profile_name, career_index, state_character, callback, optional_scale,
+            camera_move_duration, optional_skin, reset_camera)
+        local native_skin = native.native_skin_name()
+        local is_pusfume = native_skin
+            and career_index == registry.find_career_index()
+            and (profile_name == registry.PROFILE_NAME or profile_name == "bardin")
+
+        if is_pusfume then
+            previewer._pusfume_preview_active = true
+            optional_skin = native_skin
+            mod:info("[pusfume] Menu previewer forcing the native Pusfume skin")
+        else
+            previewer._pusfume_preview_active = nil
+        end
+
+        return func(previewer, profile_name, career_index, state_character, callback,
+            optional_scale, camera_move_duration, optional_skin, reset_camera)
+    end)
+
+    -- The previewer spawns the mesh attachment raw, so its packaged idle/walk
+    -- controller never starts by itself; mirror the gameplay activation.
+    mod:hook_safe(MenuWorldPreviewer, "_spawn_hero_unit", function(previewer)
+        if not previewer._pusfume_preview_active then
+            return
+        end
+
+        local mesh_unit = previewer.mesh_unit
+
+        if not mesh_unit or not Unit.alive(mesh_unit)
+                or not Unit.has_animation_state_machine(mesh_unit) then
+            return
+        end
+
+        Unit.set_animation_bone_mode(mesh_unit, "transform")
+        Unit.set_bones_lod(mesh_unit, 0)
+        Unit.enable_animation_state_machine(mesh_unit)
+
+        if Unit.has_animation_event(mesh_unit, "enable") then
+            Unit.animation_event(mesh_unit, "enable")
+        end
+
+        if Unit.has_animation_event(mesh_unit, "idle") then
+            Unit.animation_event(mesh_unit, "idle")
+        end
+
+        -- The preview mesh spawns with the compiled standard materials, which
+        -- have no skinning permutation - the controller was running against a
+        -- rigid render path. The donor material carries the character shader,
+        -- so the menu idle only becomes visible after this swap.
+        native.apply_donor_to_unit(mesh_unit)
+
+        mod:info("[pusfume] Menu previewer native controller enabled")
+    end)
+
+    mod:hook_safe(MenuWorldPreviewer, "_update_units_visibility", function(previewer)
+        if not previewer._pusfume_preview_active then
+            return
+        end
+
+        local equipment_units = previewer._equipment_units
+
+        if not equipment_units then
+            return
+        end
+
+        for _, hands in pairs(equipment_units) do
+            if type(hands) == "table" then
+                for _, weapon_unit in pairs(hands) do
+                    if weapon_unit and Unit.alive(weapon_unit) then
+                        Unit.set_unit_visibility(weapon_unit, false)
+                    end
+                end
+            end
+        end
+    end)
+
+    state.previewer_purity_installed = true
+end
+
+local function install_preview_hooks(registry, native)
     if state.preview_hook_installed or not CharacterSelectionStateCharacter then
         return
     end
@@ -317,13 +410,26 @@ local function install_preview_hooks(registry)
 
     mod:hook(CharacterSelectionStateCharacter, "_spawn_hero_unit", function(func, window, hero_name)
         if is_pusfume_selection(window, registry) then
+            if native.preview_enabled() then
+                sync_preview_visibility(window, false)
+                state.native_preview_enabled = true
+                mod:info("[pusfume] Requesting native Pusfume hero preview")
+
+                local spawn_callback = callback(window, "cb_hero_unit_spawned", hero_name)
+
+                -- Equipped skins resolve through the donor backend. Force the
+                -- base skin so Pusfume cannot preview as Ranger Veteran.
+                return window.world_previewer:request_spawn_hero_unit(hero_name,
+                    window._selected_career_index, true, spawn_callback, nil, 0.5)
+            end
+
             local world_previewer = window.world_previewer
 
             suppress_donor_preview(world_previewer)
             sync_preview_visibility(window, true)
             state.donor_preview_suppressed = true
 
-            mod:info("[pusfume] Suppressed Ranger Veteran menu unit; using model-derived UI preview")
+            mod:info("[pusfume] Native hero preview disabled; using crash-safe model-derived UI preview")
 
             return
         end
@@ -336,10 +442,11 @@ local function install_preview_hooks(registry)
     state.preview_hook_installed = true
 end
 
-function M.install(registry)
+function M.install(registry, native)
     install_modern_hooks(registry)
     install_legacy_hooks(registry)
-    install_preview_hooks(registry)
+    install_preview_hooks(registry, native)
+    install_previewer_purity_hooks(registry, native)
 
     state.hook_installed = state.modern_hook_installed or state.legacy_hook_installed
 
