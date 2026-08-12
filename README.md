@@ -24,6 +24,25 @@ Contributions must follow [CONTRIBUTING.md](CONTRIBUTING.md), including issue-li
 
 This prototype supports the Adventure Keep and Adventure missions only. Chaos Wastes snapshots its career list before runtime mods register, and Weaves/Versus use separate career and loadout paths; Pusfume therefore locks itself in those mechanisms instead of risking an invalid spawn.
 
+## Blender authoring
+
+The repository includes an installable **VT2 Content Tools** extension for
+Blender **5.2.0 LTS**. It validates character rigs, UVs, material slots,
+four-influence skin weights, and active animation clips, then exports the model,
+active clip, referenced textures, and a hash-verified handoff report with the
+FBX settings confirmed by Pusfume. It also mirrors `j_left*` and `j_right*`
+bones directly in Pose Mode without renaming the VT2 rig. This removes Maya and Autodesk accounts from
+Janfon's authoring/export path; VT2's SDK/VMB compiler is still required for
+the final runtime resources.
+
+Animators can download the ready-to-install
+[`vt2_content_tools-0.6.0.zip`](https://github.com/Ensrick/vt2-pusfume/releases/download/vt2-content-tools-v0.6.0/vt2_content_tools-0.6.0.zip)
+directly. Do not extract it; install the ZIP through Blender 5.2's **Edit >
+Preferences > Get Extensions > Install from Disk** command. Developers can
+build the same package with `py -3 tools\package_blender_addon.py`. Follow
+[BLENDER_CONTENT_TOOLS.md](docs/BLENDER_CONTENT_TOOLS.md) for the complete
+artist workflow.
+
 ## Build
 
 From this repository:
@@ -38,7 +57,7 @@ Run the source compatibility check before building:
 .\tools\Test-PusfumeSource.ps1
 ```
 
-The output is written to `pusfume/bundleV2`. See [LIVE_TEST_CHECKLIST.md](docs/LIVE_TEST_CHECKLIST.md) for the first in-game pass, [CAREER_SYSTEM.md](docs/CAREER_SYSTEM.md) for the reverse-engineered architecture, and [ASSET_PIPELINE.md](docs/ASSET_PIPELINE.md) for Janfon's art handoff.
+The output is written to `pusfume/bundleV2`. See [LIVE_TEST_CHECKLIST.md](docs/LIVE_TEST_CHECKLIST.md) for the first in-game pass, [CAREER_SYSTEM.md](docs/CAREER_SYSTEM.md) for the reverse-engineered architecture, [ASSET_PIPELINE.md](docs/ASSET_PIPELINE.md) for Janfon's art handoff, and [BLENDER_CONTENT_TOOLS.md](docs/BLENDER_CONTENT_TOOLS.md) for the no-Maya Blender workflow.
 
 ## Asset policy
 
