@@ -32,3 +32,11 @@ compiler. The receiving mod project still creates and compiles `.unit`,
 
 Install the packaged ZIP through **Edit > Preferences > Get Extensions >
 Install from Disk**, then open **3D View > Sidebar > VT2**.
+
+## Download
+
+Download the installable
+[`vt2_content_tools-0.6.0.zip`](https://github.com/Ensrick/vt2-pusfume/releases/download/vt2-content-tools-v0.6.0/vt2_content_tools-0.6.0.zip)
+from the GitHub release. Do not extract it. In Blender 5.2, choose **Edit >
+Preferences > Get Extensions > menu > Install from Disk**, select the ZIP, and
+enable **VT2 Content Tools** if Blender does not enable it automatically.

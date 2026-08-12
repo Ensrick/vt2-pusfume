@@ -11,19 +11,23 @@ texture, package, and bundle resources.
 
 ## Install
 
-Build the installable package from the repository root:
-
-```powershell
-py -3 tools\package_blender_addon.py
-```
-
-This writes `.build/dist/vt2_content_tools-0.6.0.zip`. In Blender 5.2:
+For animators, download
+[`vt2_content_tools-0.6.0.zip`](https://github.com/Ensrick/vt2-pusfume/releases/download/vt2-content-tools-v0.6.0/vt2_content_tools-0.6.0.zip)
+from the GitHub release. Do not extract the ZIP. In Blender 5.2:
 
 1. Open **Edit > Preferences > Get Extensions**.
 2. Open the menu and choose **Install from Disk**.
 3. Select `vt2_content_tools-0.6.0.zip`.
 4. Open the 3D Viewport and press `N` to show the sidebar.
 5. Select the **VT2** tab.
+
+Developers can build the same deterministic package from the repository root:
+
+```powershell
+py -3 tools\package_blender_addon.py
+```
+
+This writes `.build/dist/vt2_content_tools-0.6.0.zip`.
 
 The package does not need Maya, an Autodesk account, a network service, or a
 machine-specific Python installation.

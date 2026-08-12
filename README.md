@@ -35,9 +35,13 @@ bones directly in Pose Mode without renaming the VT2 rig. This removes Maya and 
 Janfon's authoring/export path; VT2's SDK/VMB compiler is still required for
 the final runtime resources.
 
-Build the installable ZIP with `py -3 tools\package_blender_addon.py` and follow
-[BLENDER_CONTENT_TOOLS.md](docs/BLENDER_CONTENT_TOOLS.md) for installation and
-the artist workflow.
+Animators can download the ready-to-install
+[`vt2_content_tools-0.6.0.zip`](https://github.com/Ensrick/vt2-pusfume/releases/download/vt2-content-tools-v0.6.0/vt2_content_tools-0.6.0.zip)
+directly. Do not extract it; install the ZIP through Blender 5.2's **Edit >
+Preferences > Get Extensions > Install from Disk** command. Developers can
+build the same package with `py -3 tools\package_blender_addon.py`. Follow
+[BLENDER_CONTENT_TOOLS.md](docs/BLENDER_CONTENT_TOOLS.md) for the complete
+artist workflow.
 
 ## Build
 
