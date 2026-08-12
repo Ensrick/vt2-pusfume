@@ -2,6 +2,21 @@
 
 Pusfume changes synchronized VT2 career data and can crash every connected peer when registration, assets, or loadouts diverge. Treat every change as production code even while the mod is experimental.
 
+## Project-manager authority
+
+The user-designated **Pusfume project-manager Sol instance** has full authority
+to change any file, code, asset, configuration, build input, documentation, or
+project structure in this repository when the change is needed to make Pusfume
+work. That authority includes replacing prototypes, refactoring across existing
+ownership boundaries, and removing Pusfume code that blocks the working design;
+no directory or existing implementation is reserved from it.
+
+This grant does not waive repository safety or provenance. Changes must preserve
+reviewable Git history, avoid destructive handling of unrelated work, respect
+asset licenses and redistribution permissions, and satisfy the relevant source,
+CI, and live-test evidence requirements below. It grants authority over this
+Pusfume repository, not unrelated repositories or third-party projects.
+
 ## Required workflow
 
 1. Search the issue tracker before starting work.
