@@ -58,9 +58,27 @@ class PusfumeAtlasLayoutTests(unittest.TestCase):
     def test_runtime_regions_derive_from_manifest(self):
         self.assertEqual(self.layout["atlas_size"], atlas.ATLAS_SIZE)
         self.assertEqual(set(self.layout["materials"]), set(atlas.ATLAS_REGIONS))
+        self.assertEqual((1, 1), atlas.ATLAS_REGIONS["p_main"]["origin"])
+        self.assertEqual((2046, 4094), atlas.ATLAS_REGIONS["p_main"]["size"])
         self.assertEqual((1008, 1008), atlas.ATLAS_REGIONS["p_glob"]["size"])
         self.assertLess(atlas.ATLAS_REGIONS["p_glob"]["allowed_min"][0], 0)
         self.assertGreater(atlas.ATLAS_REGIONS["p_glob"]["allowed_max"][0], 1)
+
+    def test_body_atlas_transform_stays_within_one_source_texel(self):
+        region = atlas.ATLAS_REGIONS["p_main"]
+        atlas_size = atlas.ATLAS_SIZE
+        samples = ((0.0, 0.0), (0.25, 0.75), (0.5, 0.5), (1.0, 1.0))
+        for source_u, source_v in samples:
+            atlas_u = (
+                region["origin"][0] + source_u * region["size"][0]
+            ) / atlas_size
+            atlas_v = (
+                region["origin"][1] + source_v * region["size"][1]
+            ) / atlas_size
+            sampled_body_u = atlas_u * atlas_size / 2048
+            sampled_body_v = atlas_v * atlas_size / 4096
+            self.assertLessEqual(abs(source_u - sampled_body_u) * 2048, 1.0)
+            self.assertLessEqual(abs(source_v - sampled_body_v) * 4096, 1.0)
 
     def test_only_dedicated_whiskers_retain_diffuse_alpha(self):
         self.assertEqual(["df"], self.layout["force_opaque_suffixes"])

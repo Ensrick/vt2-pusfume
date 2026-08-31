@@ -10,6 +10,24 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- v0.6.104 adopts the Warlock Engineer pipeline's source-UV preservation rule
+  for Pusfume's third-person body. The body source already exactly fills its
+  `2048x4096` atlas tile, but the exporter contracted every `p_main` UV by an
+  eight-pixel inset without contracting the image to match. That shifted the
+  diffuse, normal, and response samples away from Janfon's Blender coordinates
+  and could expose the reported torso-to-leg seam. Janfon's authored UV minimum
+  is `-0.000094` (`-0.19` source pixels), so a zero inset would wrap those loops
+  into unrelated atlas data; the body now uses the minimum safe one-pixel
+  inset, reducing coordinate displacement from eight pixels to at most one.
+  Other atlas materials, the proven Globadier child, fur, whiskers, and
+  emission handling are unchanged. Regression tests enforce the measured
+  source-to-atlas displacement ceiling. Blender subprocesses now fail the
+  build on Python exceptions instead of permitting stale generated output, and
+  the canonical build accepts an explicit extracted Globadier material donor
+  when matching installed game bundles are unavailable while retaining all
+  payload, parent, channel, and patch-count validation. The complete candidate
+  was hash-verified locally and uploaded friends-only as Workshop ManifestID
+  `8179178955685844286` (#28).
 - Document the donor-audited Pusfume ragdoll pipeline, including the one-owner
   linked-child safety gate, immutable export-rig rule, compiled unit/state
   machine inspection, Blender 5.2 handoff requirements, offline validation,

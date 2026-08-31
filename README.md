@@ -308,6 +308,9 @@ py -m unittest discover -s tests -v
   -FirstPersonMaterialDonor ".build\donor_human_1p_extract\046F5616B1180D05.material" `
   -VersusFirstPersonBlend ".build\janfon_1p_claws_20260719\pusfume_1p_arms claws base.blend" `
   -VersusFirstPersonDonorUnit ".build\donor_skaven_1p_extract\B62B2EB36EEED507.unit" `
+  -ThirdPersonMaterialDonor ".build\generated-native\donor-bundle-extract\90BDF3BAC6F81BA8.material" `
+  -WhiskerMaterialDonor ".build\generated-native\laurel-bundle-extract\C70B1AAD3B363E24.material" `
+  -FurMaterialDonor ".build\generated-native\skaven-fur-bundle-extract\4322B11893593962.material" `
   -Upload
 ```
 
@@ -319,6 +322,11 @@ This is the only native ship entry point. It runs Blender, VMBLauncher, the VT2
 SDK, deploy, and upload as redirected `CreateNoWindow` children, preserving the
 desktop while retaining captured diagnostics. Do not invoke `vmb.js`,
 VMBLauncher, or `ugc_tool` separately for Pusfume.
+
+The three explicit material-donor switches are fallbacks for reviewed
+extractions when matching VT2 bundles are not installed. The build still
+validates each payload's size, parent, texture slots, and patch count before it
+can enter a bundle. Omit the switches to extract from installed game bundles.
 
 See [LIVE_TEST_CHECKLIST.md](docs/LIVE_TEST_CHECKLIST.md) for the in-game pass,
 [CAREER_SYSTEM.md](docs/CAREER_SYSTEM.md) for the reverse-engineered career

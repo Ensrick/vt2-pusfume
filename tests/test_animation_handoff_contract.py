@@ -228,7 +228,23 @@ class AnimationHandoffContractTests(unittest.TestCase):
         self.assertIn("$startInfo.RedirectStandardOutput = $true", build)
         self.assertIn("$startInfo.RedirectStandardError = $true", build)
         self.assertIn("MainWindowHandle = $process.MainWindowHandle", build)
+        self.assertEqual(6, build.count('"--python-exit-code", "1"'))
         self.assertNotRegex(build, r"(?m)^\s*&\s+")
+
+    def test_native_build_accepts_only_validated_explicit_body_donor(self):
+        build = self.read("tools/Build-NativePusfume.ps1")
+        self.assertIn('[string]$ThirdPersonMaterialDonor = ""', build)
+        self.assertIn('[string]$WhiskerMaterialDonor = ""', build)
+        self.assertIn('[string]$FurMaterialDonor = ""', build)
+        self.assertIn("Explicit Globadier material donor not found", build)
+        self.assertIn("Explicit Laurel whisker donor not found", build)
+        self.assertIn("Explicit Skaven fur donor not found", build)
+        self.assertIn('"--expect-size", "768"', build)
+        self.assertIn('"--expect-size", "128"', build)
+        self.assertIn('"--expect-size", "256"', build)
+        self.assertIn('"--expect-parent", "3D25339231384C80"', build)
+        self.assertIn('"--expect-parent", "F85B289742D5D69A"', build)
+        self.assertIn('"--expect-parent", "7B55B884FAFA2B12"', build)
 
     def test_native_ship_uses_vmblauncher_for_every_distribution_step(self):
         build = self.read("tools/Build-NativePusfume.ps1")

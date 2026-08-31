@@ -4,6 +4,26 @@ Use the **Modded Realm** and the normal Adventure Keep. Pusfume `0.6.67-dev`
 intentionally locks itself in Chaos Wastes, Weaves, Versus, and other
 mechanisms that snapshot or constrain the vanilla career list.
 
+## v0.6.104 body seam test
+
+Test Workshop ManifestID `8179178955685844286`.
+
+Purpose: verify the minimum-safe `p_main` UV transform removes the visible line
+where Pusfume's torso meets his legs without regressing the accepted materials.
+
+1. Open the inventory preview and rotate Pusfume through front, both sides, and
+   back. Inspect the lower torso/waist under both bright and shadowed lighting.
+2. Enter the Keep, enable Tweaker's third-person camera, and repeat the same
+   inspection in sunlight and deep shadow. The skin, painted fur, leather,
+   metal, separate fur cards, and whiskers should match v0.6.103 apart from the
+   corrected body-map alignment.
+3. Walk, jump, crouch, and attack with one hero weapon and one Versus weapon.
+   Confirm the waist line does not open or change with deformation.
+4. Report whether the seam is gone, reduced, unchanged, or only visible at a
+   particular distance/lighting angle. Attach one close screenshot if any line
+   remains; that distinction will isolate authored island padding from the now
+   eliminated atlas-coordinate shift.
+
 ## v0.6.103 Assassin blade tuning test
 
 Test Workshop ManifestID `6073798130686377196`. Purpose: find the correct

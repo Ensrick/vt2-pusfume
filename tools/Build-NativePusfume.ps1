@@ -10,6 +10,9 @@ param(
     [string]$VersusFirstPersonBlend = "",
     [string]$VersusFirstPersonDonorUnit = "",
     [string]$VersusFirstPersonMaterialDonor = ".build\donor_skaven_1p_extract\CE6F40AD55CA6EDF.material",
+    [string]$ThirdPersonMaterialDonor = "",
+    [string]$WhiskerMaterialDonor = "",
+    [string]$FurMaterialDonor = "",
     [switch]$AssassinFirstPersonAnimations,
     [ValidateSet("bsi", "fbx")]
     [string]$FirstPersonFormat = "bsi",
@@ -354,7 +357,7 @@ if ($firstPersonEnabled) {
     }
     $sourceBlendHash = (Get-FileHash -LiteralPath $firstPersonBlendPath -Algorithm SHA256).Hash
     $firstPersonArguments = @(
-        "--background", "--factory-startup", "--disable-autoexec",
+        "--background", "--factory-startup", "--disable-autoexec", "--python-exit-code", "1",
         "--python", $firstPersonTool, "--",
         $firstPersonBlendPath, $firstPersonDonorUnitPath, $firstPersonAssetPath,
         "--align-native-hero-grips")
@@ -383,7 +386,7 @@ if ($versusFirstPersonEnabled) {
     $sourceBlendHash = (Get-FileHash -LiteralPath $versusFirstPersonBlendPath -Algorithm SHA256).Hash
 
     $result = Invoke-HiddenTool -FilePath $blenderExePath -ArgumentList @(
-        "--background", "--factory-startup", "--disable-autoexec",
+        "--background", "--factory-startup", "--disable-autoexec", "--python-exit-code", "1",
         "--python", $versusFirstPersonTool, "--",
         $versusFirstPersonBlendPath, $versusFirstPersonDonorUnitPath,
         $versusFirstPersonAssetPath)
@@ -405,7 +408,7 @@ if ($assassinFirstPersonAnimationsEnabled) {
     $assassinFirstPersonAnimationTool = Join-Path $repoRoot `
         "tools\export_pusfume_1p_actions.py"
     $result = Invoke-HiddenTool -FilePath $blenderExePath -ArgumentList @(
-        "--background", "--factory-startup", "--disable-autoexec",
+        "--background", "--factory-startup", "--disable-autoexec", "--python-exit-code", "1",
         "--python", $assassinFirstPersonAnimationTool, "--",
         $versusFirstPersonBlendPath, $versusFirstPersonDonorUnitPath,
         $assassinFirstPersonAnimationRoot)
@@ -426,7 +429,7 @@ $idleFbxPath = Join-Path $generatedRoot "pusfume_3p_idle.fbx"
 if ([string]::IsNullOrWhiteSpace($IdleAnimationFbx)) {
     $idleFbxTool = Join-Path $repoRoot "tools\generate_idle_pusfume_fbx.py"
     $result = Invoke-HiddenTool -FilePath $blenderExePath -ArgumentList @(
-        "--background", "--factory-startup", "--disable-autoexec",
+        "--background", "--factory-startup", "--disable-autoexec", "--python-exit-code", "1",
         "--python", $idleFbxTool, "--", $modelFbxPath, $idleFbxPath)
     Assert-HiddenToolSuccess $result "Idle Pusfume FBX generation"
 } else {
@@ -444,7 +447,7 @@ if (-not (Test-Path -LiteralPath $idleFbxPath -PathType Leaf) -or `
 
 $animationContractTool = Join-Path $repoRoot "tools\validate_pusfume_animation_contract.py"
 $result = Invoke-HiddenTool -FilePath $blenderExePath -ArgumentList @(
-    "--background", "--factory-startup", "--disable-autoexec",
+    "--background", "--factory-startup", "--disable-autoexec", "--python-exit-code", "1",
     "--python", $animationContractTool, "--",
     $modelFbxPath, $idleFbxPath, $animationFbxPath)
 Assert-HiddenToolSuccess $result "Pusfume animation contract validation"
@@ -455,7 +458,7 @@ if ($useFbxDcc) {
     $animatedModelFbxPath = Join-Path $generatedRoot "pusfume_3p_animated.fbx"
 
     $animatedArguments = @(
-        "--background", "--factory-startup", "--disable-autoexec",
+        "--background", "--factory-startup", "--disable-autoexec", "--python-exit-code", "1",
         "--python", $animatedFbxTool, "--",
         $modelFbxPath, $animationFbxPath, $animatedModelFbxPath)
     if ($LegacyFur) {
@@ -2140,22 +2143,38 @@ if ($SplicedGameChild) {
     # Restore the last empirically coherent body contract: every opaque slot
     # uses the Globadier outfit child, Janfon's authored atlas remains
     # authoritative, and no post-process alters its packed AO response.
-    $donorGameBundle = Join-Path $GameBundleDir "7a8e617a32277fc4"
-    if (-not (Test-Path -LiteralPath $donorGameBundle -PathType Leaf)) {
-        throw "Installed donor game bundle not found: $donorGameBundle"
-    }
-    if (-not (Test-Path -LiteralPath $UnpackerExe -PathType Leaf)) {
-        throw "vt2_bundle_unpacker not found: $UnpackerExe"
-    }
+    $gameChildPath = $null
+    if (-not [string]::IsNullOrWhiteSpace($ThirdPersonMaterialDonor)) {
+        $gameChildCandidate = if ([IO.Path]::IsPathRooted($ThirdPersonMaterialDonor)) {
+            $ThirdPersonMaterialDonor
+        } else {
+            Join-Path $repoRoot $ThirdPersonMaterialDonor
+        }
+        if (-not (Test-Path -LiteralPath $gameChildCandidate -PathType Leaf)) {
+            throw "Explicit Globadier material donor not found: $gameChildCandidate"
+        }
+        $gameChildPath = (Resolve-Path -LiteralPath $gameChildCandidate).Path
+        Write-Host "Using explicit Globadier material donor: $gameChildPath"
+    } else {
+        $donorGameBundle = Join-Path $GameBundleDir "7a8e617a32277fc4"
+        if (-not (Test-Path -LiteralPath $donorGameBundle -PathType Leaf)) {
+            throw ("Installed donor game bundle not found: $donorGameBundle. " +
+                "Supply -ThirdPersonMaterialDonor with an extracted " +
+                "90BDF3BAC6F81BA8.material from the matching game build.")
+        }
+        if (-not (Test-Path -LiteralPath $UnpackerExe -PathType Leaf)) {
+            throw "vt2_bundle_unpacker not found: $UnpackerExe"
+        }
 
-    $spliceExtractDir = Join-Path $generatedRoot "donor-bundle-extract"
-    New-Item -ItemType Directory -Path $spliceExtractDir -Force | Out-Null
-    $result = Invoke-HiddenTool -FilePath $UnpackerExe -ArgumentList @(
-        "extract", $donorGameBundle, $spliceExtractDir, "--flatten")
-    Assert-HiddenToolSuccess $result "Globadier donor bundle extraction"
-    $gameChildPath = Join-Path $spliceExtractDir "90BDF3BAC6F81BA8.material"
-    if (-not (Test-Path -LiteralPath $gameChildPath -PathType Leaf)) {
-        throw "Donor bundle extraction did not produce 90BDF3BAC6F81BA8.material"
+        $spliceExtractDir = Join-Path $generatedRoot "donor-bundle-extract"
+        New-Item -ItemType Directory -Path $spliceExtractDir -Force | Out-Null
+        $result = Invoke-HiddenTool -FilePath $UnpackerExe -ArgumentList @(
+            "extract", $donorGameBundle, $spliceExtractDir, "--flatten")
+        Assert-HiddenToolSuccess $result "Globadier donor bundle extraction"
+        $gameChildPath = Join-Path $spliceExtractDir "90BDF3BAC6F81BA8.material"
+        if (-not (Test-Path -LiteralPath $gameChildPath -PathType Leaf)) {
+            throw "Donor bundle extraction did not produce 90BDF3BAC6F81BA8.material"
+        }
     }
 
     # Slot semantics are verified from the installed child: diffuse,
@@ -2295,20 +2314,37 @@ if ($SplicedGameChild) {
     # Laurel's compiled feather material is the proven skinned alpha-card
     # contract. Preserve its shader parent, alpha scalar, and channel layout;
     # patch only the three texture resources to Janfon's whisker maps.
-    $laurelGameBundle = Join-Path $GameBundleDir "95865e5dbaf202e3"
-    if (-not (Test-Path -LiteralPath $laurelGameBundle -PathType Leaf)) {
-        throw "Installed Laurel game bundle not found: $laurelGameBundle"
-    }
+    $laurelMaterialPath = $null
+    if (-not [string]::IsNullOrWhiteSpace($WhiskerMaterialDonor)) {
+        $laurelCandidate = if ([IO.Path]::IsPathRooted($WhiskerMaterialDonor)) {
+            $WhiskerMaterialDonor
+        } else {
+            Join-Path $repoRoot $WhiskerMaterialDonor
+        }
+        if (-not (Test-Path -LiteralPath $laurelCandidate -PathType Leaf)) {
+            throw "Explicit Laurel whisker donor not found: $laurelCandidate"
+        }
+        $laurelMaterialPath = (Resolve-Path -LiteralPath $laurelCandidate).Path
+        Write-Host "Using explicit Laurel whisker donor: $laurelMaterialPath"
+    } else {
+        $laurelGameBundle = Join-Path $GameBundleDir "95865e5dbaf202e3"
+        if (-not (Test-Path -LiteralPath $laurelGameBundle -PathType Leaf)) {
+            throw ("Installed Laurel game bundle not found: $laurelGameBundle. " +
+                "Supply -WhiskerMaterialDonor with an extracted " +
+                "C70B1AAD3B363E24.material from the matching game build.")
+        }
 
-    $laurelExtractDir = Join-Path $generatedRoot "laurel-bundle-extract"
-    New-Item -ItemType Directory -Path $laurelExtractDir -Force | Out-Null
-    $result = Invoke-HiddenTool -FilePath $UnpackerExe -ArgumentList @(
-        "extract", $laurelGameBundle, $laurelExtractDir, "--flatten",
-        "--include", "*C70B1AAD3B363E24*")
-    Assert-HiddenToolSuccess $result "Laurel donor bundle extraction"
-    $laurelMaterialPath = Join-Path $laurelExtractDir "C70B1AAD3B363E24.material"
-    if (-not (Test-Path -LiteralPath $laurelMaterialPath -PathType Leaf)) {
-        throw "Laurel bundle extraction did not produce C70B1AAD3B363E24.material"
+        $laurelExtractDir = Join-Path $generatedRoot "laurel-bundle-extract"
+        New-Item -ItemType Directory -Path $laurelExtractDir -Force | Out-Null
+        $result = Invoke-HiddenTool -FilePath $UnpackerExe -ArgumentList @(
+            "extract", $laurelGameBundle, $laurelExtractDir, "--flatten",
+            "--include", "*C70B1AAD3B363E24*")
+        Assert-HiddenToolSuccess $result "Laurel donor bundle extraction"
+        $laurelMaterialPath = Join-Path $laurelExtractDir `
+            "C70B1AAD3B363E24.material"
+        if (-not (Test-Path -LiteralPath $laurelMaterialPath -PathType Leaf)) {
+            throw "Laurel bundle extraction did not produce C70B1AAD3B363E24.material"
+        }
     }
 
     $whiskerPayload = Join-Path $generatedRoot "spliced_whisker_payload.bin"
@@ -2353,20 +2389,37 @@ if ($SplicedGameChild) {
         # Fur needs the enemy fur response/ambient contract, not the Laurel
         # plume shader. Preserve Fatshark's native 1-bit climate material and
         # patch only diffuse, normal, and response resources to Pusfume's maps.
-        $skavenFurGameBundle = Join-Path $GameBundleDir "6766ece9a8417e33"
-        if (-not (Test-Path -LiteralPath $skavenFurGameBundle -PathType Leaf)) {
-            throw "Installed Skaven fur game bundle not found: $skavenFurGameBundle"
-        }
-        $skavenFurExtractDir = Join-Path $generatedRoot "skaven-fur-bundle-extract"
-        New-Item -ItemType Directory -Path $skavenFurExtractDir -Force | Out-Null
-        $result = Invoke-HiddenTool -FilePath $UnpackerExe -ArgumentList @(
-            "extract", $skavenFurGameBundle, $skavenFurExtractDir, "--flatten",
-            "--include", "*4322B11893593962*")
-        Assert-HiddenToolSuccess $result "Skaven fur donor bundle extraction"
-        $skavenFurMaterialPath = Join-Path $skavenFurExtractDir `
-            "4322B11893593962.material"
-        if (-not (Test-Path -LiteralPath $skavenFurMaterialPath -PathType Leaf)) {
-            throw "Skaven fur extraction did not produce 4322B11893593962.material"
+        $skavenFurMaterialPath = $null
+        if (-not [string]::IsNullOrWhiteSpace($FurMaterialDonor)) {
+            $furCandidate = if ([IO.Path]::IsPathRooted($FurMaterialDonor)) {
+                $FurMaterialDonor
+            } else {
+                Join-Path $repoRoot $FurMaterialDonor
+            }
+            if (-not (Test-Path -LiteralPath $furCandidate -PathType Leaf)) {
+                throw "Explicit Skaven fur donor not found: $furCandidate"
+            }
+            $skavenFurMaterialPath = (Resolve-Path -LiteralPath $furCandidate).Path
+            Write-Host "Using explicit Skaven fur donor: $skavenFurMaterialPath"
+        } else {
+            $skavenFurGameBundle = Join-Path $GameBundleDir "6766ece9a8417e33"
+            if (-not (Test-Path -LiteralPath $skavenFurGameBundle -PathType Leaf)) {
+                throw ("Installed Skaven fur game bundle not found: " +
+                    "$skavenFurGameBundle. Supply -FurMaterialDonor with an " +
+                    "extracted 4322B11893593962.material from the matching game build.")
+            }
+            $skavenFurExtractDir = Join-Path $generatedRoot `
+                "skaven-fur-bundle-extract"
+            New-Item -ItemType Directory -Path $skavenFurExtractDir -Force | Out-Null
+            $result = Invoke-HiddenTool -FilePath $UnpackerExe -ArgumentList @(
+                "extract", $skavenFurGameBundle, $skavenFurExtractDir, "--flatten",
+                "--include", "*4322B11893593962*")
+            Assert-HiddenToolSuccess $result "Skaven fur donor bundle extraction"
+            $skavenFurMaterialPath = Join-Path $skavenFurExtractDir `
+                "4322B11893593962.material"
+            if (-not (Test-Path -LiteralPath $skavenFurMaterialPath -PathType Leaf)) {
+                throw "Skaven fur extraction did not produce 4322B11893593962.material"
+            }
         }
 
         $furPayload = Join-Path $generatedRoot "spliced_fur_payload.bin"
