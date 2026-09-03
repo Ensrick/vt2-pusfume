@@ -1,14 +1,21 @@
 local mod = get_mod("pusfume")
+local buff_perks = require("scripts/unit_extensions/default_player_unit/buffs/settings/buff_perk_names")
 
 local M = {}
 
 local CAREER_NAME = "pusfume"
-local CHALLENGE_CATEGORY = "pusfume_scheme"
-local CHALLENGE_SKAVEN = "pusfume_scheme_kill_skaven"
-local CHALLENGE_SPECIALS = "pusfume_scheme_kill_skaven_specials"
-local REWARD_STRENGTH = "pusfume_scheme_reward_strength"
-local REWARD_SPEED = "pusfume_scheme_reward_speed"
-local STATION_DURATION = 20
+local ACTIVE_COOLDOWN = 90
+local iteration_effect_by_breed = {
+    beastmen_standard_bearer = "wargor",
+    chaos_corruptor_sorcerer = "lifeleech",
+    chaos_vortex_sorcerer = "blightstormer",
+    skaven_gutter_runner = "gutterrunner",
+    skaven_loot_rat = "sackrat",
+    skaven_pack_master = "packmaster",
+    skaven_poison_wind_globadier = "gasrat",
+    skaven_ratling_gunner = "ratling",
+    skaven_warpfire_thrower = "warpfire_thrower",
+}
 
 local poison_damage_types = {
     arrow_poison = true,
@@ -21,10 +28,14 @@ local poison_damage_sources = {
     skaven_poison_wind_globadier = true,
 }
 local state = {
+    augmentation_activations = 0,
+    augmentation_armed = false,
     installed = false,
+    iteration_effect = nil,
+    iteration_procs = 0,
+    iteration_special = nil,
     poison_blocks = 0,
-    station_deployments = 0,
-    station = nil,
+    scaredy_rat_procs = 0,
 }
 
 local function is_pusfume_unit(unit)
@@ -35,14 +46,6 @@ local function is_pusfume_unit(unit)
     local career_extension = ScriptUnit.has_extension(unit, "career_system")
 
     return career_extension and career_extension:career_name() == CAREER_NAME
-end
-
-local function is_skaven_breed(breed)
-    if not breed then
-        return false
-    end
-
-    return breed.race == "skaven" or type(breed.name) == "string" and string.sub(breed.name, 1, 7) == "skaven_"
 end
 
 local function append_lookup(lookup, name)
@@ -74,109 +77,33 @@ local function register_buff_template(name, definition)
     append_lookup(NetworkLookup.buff_templates, name)
 end
 
+local function add_networked_buff(owner_unit, buff_name)
+    local entity_manager = Managers.state.entity
+    local buff_system = entity_manager and entity_manager:system("buff_system")
 
-local function register_challenges()
-    InGameChallengeTemplates[CHALLENGE_SKAVEN] = {
-        default_target = 40,
-        description = "pusfume_scheme_kill_skaven_description",
-        events = {
-            on_player_killed_enemy = function(t, data, killing_blow, breed_killed)
-                return is_skaven_breed(breed_killed) and 1 or nil
-            end,
-        },
-    }
-    InGameChallengeTemplates[CHALLENGE_SPECIALS] = {
-        default_target = 5,
-        description = "pusfume_scheme_kill_specials_description",
-        events = {
-            on_player_killed_enemy = function(t, data, killing_blow, breed_killed)
-                return is_skaven_breed(breed_killed) and breed_killed.special and 1 or nil
-            end,
-        },
-    }
-    InGameChallengeRewards[REWARD_STRENGTH] = {
-        icon = "icon_objective_potion",
-        pickup_type = "damage_boost_potion",
-        sound = "Play_hud_grail_knight_charge",
-        target = "owner",
-        type = "pickup",
-        pickup_spawn_type = PickupSpawnType.DropIfFull,
-    }
-    InGameChallengeRewards[REWARD_SPEED] = {
-        icon = "icon_objective_potion",
-        pickup_type = "speed_boost_potion",
-        sound = "Play_hud_grail_knight_stamina",
-        target = "owner",
-        type = "pickup",
-        pickup_spawn_type = PickupSpawnType.DropIfFull,
-    }
+    if not buff_system then
+        return false
+    end
 
-    append_lookup(NetworkLookup.challenges, CHALLENGE_SKAVEN)
-    append_lookup(NetworkLookup.challenges, CHALLENGE_SPECIALS)
-    append_lookup(NetworkLookup.challenge_rewards, REWARD_STRENGTH)
-    append_lookup(NetworkLookup.challenge_rewards, REWARD_SPEED)
-    append_lookup(NetworkLookup.challenge_categories, CHALLENGE_CATEGORY)
+    buff_system:add_buff(owner_unit, buff_name, owner_unit, false)
+
+    return true
 end
 
 
-PassiveAbilityPusfumeScheme = class(PassiveAbilityPusfumeScheme)
+PassiveAbilityPusfumeAggressiveIteration = class(PassiveAbilityPusfumeAggressiveIteration)
 
-PassiveAbilityPusfumeScheme.init = function(self, extension_init_context, unit, extension_init_data)
-    self._is_server = extension_init_context.is_server
-    self._player_unique_id = extension_init_data.player:unique_id()
+PassiveAbilityPusfumeAggressiveIteration.init = function(self, extension_init_context, unit)
+    self._owner_unit = unit
 end
 
-PassiveAbilityPusfumeScheme.extensions_ready = function(self)
-    if not self._is_server then
-        return
-    end
-
-    local level_transition_handler = Managers.level_transition_handler
-    local level_key = level_transition_handler and level_transition_handler:get_current_level_keys()
-    local level_settings = level_key and LevelSettings[level_key]
-
-    if level_settings and level_settings.hub_level then
-        return
-    end
-
-    local challenge_manager = Managers.venture and Managers.venture.challenge
-
-    if not challenge_manager then
-        mod:warning("[pusfume] The Great Scheme could not find the challenge manager")
-        return
-    end
-
-    local owner_id = self._player_unique_id
-    local existing = challenge_manager:get_challenges_filtered({}, CHALLENGE_CATEGORY, owner_id)
-
-    if #existing > 0 then
-        for i = 1, #existing do
-            existing[i]:set_paused(false)
-        end
-
-        return
-    end
-
-    local completed = challenge_manager:get_completed_challenges_filtered({}, CHALLENGE_CATEGORY, owner_id)
-
-    if #completed == 0 then
-        challenge_manager:add_challenge(CHALLENGE_SKAVEN, false, CHALLENGE_CATEGORY, REWARD_STRENGTH, owner_id, 40)
-        challenge_manager:add_challenge(CHALLENGE_SPECIALS, false, CHALLENGE_CATEGORY, REWARD_SPEED, owner_id, 5)
-        mod:info("[pusfume] The Great Scheme started two placeholder Skaven quests")
-    end
+PassiveAbilityPusfumeAggressiveIteration.extensions_ready = function(self)
 end
 
-PassiveAbilityPusfumeScheme.destroy = function(self)
-    local challenge_manager = Managers.venture and Managers.venture.challenge
-
-    if not self._is_server or not challenge_manager then
-        return
-    end
-
-    local challenges = challenge_manager:get_challenges_filtered({}, CHALLENGE_CATEGORY, self._player_unique_id)
-
-    for i = 1, #challenges do
-        challenges[i]:set_paused(true)
+PassiveAbilityPusfumeAggressiveIteration.destroy = function(self)
+    if is_pusfume_unit(self._owner_unit) then
+        state.iteration_effect = nil
+        state.iteration_special = nil
     end
 end
 
@@ -206,28 +133,15 @@ CareerAbilityPusfumeIngenuity.update = function(self)
         return
     end
 
-    local position = POSITION_LOOKUP[self._owner_unit]
-
-    if not position then
-        return
-    end
-
-    local now = Managers.time:time("game")
-
-    state.station = {
-        expires_at = now + STATION_DURATION,
-        owner_unit = self._owner_unit,
-        position = Vector3Box(position),
-    }
-    state.station_deployments = state.station_deployments + 1
+    state.augmentation_activations = state.augmentation_activations + 1
+    state.augmentation_armed = true
     self._career_extension:start_activated_ability_cooldown()
 
     if self._local_player then
-        mod:echo(mod:localize("pusfume_ingenuity_station_placeholder"))
+        mod:echo(mod:localize("pusfume_ingenuity_armed_placeholder"))
     end
 
-    mod:info("[pusfume] Skaven Ingenuity station scaffold deployed x=%.2f y=%.2f z=%.2f duration=%ds",
-        position.x, position.y, position.z, STATION_DURATION)
+    mod:info("[pusfume] Moulder Ingenuity armed the next consumable selection")
 end
 
 CareerAbilityPusfumeIngenuity.stop = function(self)
@@ -240,20 +154,40 @@ local function register_buffs()
     fassert(type(BuffTemplates) == "table" and NetworkLookup and type(NetworkLookup.buff_templates) == "table",
         "Pusfume requires VT2's buff and network registries before gameplay registration.")
 
-    ProcFunctions.pusfume_scaredy_rat_proc = function(owner_unit)
+    ProcFunctions.pusfume_aggressive_iteration_proc = function(owner_unit, buff, params)
         if not Unit.alive(owner_unit) or not is_pusfume_unit(owner_unit) then
             return
         end
 
-        local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
+        local breed = params and params[2]
 
-        buff_extension:add_buff("pusfume_scaredy_rat_speed")
+        if not breed or not breed.special then
+            return
+        end
+
+        local breed_name = breed.name or "unknown_special"
+        state.iteration_effect = iteration_effect_by_breed[breed_name]
+        state.iteration_procs = state.iteration_procs + 1
+        state.iteration_special = breed_name
+        add_networked_buff(owner_unit, "pusfume_aggressive_iteration_ready")
+        mod:info("[pusfume] Aggressive Iteration captured special=%s effect=%s",
+            breed_name, tostring(state.iteration_effect or "unmapped"))
     end
 
-    register_buff_template("pusfume_scaredy_rat_listener", {
-        event = "on_damage_taken",
+    register_buff_template("pusfume_aggressive_iteration_listener", {
+        event = "on_kill",
         event_buff = true,
-        buff_func = "pusfume_scaredy_rat_proc",
+        buff_func = "pusfume_aggressive_iteration_proc",
+    })
+    register_buff_template("pusfume_aggressive_iteration_ready", {
+        icon = "bardin_ranger_passive",
+        max_stacks = 1,
+        refresh_durations = true,
+    })
+    register_buff_template("pusfume_scaredy_rat_listener", {
+        perks = {
+            buff_perks.no_moveslow_on_hit,
+        },
     })
     register_buff_template("pusfume_scaredy_rat_speed", {
         apply_buff_func = "apply_movement_buff",
@@ -264,17 +198,10 @@ local function register_buffs()
         refresh_durations = true,
         remove_buff_func = "remove_movement_buff",
     })
-    register_buff_template("pusfume_insider_knowledge_aura", {
-        buff_to_add = "pusfume_insider_knowledge_team",
-        range = 100000,
-        remove_buff_func = "remove_aura_buff",
-        update_frequency = 0.1,
-        update_func = "activate_buff_on_distance",
-    })
-    register_buff_template("pusfume_insider_knowledge_team", {
+    register_buff_template("pusfume_swift_claws", {
         max_stacks = 1,
-        multiplier = 0.05,
-        stat_buff = "power_level_skaven",
+        multiplier = -0.15,
+        stat_buff = "reload_speed",
     })
 end
 
@@ -283,7 +210,7 @@ local function register_abilities()
     ActivatedAbilitySettings.pusfume = {
         {
             ability_class = CareerAbilityPusfumeIngenuity,
-            cooldown = 60,
+            cooldown = ACTIVE_COOLDOWN,
             description = "pusfume_active_description",
             display_name = "pusfume_active_name",
             icon = "bardin_ranger_activated_ability",
@@ -291,16 +218,17 @@ local function register_abilities()
     }
     PassiveAbilitySettings.pusfume = {
         buffs = {
+            "pusfume_aggressive_iteration_listener",
             "pusfume_scaredy_rat_listener",
-            "pusfume_insider_knowledge_aura",
+            "pusfume_swift_claws",
         },
         description = "pusfume_passive_description",
         display_name = "pusfume_passive_name",
         icon = "bardin_ranger_passive",
         passive_ability_classes = {
             {
-                ability_class = PassiveAbilityPusfumeScheme,
-                name = "pusfume_scheme",
+                ability_class = PassiveAbilityPusfumeAggressiveIteration,
+                name = "pusfume_aggressive_iteration",
             },
         },
         perks = {
@@ -313,17 +241,19 @@ local function register_abilities()
                 display_name = "pusfume_scaredy_rat_name",
             },
             {
-                description = "pusfume_insider_knowledge_description",
-                display_name = "pusfume_insider_knowledge_name",
+                description = "pusfume_swift_claws_description",
+                display_name = "pusfume_swift_claws_name",
             },
         },
     }
 end
 
 
-local function install_poison_immunity()
+local function install_damage_traits()
     mod:hook(PlayerUnitHealthExtension, "add_damage", function(func, health_extension, attacker_unit,
-            damage_amount, hit_zone_name, damage_type, hit_position, damage_direction, damage_source_name, ...)
+            damage_amount, hit_zone_name, damage_type, hit_position, damage_direction, damage_source_name,
+            hit_ragdoll_actor, source_attacker_unit, hit_react_type, is_critical_strike, added_dot, first_hit,
+            total_hits, attack_type, backstab_multiplier, target_index)
         if is_pusfume_unit(health_extension.unit)
                 and (poison_damage_types[damage_type] or poison_damage_sources[damage_source_name]) then
             state.poison_blocks = state.poison_blocks + 1
@@ -336,8 +266,28 @@ local function install_poison_immunity()
             return
         end
 
-        return func(health_extension, attacker_unit, damage_amount, hit_zone_name, damage_type, hit_position,
-            damage_direction, damage_source_name, ...)
+        local result = func(health_extension, attacker_unit, damage_amount, hit_zone_name, damage_type,
+            hit_position, damage_direction, damage_source_name, hit_ragdoll_actor, source_attacker_unit,
+            hit_react_type, is_critical_strike, added_dot, first_hit, total_hits, attack_type,
+            backstab_multiplier, target_index)
+        local owner_unit = health_extension.unit
+        local actual_attacker = source_attacker_unit or attacker_unit
+        local side_manager = Managers.state.side
+        local owner_side = side_manager and side_manager.side_by_unit[owner_unit]
+        local attacker_side = actual_attacker and side_manager and side_manager.side_by_unit[actual_attacker]
+        local melee_attack = attack_type == "light_attack" or attack_type == "heavy_attack"
+
+        if melee_attack and damage_amount and damage_amount > 0 and owner_side and attacker_side
+                and owner_side ~= attacker_side and is_pusfume_unit(owner_unit) then
+            local buff_extension = ScriptUnit.has_extension(owner_unit, "buff_system")
+
+            if buff_extension then
+                buff_extension:add_buff("pusfume_scaredy_rat_speed")
+                state.scaredy_rat_procs = state.scaredy_rat_procs + 1
+            end
+        end
+
+        return result
     end)
 end
 
@@ -348,25 +298,19 @@ function M.install()
     end
 
     register_buffs()
-    register_challenges()
     register_abilities()
-    install_poison_immunity()
+    install_damage_traits()
     state.installed = true
 
     mod:command("pusfume_gameplay", "Show Pusfume career-kit diagnostics.", function()
-        local active = state.station and Managers.time and Managers.time:time("game") < state.station.expires_at
-
         mod:echo(string.format(
-            "Pusfume gameplay: poison_blocks=%d station_deployments=%d station_active=%s inventory_upgrades=guarded",
-            state.poison_blocks, state.station_deployments, tostring(active == true)))
+            "Pusfume gameplay: poison_blocks=%d scaredy_rat_procs=%d iteration_procs=%d iteration_special=%s iteration_effect=%s augmentation_activations=%d augmentation_armed=%s payloads=guarded",
+            state.poison_blocks, state.scaredy_rat_procs, state.iteration_procs, tostring(state.iteration_special),
+            tostring(state.iteration_effect), state.augmentation_activations, tostring(state.augmentation_armed)))
     end)
 end
 
 function M.update()
-    if state.station and Managers.time and Managers.time:time("game") >= state.station.expires_at then
-        state.station = nil
-        mod:info("[pusfume] Skaven Ingenuity station scaffold expired")
-    end
 end
 
 function M.status()

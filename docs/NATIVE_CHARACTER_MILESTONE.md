@@ -197,6 +197,15 @@ preserves fractional diffuse alpha by disabling texture preprocessing cuts.
 Live acceptance remains pending; the v0.6.4 body/animation milestone above is
 unchanged.
 
+### v0.6.60 fur correction
+
+Standalone body fur must not reuse the Laurel plume response. The v0.6.60
+build extracts the installed game's native Skaven `mtr_fur_1bit_climate`
+child, verifies its 256-byte payload, parent, and texture channels, then patches
+only Pusfume's diffuse, normal, and response IDs. Whiskers intentionally remain
+on the separate Laurel alpha-card contract. No texture gain or UV change is
+part of this correction.
+
 The layout uses guard insets and repeated edge tiles for wrapped UV regions.
 The audit covers all 24,318 triangles and reports zero escaped UV loops. The
 opaque diffuse atlas is fully opaque; only whiskers retain diffuse alpha.
@@ -236,7 +245,7 @@ Git. A clean public clone cannot produce the native candidate without them.
 ```powershell
 py -m unittest discover -s tests -v
 .\tools\Test-PusfumeSource.ps1
-.\tools\Build-NativePusfume.ps1 -HeroPreview -SplicedGameChild
+.\tools\Build-NativePusfume.ps1 -HeroPreview -SplicedGameChild -Upload
 ```
 
 The build must report:
@@ -251,16 +260,13 @@ The build must report:
 
 ### Upload and manifest verification
 
-```powershell
-& "<VMBLauncher.exe>" upload pusfume `
-  --config .build/vmb-pusfume-settings.json `
-  --no-banner
-```
-
-Do not trust the uploader's final message alone. Confirm that
-`Steam/logs/workshop_log.txt` contains a fresh `Uploaded new content` line and
-record its ManifestID. A full Steam restart may be required before a
-self-authored item reports the new `last_updated` timestamp in the game log.
+`-Upload` is part of the one-shot native pipeline above. The script invokes
+VMBLauncher through a redirected `CreateNoWindow` process, deploys through the
+launcher's hash-verified local/enabled-remote path, and refuses success unless
+`Steam/logs/workshop_log.txt` contains a fresh `Uploaded new content` line for
+item `3764954245`. Do not launch VMBLauncher, `vmb.js`, or `ugc_tool`
+separately. Record the printed ManifestID and compare the next game log's
+`last_updated`; only troubleshoot Steam synchronization if that log is stale.
 
 For Manifest `2405082174877027150`, the expected in-game timestamp is
 `7/16/2026 6:45:43 PM`.
@@ -296,11 +302,19 @@ can reproduce the required character shader binding.
 
 ## Current limitations
 
-- Only idle and walk are animated. Run/sprint, crouch, jump/fall, dodge,
-  attacks, ability actions, ledge states, downed, death, and weapon poses need
-  authored or safely retargeted clips.
+- Third-person animation still covers only idle and walk. Run/sprint, crouch,
+  jump/fall, dodge, attacks, ability actions, ledge states, downed, and death
+  need authored or safely retargeted clips.
+- The v0.6.60 first-person Assassin pipeline exports and compiles Janfon's nine
+  authored Gutter Runner claw clips against his 99-bone attachment skeleton.
+  Equip, idle, block, light, heavy, and push-stab actions are wired; live game
+  validation remains required before this becomes the template for other
+  custom weapon-animation handoffs.
 - The placeholder armature and mesh still need Janfon's planned overhaul.
-- First-person arms are not implemented.
+- Janfon's first-person arms are compiled and attached. v0.6.16 resets their
+  saved NLA pose, rebinds them offline to the exact compiled donor rest
+  skeleton, and removes runtime transform correction. The direct-link result
+  still requires live verification.
 - Pusfume still borrows Ranger Veteran gameplay, talents, ability, inventory,
   and persistence.
 - Bardin's donor weapon bodies are hidden rather than integrated with custom
@@ -319,8 +333,8 @@ can reproduce the required character shader binding.
    dodge, crouch, weapon, and action states.
 4. Test a host and remote client with identical builds, including death,
    rescue, bot takeover, and reconnect.
-5. Request separate first-person arms and weapon hand poses after third-person
-   locomotion is stable.
+5. Author and validate weapon-specific first-person hand poses after the
+   corrected rest-pose attachment is verified in game.
 6. Replace Ranger Veteran backend persistence with Pusfume-specific local data.
 7. Complete provenance review before changing Workshop visibility.
 
@@ -329,6 +343,10 @@ can reproduce the required character shader binding.
 - `tools/Build-NativePusfume.ps1`: canonical private native build and deploy.
 - `tools/prepare_animated_pusfume_fbx.py`: model, animation, and atlas merge.
 - `tools/generate_idle_pusfume_fbx.py`: deterministic placeholder idle.
+- `tools/prepare_pusfume_1p_blend.py`: guarded static first-person bind export.
+- `tools/export_pusfume_1p_actions.py`: guarded Blender 5.2 Assassin clip export.
+- `tools/stingray_unit_scene.py`: guarded VT2 v189 compiled-unit scene parser.
+- `tools/diagnose_pusfume_1p_blend.py`: Blender deformation and rig evidence.
 - `tools/make_spliced_child.py`: texture and reflected-variable material patch.
 - `tools/splice_bundle_resource.py`: size-aware bundle payload replacement.
 - `tools/pusfume_atlas_layout.json`: atlas source and tile contract.

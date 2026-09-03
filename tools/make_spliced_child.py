@@ -1,10 +1,10 @@
-"""Build the Track D spliced-child payload from the installed game data.
+"""Build a spliced child-material payload from installed game data.
 
-Extracts the game's compiled mtr_outfit child material from the donor bundle
-and patches selected texture ids to Pusfume's atlas texture ids. The
+Extracts an exact compiled child material from a donor bundle and patches
+selected texture ids and reflected variables for Pusfume. The
 output payload is written under .build and is never committed: it derives
-from Fatshark game data (a 768-byte binding table - parent hash, slot keys,
-texture ids - with no embedded shader payload).
+from Fatshark game data (a binding table containing the parent hash, slot keys,
+texture ids, and variable defaults, with no embedded shader payload).
 
 Each mapping must match exactly once; anything else aborts, so a game patch
 that changes the child's layout fails the build instead of shipping garbage.
@@ -33,7 +33,10 @@ def _short_hash(name):
 
 
 def _parse_short_hash(name):
-    return int(name, 16) if len(name) == 8 else _short_hash(name)
+    if len(name) == 8 and all(character in "0123456789abcdefABCDEF"
+                              for character in name):
+        return int(name, 16)
+    return _short_hash(name)
 
 
 def read_texture_bindings(payload):
