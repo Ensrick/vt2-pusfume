@@ -19,7 +19,11 @@ request rather than in release notes.
   localization. Ratling firing exit now reproduces the complete native Versus
   reset sequence, including `barrel_spin_finished` and owner `idle`, to prevent
   the firing pose from latching after release. No native model, texture,
-  material, fur, or animation payload was intentionally changed (#15, #48).
+  material, fur, or animation payload was intentionally changed. Commit
+  `b95d1a8` passed 169 tests, source preflight, Lua parsing, GitHub CI, native
+  compilation, and compiled-rest/material/animation checks. All eight live
+  files are hash-identical to staging (`177,794,671` bytes); Steam confirmed
+  friends-only ManifestID `3952544955071264903` (#15, #48).
 - v0.6.104 adopts the Warlock Engineer pipeline's source-UV preservation rule
   for Pusfume's third-person body. The body source already exactly fills its
   `2048x4096` atlas tile, but the exporter contracted every `p_main` UV by an

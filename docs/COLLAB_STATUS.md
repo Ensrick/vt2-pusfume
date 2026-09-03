@@ -11,6 +11,17 @@ architecture and reproduction contract are in
 
 ## Latest shipment
 
+- 2026-09-03 local: v0.7.0 SHIPPED `[unverified]` - Pusfume now owns a
+  deterministic 18-slot talent tree and six VMF-persisted selections rather
+  than writing talent changes through Ranger Veteran. Eight source-backed
+  slots are operational and ten complex effects are visibly guarded. Ratling
+  firing exit now sends the complete native pose reset sequence. Commit
+  `b95d1a8`; 169 tests, source preflight, all 18 Lua files, GitHub CI, native
+  compilation, both compiled-rest contracts, all material channels, and nine
+  Assassin clips pass. Eight live files are hash-identical to staging at
+  `177,794,671` bytes. Friends-only Workshop ManifestID
+  `3952544955071264903`. Live talent UI/persistence and Ratling acceptance are
+  still required before closing #15 or #48.
 - 2026-08-03 local: v0.6.102 LIVE RESULT / v0.6.103 SHIPPED
   `[unverified]` - Weapon Tweaker's dev hold-pose tuner could not move the
   Assassin blades: it resolves the equipment's wielded units, which assassin
