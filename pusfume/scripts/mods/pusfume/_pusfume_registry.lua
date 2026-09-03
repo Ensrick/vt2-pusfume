@@ -2,6 +2,7 @@ local mod = get_mod("pusfume")
 
 local M = {}
 local loadout_validator
+local talent_tree_index
 
 M.CAREER_NAME = "pusfume"
 M.DONOR_CAREER_NAME = "dr_ranger"
@@ -84,6 +85,10 @@ end
 
 function M.set_loadout_validator(validator)
     loadout_validator = validator
+end
+
+function M.set_talent_tree_index(index)
+    talent_tree_index = index
 end
 
 local function build_state_list(base_states, additional_states)
@@ -278,6 +283,7 @@ function M.register()
     career.preview_wield_slot = nil
     career.activated_ability = ActivatedAbilitySettings.pusfume
     career.passive_ability = PassiveAbilitySettings.pusfume
+    career.talent_tree_index = talent_tree_index or career.talent_tree_index
     career.attributes = career.attributes or {}
     career.attributes.max_hp = 100
 

@@ -8,6 +8,7 @@ GAMEPLAY = (ROOT / "pusfume/scripts/mods/pusfume/_pusfume_gameplay.lua").read_te
 REGISTRY = (ROOT / "pusfume/scripts/mods/pusfume/_pusfume_registry.lua").read_text(encoding="utf-8")
 LOCALIZATION = (ROOT / "pusfume/scripts/mods/pusfume/pusfume_localization.lua").read_text(encoding="utf-8")
 PREFLIGHT = (ROOT / "pusfume/scripts/mods/pusfume/_pusfume_preflight.lua").read_text(encoding="utf-8")
+TALENTS = (ROOT / "pusfume/scripts/mods/pusfume/_pusfume_talents.lua").read_text(encoding="utf-8")
 
 
 class CareerSpecV2Tests(unittest.TestCase):
@@ -60,6 +61,11 @@ class CareerSpecV2Tests(unittest.TestCase):
         self.assertIn("Moulder Ingenuity armed the next consumable selection", GAMEPLAY)
         self.assertNotIn("Vector3Box", GAMEPLAY)
         self.assertNotIn("STATION_DURATION", GAMEPLAY)
+
+    def test_v2_talent_tree_is_registered_with_guarded_boundaries(self):
+        self.assertEqual(18, len(re.findall(r'key\s*=\s*"[a-z0-9_]+"', TALENTS)))
+        self.assertEqual(10, TALENTS.count("guarded = true"))
+        self.assertIn('SETTING_KEY = "pusfume_talent_columns"', TALENTS)
 
 
 if __name__ == "__main__":

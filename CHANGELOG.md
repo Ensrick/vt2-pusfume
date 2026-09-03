@@ -10,6 +10,16 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- v0.7.0 gives Pusfume a deterministic six-row, 18-slot talent tree and stores
+  its six selected columns in VMF data rather than translating talent backend
+  calls to Ranger Veteran. The temporary-health row, Coward at Heart, Elusive
+  Nature, and the standard stagger row use stock VT2 contracts; ten complex
+  effects remain visibly labeled, empty-buff guarded prototypes. Runtime
+  preflight validates tree ownership, counts, persistence, and all talent
+  localization. Ratling firing exit now reproduces the complete native Versus
+  reset sequence, including `barrel_spin_finished` and owner `idle`, to prevent
+  the firing pose from latching after release. No native model, texture,
+  material, fur, or animation payload was intentionally changed (#15, #48).
 - v0.6.104 adopts the Warlock Engineer pipeline's source-UV preservation rule
   for Pusfume's third-person body. The body source already exactly fills its
   `2048x4096` atlas tile, but the exporter contracted every `p_main` UV by an

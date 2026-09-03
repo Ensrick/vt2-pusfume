@@ -111,6 +111,24 @@ class WeaponContractTests(unittest.TestCase):
         self.assertIn("create_globadier_template", WEAPONS)
         self.assertIn("spawn_globadier_globe", WEAPONS)
         self.assertIn('template.pusfume_role_pose = "to_globadier"', WEAPONS)
+
+    def test_ratling_exit_restores_the_complete_native_pose_sequence(self):
+        reset = WEAPONS.split(
+            "local function reset_ratling_firing_pose", 1
+        )[1].split("local function ratling_winding_leave", 1)[0]
+        for event_name in (
+            "attack_finished",
+            "barrel_spin_finished",
+            "no_anim_upperbody",
+            "to_combat",
+            "idle",
+        ):
+            self.assertIn(f'"{event_name}"', reset)
+
+        self.assertIn(
+            "reset_ratling_firing_pose(owner_unit, is_local_player, is_destroy)",
+            WEAPONS.split("local function ratling_firing_leave", 1)[1],
+        )
         self.assertIn("template.ammo_data.infinite_ammo = false", WEAPONS)
         self.assertIn("install_ratling_audio_adapter", WEAPONS)
         self.assertIn('mod:hook(ActionMinigun, "_play_vo"', WEAPONS)

@@ -300,7 +300,8 @@ local function reset_ratling_firing_pose(owner_unit, is_local_player, is_destroy
         return
     end
 
-    local first_person_reset = false
+    local first_person_attack_reset = false
+    local first_person_barrel_reset = false
 
     if is_local_player then
         local first_person_extension = ScriptUnit.has_extension(
@@ -309,19 +310,24 @@ local function reset_ratling_firing_pose(owner_unit, is_local_player, is_destroy
             and (first_person_extension._pusfume_active_animation_unit
                 or first_person_extension:get_first_person_unit())
 
-        first_person_reset = play_ratling_reset_event(
+        first_person_attack_reset = play_ratling_reset_event(
             active_animation_unit, "attack_finished")
+        first_person_barrel_reset = play_ratling_reset_event(
+            active_animation_unit, "barrel_spin_finished")
     end
 
     local upper_body_reset = play_ratling_reset_event(
         owner_unit, "no_anim_upperbody")
     local combat_reset = play_ratling_reset_event(owner_unit, "to_combat")
+    local idle_reset = play_ratling_reset_event(owner_unit, "idle")
 
     mod:info(
-        "[pusfume] Ratling firing pose reset first_person=%s upper_body=%s combat=%s",
-        tostring(first_person_reset),
+        "[pusfume] Ratling firing pose reset attack=%s barrel=%s upper_body=%s combat=%s idle=%s",
+        tostring(first_person_attack_reset),
+        tostring(first_person_barrel_reset),
         tostring(upper_body_reset),
-        tostring(combat_reset))
+        tostring(combat_reset),
+        tostring(idle_reset))
 end
 
 local function ratling_winding_leave(self, owner_unit, weapon_unit, state_data,

@@ -42,7 +42,7 @@ local function backend_runtime_check(checks, registry)
     end
 end
 
-function M.collect(registry, career_index, backend, compat, ui, native, weapons)
+function M.collect(registry, career_index, backend, compat, ui, native, weapons, talents)
     local checks = {}
     local career = CareerSettings and CareerSettings[registry.CAREER_NAME]
     local donor = CareerSettings and CareerSettings[registry.DONOR_CAREER_NAME]
@@ -86,6 +86,19 @@ function M.collect(registry, career_index, backend, compat, ui, native, weapons)
         and talent_tree
     add(checks, "career kit", has_gameplay and "PASS" or "FAIL",
         "v2 Aggressive Iteration, Moulder Ingenuity, perks, and current talent tree")
+    local talent_status = talents and talents.status()
+    local custom_tree_ready = talent_status and career
+        and talent_status.tree_index == career.talent_tree_index
+        and talent_status.talent_count == 18 and talent_status.operational_count == 8
+        and talent_status.guarded_count == 10
+    add(checks, "custom talent tree", custom_tree_ready and "PASS" or "FAIL",
+        custom_tree_ready and "18 unique slots: 8 operational, 10 explicitly guarded"
+            or "custom six-row talent registry is incomplete")
+    local persisted_selection = talents and talents.get_selection()
+    local persistence_ready = type(persisted_selection) == "table" and #persisted_selection == 6
+    add(checks, "talent persistence", persistence_ready and "PASS" or "FAIL",
+        persistence_ready and "six Pusfume-owned VMF columns are available"
+            or "Pusfume talent columns are unavailable")
     add(checks, "career health", career and career.attributes and career.attributes.max_hp == 100 and "PASS" or "FAIL",
         "v2 specification requires 100 maximum health")
 
@@ -118,6 +131,32 @@ function M.collect(registry, career_index, backend, compat, ui, native, weapons)
     add(checks, "career localization", not unresolved_localization and "PASS" or "FAIL",
         unresolved_localization and "global Localize missed " .. unresolved_localization
             or "identity, abilities, perks, and quests resolve through global Localize")
+
+    local unresolved_talent_localization
+
+    for row = 1, 6 do
+        for column = 1, 3 do
+            local talent_name = talent_tree and talent_tree[row] and talent_tree[row][column]
+            local lookup = talent_name and TalentIDLookup and TalentIDLookup[talent_name]
+            local talent = lookup and Talents[registry.PROFILE_NAME][lookup.talent_id]
+            local display_name = talent and Localize(talent.display_name)
+            local description = talent and Localize(talent.description)
+
+            if not talent or display_name == "<" .. tostring(talent and talent.display_name) .. ">"
+                    or description == "<" .. tostring(talent and talent.description) .. ">" then
+                unresolved_talent_localization = talent_name or string.format("row=%d column=%d", row, column)
+                break
+            end
+        end
+
+        if unresolved_talent_localization then
+            break
+        end
+    end
+
+    add(checks, "talent localization", not unresolved_talent_localization and "PASS" or "FAIL",
+        unresolved_talent_localization and "unresolved talent slot " .. unresolved_talent_localization
+            or "all 18 talent names and descriptions resolve")
 
     local iteration_proc_ready = ProcFunctions
         and type(ProcFunctions.pusfume_aggressive_iteration_proc) == "function"
@@ -386,7 +425,7 @@ function M.summarize(checks)
     return totals
 end
 
-function M.install(registry, career_index, backend, compat, ui, native, weapons)
+function M.install(registry, career_index, backend, compat, ui, native, weapons, talents)
     mod:command("pusfume_preflight", "Run Pusfume registration and runtime checks.", function()
         registry.refresh_item_permissions()
         weapons.install(registry)
@@ -394,7 +433,7 @@ function M.install(registry, career_index, backend, compat, ui, native, weapons)
         compat.install(registry)
         ui.install(registry, native)
 
-        local checks = M.collect(registry, career_index, backend, compat, ui, native, weapons)
+        local checks = M.collect(registry, career_index, backend, compat, ui, native, weapons, talents)
 
         for _, check in ipairs(checks) do
             mod:echo("%s", string.format(
@@ -409,8 +448,8 @@ function M.install(registry, career_index, backend, compat, ui, native, weapons)
     end)
 end
 
-function M.log_summary(registry, career_index, backend, compat, ui, native, weapons)
-    local checks = M.collect(registry, career_index, backend, compat, ui, native, weapons)
+function M.log_summary(registry, career_index, backend, compat, ui, native, weapons, talents)
+    local checks = M.collect(registry, career_index, backend, compat, ui, native, weapons, talents)
     local totals = M.summarize(checks)
 
     mod:info("[pusfume] preflight summary pass=%d warn=%d fail=%d", totals.PASS, totals.WARN, totals.FAIL)

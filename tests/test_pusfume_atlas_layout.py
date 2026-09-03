@@ -80,6 +80,18 @@ class PusfumeAtlasLayoutTests(unittest.TestCase):
             self.assertLessEqual(abs(source_u - sampled_body_u) * 2048, 1.0)
             self.assertLessEqual(abs(source_v - sampled_body_v) * 4096, 1.0)
 
+    def test_body_tile_preserves_janfon_source_and_channel_contract(self):
+        body = self.layout["tiles"]["body"]
+
+        self.assertEqual([0, 0], body["origin"])
+        self.assertEqual([2048, 4096], body["size"])
+        self.assertEqual([1, 1], body["grid"])
+        self.assertEqual(1, body["inset"])
+        self.assertEqual("pusfume_body_new_df", body["sources"]["df"])
+        self.assertEqual("skaven_body_nm", body["sources"]["nm"])
+        self.assertEqual("skaven_body_s", body["sources"]["s"])
+        self.assertEqual({"tile": "body", "repeat": False}, self.layout["materials"]["p_main"])
+
     def test_only_dedicated_whiskers_retain_diffuse_alpha(self):
         self.assertEqual(["df"], self.layout["force_opaque_suffixes"])
         self.assertNotIn("p_whiskers", self.layout["materials"])

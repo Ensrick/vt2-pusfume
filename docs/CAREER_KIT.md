@@ -41,13 +41,24 @@ The base perks use stock VT2 contracts:
 Run `/pusfume_gameplay` to report poison blocks, Scaredy-rat triggers, captured
 Special/effect state, augmentation activations, and guarded payload status.
 
+## Talent Tree
+
+Pusfume owns a fifth deterministic `dwarf_ranger` talent tree and six locally
+persisted column choices. Selecting a Pusfume talent no longer changes Ranger
+Veteran. The temporary-health row, Coward at Heart, Elusive Nature, and the
+standard stagger row use stock VT2 buff contracts and are operational.
+
+The other ten slots are present so the specification and UI can be tested, but
+their names explicitly say `Guarded Prototype` and their buff lists are empty.
+This prevents item mutation, target tracking, area effects, and host-authority
+logic from entering multiplayer before each contract has dedicated tests.
+
 ## Deferred Systems
 
-Pusfume still uses Ranger Veteran's talent tree and weapons. The v2 six-row
-talent design, custom weapons, Aggressive Iteration attack payloads, and
-consumable transformations must not be presented as functional until they have
-engine-backed implementations, synchronized lookups, assets, and multiplayer
-regression coverage.
+Aggressive Iteration attack payloads, consumable transformations, ten guarded
+talent effects, and the final custom weapon roster must not be presented as
+functional until they have engine-backed implementations, synchronized
+lookups, assets where required, and multiplayer regression coverage.
 
 ## Visual Contract
 

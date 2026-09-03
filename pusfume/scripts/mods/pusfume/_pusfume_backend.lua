@@ -327,7 +327,7 @@ function M.install_runtime_guards(registry, weapons)
     return true
 end
 
-function M.install(registry, weapons)
+function M.install(registry, weapons, talents)
     if status.installed then
         return status
     end
@@ -408,21 +408,97 @@ function M.install(registry, weapons)
     end)
     status.hook_count = status.hook_count + 1
 
-    local talent_methods = {
-        "set_default_override",
-        "get_talent_ids",
-        "get_talent_tree",
-        "set_talents",
-        "get_talents",
-        "get_bot_talents",
-        "get_default_talents",
-        "get_career_talents",
-        "get_career_talent_ids",
-    }
+    mod:hook("BackendInterfaceTalentsPlayfab", "set_default_override",
+        function(func, self, career_name, ...)
+            if career_name == registry.CAREER_NAME then
+                return
+            end
 
-    for _, method_name in ipairs(talent_methods) do
-        hook_career_first("BackendInterfaceTalentsPlayfab", method_name, registry)
+            return func(self, career_name, ...)
+        end)
+    status.hook_count = status.hook_count + 1
+
+    mod:hook("BackendInterfaceTalentsPlayfab", "get_talent_ids",
+        function(func, self, career_name, optional_talents, is_bot)
+            if career_name == registry.CAREER_NAME then
+                local selection = optional_talents
+
+                if is_bot and not selection then
+                    selection = talents.get_selection()
+                end
+
+                return talents.get_talent_ids(selection)
+            end
+
+            return func(self, career_name, optional_talents, is_bot)
+        end)
+    status.hook_count = status.hook_count + 1
+
+    mod:hook("BackendInterfaceTalentsPlayfab", "get_talent_tree",
+        function(func, self, career_name, ...)
+            if career_name == registry.CAREER_NAME then
+                return talents.get_tree()
+            end
+
+            return func(self, career_name, ...)
+        end)
+    status.hook_count = status.hook_count + 1
+
+    mod:hook("BackendInterfaceTalentsPlayfab", "set_talents",
+        function(func, self, career_name, selected_talents, ...)
+            if career_name == registry.CAREER_NAME then
+                local selection = talents.set_selection(selected_talents)
+                self._talents[career_name] = selection
+                self._bot_talents[career_name] = table.clone(selection)
+
+                return
+            end
+
+            return func(self, career_name, selected_talents, ...)
+        end)
+    status.hook_count = status.hook_count + 1
+
+    mod:hook("BackendInterfaceTalentsPlayfab", "get_talents",
+        function(func, self, career_name, ...)
+            if career_name == registry.CAREER_NAME then
+                return talents.get_selection()
+            end
+
+            return func(self, career_name, ...)
+        end)
+    status.hook_count = status.hook_count + 1
+
+    mod:hook("BackendInterfaceTalentsPlayfab", "get_bot_talents",
+        function(func, self, career_name, ...)
+            if career_name == registry.CAREER_NAME then
+                return talents.get_selection()
+            end
+
+            return func(self, career_name, ...)
+        end)
+    status.hook_count = status.hook_count + 1
+
+    for _, method_name in ipairs({ "get_default_talents", "get_career_talents" }) do
+        mod:hook("BackendInterfaceTalentsPlayfab", method_name,
+            function(func, self, career_name, ...)
+                if career_name == registry.CAREER_NAME then
+                    return talents.get_loadout_sets()
+                end
+
+                return func(self, career_name, ...)
+            end)
+        status.hook_count = status.hook_count + 1
     end
+
+    mod:hook("BackendInterfaceTalentsPlayfab", "get_career_talent_ids",
+        function(func, self, career_name, ...)
+            if career_name == registry.CAREER_NAME then
+                return talents.get_talent_ids()
+            end
+
+            return func(self, career_name, ...)
+        end)
+    status.hook_count = status.hook_count + 1
 
     status.installed = true
 

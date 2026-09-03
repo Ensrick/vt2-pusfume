@@ -35,7 +35,10 @@ Moulder Ingenuity transformations are specified for healing draughts, medical su
 - Level 25: Warpstone Bullets, Open Wounds, Last Ditch Effort.
 - Level 30: Expert Craftsmanship, From Scraps, Make It Two-Two!
 
-The custom talent tree is design-complete in the specification but is not safe to expose until every talent has an engine-backed implementation, localization, icon assignment, synchronized buff registration, and multiplayer regression coverage.
+The custom tree is registered as Pusfume's fifth deterministic Bardin-profile
+tree. All 18 slots have localization and placeholder icons. Eight slots use
+stock engine-backed buff contracts; ten complex slots are visibly labeled and
+registered with empty buff lists until their multiplayer contracts are safe.
 
 ## Weapons
 
@@ -61,6 +64,6 @@ Blocked pending focused implementation or live testing:
 
 - Aggressive Iteration ranged-attack payload execution.
 - Consumable transformations and all supporting assets.
-- Six-row custom talent tree behavior and icons.
+- Ten guarded custom talent effects and final authored icons.
 - Custom weapon roster and assets.
 - Voice, interaction, and narrative content.

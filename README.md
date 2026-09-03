@@ -4,8 +4,10 @@ An experimental, friends-only Vermintide 2 custom-career project by Ensrick and 
 
 Steam Workshop development item: [Pusfume - Custom Career Prototype](https://steamcommunity.com/sharedfiles/filedetails/?id=3764954245)
 
-The current milestone registers **Pusfume** as Bardin's fifth career. Ranger
-Veteran's talent tree and bot behavior remain temporary adapters. Pusfume now
+The current milestone registers **Pusfume** as Bardin's fifth career. Pusfume
+now owns a persistent six-row talent tree and no longer writes talent choices
+through Ranger Veteran's PlayFab data. Eight source-backed talent slots are
+operational; ten complex effects are visibly guarded prototypes. Pusfume also
 owns fixed prototype Packmaster-hook and Warpfire-Thrower items, his v2 identity, Aggressive Iteration
 special-kill capture, Moulder Ingenuity consumable-augmentation state, and
 three career perks. A full-size Pusfume card is placed one virtual UI row above Saltzpyre
@@ -21,7 +23,7 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The next friends-only live-test candidate is **v0.6.102-dev**. It retains the
+The next friends-only live-test candidate is **v0.7.0-dev**. It retains the
 weapon-aware dual first-person system using Janfon's assets: prototype Versus
 weapons use his 99-bone Skaven attachment, while ordinary hero weapons use his
 160-bone donor-rest human attachment.
@@ -253,8 +255,11 @@ Stingray compilation.
 Moulder Ingenuity currently arms the next consumable selection and starts its
 cooldown, but it does not yet transform inventory. Aggressive Iteration records
 the killed Special and displays its ready state, while its ranged-shot payloads
-remain guarded. The custom talent rows, weapons, consumable assets, and
-animation coverage beyond idle/walk remain deferred.
+remain guarded. The custom talent tree now exposes all 18 specified slots with
+Pusfume-owned persistence. The three temporary-health choices, Coward at Heart,
+Elusive Nature, and the three stagger choices are operational; the ten remaining
+complex effects are labeled and guarded until their network contracts are safe.
+Consumable assets and animation coverage beyond idle/walk remain deferred.
 
 ## Install and test
 
@@ -267,9 +272,9 @@ animation coverage beyond idle/walk remain deferred.
 7. After spawning, enter `/pusfume_gameplay` to inspect poison blocks, Scaredy-rat, Aggressive Iteration, and guarded augmentation state.
 8. If the UI hook is unavailable after a game update, enter `/pusfume` in chat while in the Keep.
 
-Pusfume currently shares Ranger Veteran's talents and non-weapon backend
-adapters. His melee and ranged slots are fixed to the two Pusfume-only
-prototype items until custom persistence and a larger authored roster exist.
+Pusfume owns his talent selections while retaining donor adapters for
+non-weapon backend data. His weapon roster combines Pusfume-only prototypes
+with the current all-hero-weapon compatibility test option.
 
 Do not select Pusfume in a multiplayer lobby unless every connected player has the same Pusfume build enabled. The career uses a new synchronized career index; an unmodded peer cannot resolve it.
 

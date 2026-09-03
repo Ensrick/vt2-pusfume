@@ -1,11 +1,12 @@
 local mod = get_mod("pusfume")
 
-local MOD_VERSION = "0.6.104-dev"
+local MOD_VERSION = "0.7.0-dev"
 
 mod:info("[pusfume] loading v%s", MOD_VERSION)
 
 local registry = mod:dofile("scripts/mods/pusfume/_pusfume_registry")
 local gameplay = mod:dofile("scripts/mods/pusfume/_pusfume_gameplay")
+local talents = mod:dofile("scripts/mods/pusfume/_pusfume_talents")
 local assets = mod:dofile("scripts/mods/pusfume/_pusfume_assets")
 local native_config = mod:dofile("scripts/mods/pusfume/_pusfume_native_config")
 local native = mod:dofile("scripts/mods/pusfume/_pusfume_native")
@@ -19,15 +20,16 @@ local ui = mod:dofile("scripts/mods/pusfume/_pusfume_ui")
 weapons.set_roster(roster)
 assets.install()
 gameplay.install()
+registry.set_talent_tree_index(talents.install())
 native.install(registry, native_config)
 weapons.install(registry)
 local career_index = registry.register()
 roster.install(registry)
-backend.install(registry, weapons)
+backend.install(registry, weapons, talents)
 compat.install(registry)
 ui.install(registry, native)
 access.install(registry, career_index, ui)
-preflight.install(registry, career_index, backend, compat, ui, native, weapons)
+preflight.install(registry, career_index, backend, compat, ui, native, weapons, talents)
 
 local function refresh_runtime_integrations()
     registry.refresh_career_color()
@@ -36,7 +38,7 @@ local function refresh_runtime_integrations()
     native.install(registry, native_config)
     weapons.install(registry)
     roster.install(registry)
-    backend.install(registry, weapons)
+    backend.install(registry, weapons, talents)
     backend.install_runtime_guards(registry, weapons)
     compat.install(registry)
     ui.install(registry, native)
@@ -44,7 +46,7 @@ end
 
 mod.on_all_mods_loaded = function()
     refresh_runtime_integrations()
-    preflight.log_summary(registry, career_index, backend, compat, ui, native, weapons)
+    preflight.log_summary(registry, career_index, backend, compat, ui, native, weapons, talents)
 end
 
 mod.on_game_state_changed = function()

@@ -53,6 +53,7 @@ $nativePath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_native.
 $nativeConfigPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_native_config.lua"
 $uiPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_ui.lua"
 $gameplayPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_gameplay.lua"
+$talentsPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_talents.lua"
 $accessPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\_pusfume_access.lua"
 $localizationPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\pusfume_localization.lua"
 $dataPath = Join-Path $repoRoot "pusfume\scripts\mods\pusfume\pusfume_data.lua"
@@ -95,6 +96,7 @@ $nativeText = Get-Content -LiteralPath $nativePath -Raw
 $nativeConfigText = Get-Content -LiteralPath $nativeConfigPath -Raw
 $uiText = Get-Content -LiteralPath $uiPath -Raw
 $gameplayText = Get-Content -LiteralPath $gameplayPath -Raw
+$talentsText = Get-Content -LiteralPath $talentsPath -Raw
 $accessText = Get-Content -LiteralPath $accessPath -Raw
 $localizationText = Get-Content -LiteralPath $localizationPath -Raw
 $dataText = Get-Content -LiteralPath $dataPath -Raw
@@ -762,6 +764,29 @@ Test-Condition ($preflightText -match 'add\(checks, "career kit"' -and `
     $preflightText -match 'add\(checks, "Aggressive Iteration proc"' -and `
     $preflightText -match 'add\(checks, "v2 passive perks"') `
     "career-kit preflight" "live diagnostics validate the v2 ability and passive registration"
+Test-Condition ($mainText -match 'registry\.set_talent_tree_index\(talents\.install\(\)\)' -and `
+    $registryText -match 'career\.talent_tree_index\s*=\s*talent_tree_index' -and `
+    ([regex]::Matches($talentsText, 'key\s*=\s*"[a-z0-9_]+"')).Count -eq 18 -and `
+    ([regex]::Matches($talentsText, 'guarded\s*=\s*true')).Count -eq 10 -and `
+    $talentsText -match 'TalentIDLookup\[name\]\s*=\s*\{' -and `
+    $talentsText -match 'hero_trees\[tree_index\]\s*=\s*tree') `
+    "Pusfume talent tree" "18 deterministic slots expose 8 operational and 10 guarded talents"
+Test-Condition ($talentsText -match 'SETTING_KEY\s*=\s*"pusfume_talent_columns"' -and `
+    $talentsText -match 'mod:get\(SETTING_KEY\)' -and `
+    $talentsText -match 'mod:set\(SETTING_KEY, sanitized\)' -and `
+    $backendText -match 'talents\.set_selection\(selected_talents\)' -and `
+    $backendText -notmatch 'hook_career_first\("BackendInterfaceTalentsPlayfab"') `
+    "Pusfume talent persistence" "six local VMF columns never write through Ranger Veteran"
+Test-Condition ($talentsText -match '"thp_tank"' -and `
+    $talentsText -match '"thp_smiter"' -and `
+    $talentsText -match '"thp_linesman"' -and `
+    $talentsText -match 'chunk_size\s*=\s*20' -and `
+    $talentsText -match 'multiplier\s*=\s*1\.05' -and `
+    $talentsText -match '\{ "dodging", "distance_modifier" \}' -and `
+    $talentsText -match '"smiter_unbalance"' -and `
+    $talentsText -match '"tank_unbalance"' -and `
+    $talentsText -match '"power_level_unbalance"') `
+    "Pusfume operational talents" "stock temporary-health, health-chunk movement, dodge, and stagger contracts"
 Test-Condition ($gameplayText -match 'poison_damage_types' -and `
     $gameplayText -match 'skaven_poison_wind_globadier\s*=\s*true' -and `
     $gameplayText -match 'PlayerUnitHealthExtension, "add_damage"') `
