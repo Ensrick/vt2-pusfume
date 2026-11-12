@@ -11,6 +11,17 @@ architecture and reproduction contract are in
 
 ## Latest shipment
 
+- 2026-11-11 local: v0.7.1 SHIPPED `[unverified]` - Crafty Claws now gains up
+  to ten Special-kill reload stacks and loses one to enemy damage; Run It
+  Through a Filter restores host-authoritative THP from intercepted poison
+  packets; Enhanced Cunning synchronizes 2% cooldown reduction when temporary
+  healing exceeds missing health. Hell Pit Native now correctly classifies
+  `aoe_poison_dot` as a damage type. Commit `5e4ff3b`; 171 tests, source
+  preflight, SDK compilation, both compiled-rest contracts, material checks,
+  and all nine Assassin clips pass. Eight installed files hash-match staging at
+  `177,871,715` bytes. Friends-only Workshop ManifestID
+  `1324351316374836881`. Retail VT2 has no supported non-rendering client mode,
+  so startup and host/client talent behavior remain pending live validation.
 - 2026-09-03 local: v0.7.0 SHIPPED `[unverified]` - Pusfume now owns a
   deterministic 18-slot talent tree and six VMF-persisted selections rather
   than writing talent changes through Ranger Veteran. Eight source-backed
