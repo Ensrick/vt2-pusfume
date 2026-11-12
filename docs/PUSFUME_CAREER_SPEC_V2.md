@@ -36,8 +36,8 @@ Moulder Ingenuity transformations are specified for healing draughts, medical su
 - Level 30: Expert Craftsmanship, From Scraps, Make It Two-Two!
 
 The custom tree is registered as Pusfume's fifth deterministic Bardin-profile
-tree. All 18 slots have localization and placeholder icons. Eight slots use
-stock engine-backed buff contracts; ten complex slots are visibly labeled and
+tree. All 18 slots have localization and placeholder icons. Eleven slots use
+engine-backed buff contracts; seven complex slots are visibly labeled and
 registered with empty buff lists until their multiplayer contracts are safe.
 
 ## Weapons
@@ -59,11 +59,14 @@ Implemented from v2.0 in source:
 - Hell Pit Native poison immunity.
 - Scaredy-rat no-hit-slow perk plus 20%/3-second speed buff.
 - Swift Claws 15% faster reload.
+- Crafty Claws capped Special-kill reload stacks with one-stack damage loss.
+- Enhanced Cunning server-side temporary-overheal cooldown reduction.
+- Run It Through a Filter host-authoritative temporary healing from intercepted poison packets.
 
 Blocked pending focused implementation or live testing:
 
 - Aggressive Iteration ranged-attack payload execution.
 - Consumable transformations and all supporting assets.
-- Ten guarded custom talent effects and final authored icons.
+- Seven guarded custom talent effects and final authored icons.
 - Custom weapon roster and assets.
 - Voice, interaction, and narrative content.

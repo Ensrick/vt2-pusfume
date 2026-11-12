@@ -48,14 +48,22 @@ persisted column choices. Selecting a Pusfume talent no longer changes Ranger
 Veteran. The temporary-health row, Coward at Heart, Elusive Nature, and the
 standard stagger row use stock VT2 buff contracts and are operational.
 
-The other ten slots are present so the specification and UI can be tested, but
+Crafty Claws uses the stock capped sub-buff pattern: Special kills add a 1%
+reload-speed stack up to ten, and enemy damage removes one stack. Run It Through
+a Filter observes the poison packets already intercepted by Hell Pit Native and
+restores 3 temporary health at most once per second on the authoritative host.
+Enhanced Cunning measures `heal_from_proc` against missing health before VT2
+clamps it, then uses the native career API and owner-targeted RPC to restore 2%
+cooldown on overheal for local players, bots, and remote clients.
+
+The other seven slots are present so the specification and UI can be tested, but
 their names explicitly say `Guarded Prototype` and their buff lists are empty.
 This prevents item mutation, target tracking, area effects, and host-authority
 logic from entering multiplayer before each contract has dedicated tests.
 
 ## Deferred Systems
 
-Aggressive Iteration attack payloads, consumable transformations, ten guarded
+Aggressive Iteration attack payloads, consumable transformations, seven guarded
 talent effects, and the final custom weapon roster must not be presented as
 functional until they have engine-backed implementations, synchronized
 lookups, assets where required, and multiplayer regression coverage.

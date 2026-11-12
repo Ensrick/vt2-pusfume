@@ -64,8 +64,25 @@ class CareerSpecV2Tests(unittest.TestCase):
 
     def test_v2_talent_tree_is_registered_with_guarded_boundaries(self):
         self.assertEqual(18, len(re.findall(r'key\s*=\s*"[a-z0-9_]+"', TALENTS)))
-        self.assertEqual(10, TALENTS.count("guarded = true"))
+        self.assertEqual(7, TALENTS.count("guarded = true"))
         self.assertIn('SETTING_KEY = "pusfume_talent_columns"', TALENTS)
+
+    def test_poison_filter_heals_are_host_authoritative_and_throttled(self):
+        self.assertIn('has_buff_type("pusfume_run_it_through_a_filter")', GAMEPLAY)
+        self.assertIn('if not Managers.player or not Managers.player.is_server then', GAMEPLAY)
+        self.assertRegex(GAMEPLAY, r'poison_damage_types\s*=\s*\{[^}]*aoe_poison_dot\s*=\s*true')
+        self.assertIn('poison_filter_next_heal[owner_unit] = t + 1', GAMEPLAY)
+        self.assertIn('DamageUtils.heal_network(owner_unit, owner_unit, 3, "heal_from_proc")', GAMEPLAY)
+
+    def test_enhanced_cunning_uses_server_overheal_and_native_cooldown(self):
+        self.assertIn('mod:hook(PlayerUnitHealthExtension, "add_heal"', GAMEPLAY)
+        self.assertIn('health_extension.is_server and is_pusfume_unit(owner_unit)', GAMEPLAY)
+        self.assertIn('heal_type == "heal_from_proc"', GAMEPLAY)
+        self.assertIn('health_extension:get_max_health()', GAMEPLAY)
+        self.assertIn('health_extension:current_health()', GAMEPLAY)
+        self.assertIn('reduce_owner_cooldown_percent(owner_unit, 0.02)', GAMEPLAY)
+        self.assertIn('"rpc_reduce_activated_ability_cooldown_percent"', GAMEPLAY)
+        self.assertIn('owner_player:network_id()', GAMEPLAY)
 
 
 if __name__ == "__main__":

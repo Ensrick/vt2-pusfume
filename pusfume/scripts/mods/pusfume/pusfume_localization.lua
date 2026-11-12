@@ -67,9 +67,9 @@ return {
     pusfume_talent_cleave_description = {
         en = "Striking multiple enemies in one swing grants temporary health. Health gained is based on the number of targets hit.",
     },
-    pusfume_talent_crafty_claws_name = { en = "Crafty Claws (Guarded Prototype)" },
+    pusfume_talent_crafty_claws_name = { en = "Crafty Claws" },
     pusfume_talent_crafty_claws_description = {
-        en = "Designed to grant 1% reload speed per Special kill, stacking 10 times and losing one stack on damage. This effect is guarded until its networked stack contract is validated.",
+        en = "Killing a Special grants 1% reload speed, stacking up to 10 times. Taking damage removes one stack.",
     },
     pusfume_talent_coward_at_heart_name = { en = "Coward at Heart" },
     pusfume_talent_coward_at_heart_description = {
@@ -95,13 +95,13 @@ return {
     pusfume_talent_opportunism_description = {
         en = "Designed so a timed block makes the next melee strike grant 100% more temporary health for 5 seconds. The consume-on-hit effect is guarded pending combat-proc validation.",
     },
-    pusfume_talent_enhanced_cunning_name = { en = "Enhanced Cunning (Guarded Prototype)" },
+    pusfume_talent_enhanced_cunning_name = { en = "Enhanced Cunning" },
     pusfume_talent_enhanced_cunning_description = {
-        en = "Designed so temporary health earned above maximum reduces Moulder Ingenuity's cooldown by 2%. The overheal accounting effect is guarded pending host/client validation.",
+        en = "Temporary health earned above maximum reduces Moulder Ingenuity's cooldown by 2%.",
     },
-    pusfume_talent_run_it_through_a_filter_name = { en = "Run It Through a Filter (Guarded Prototype)" },
+    pusfume_talent_run_it_through_a_filter_name = { en = "Run It Through a Filter" },
     pusfume_talent_run_it_through_a_filter_description = {
-        en = "Designed to restore 3 temporary health per second while standing in Poison Wind gas or gas mines. The gas-volume detection effect is guarded pending live validation.",
+        en = "Restore 3 temporary health per second while standing in Poison Wind gas or gas mines.",
     },
     pusfume_talent_warpstone_bullets_name = { en = "Warpstone Bullets (Guarded Prototype)" },
     pusfume_talent_warpstone_bullets_description = {

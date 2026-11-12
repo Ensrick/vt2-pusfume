@@ -13,7 +13,11 @@ local rows = {
         { key = "cleave", icon = "bardin_ranger_bloodlust", buffs = { "thp_linesman" }, buffer = "server" },
     },
     {
-        { key = "crafty_claws", icon = "bardin_ranger_cooldown_on_reload", guarded = true },
+        {
+            key = "crafty_claws",
+            icon = "bardin_ranger_cooldown_on_reload",
+            buffs = { "pusfume_crafty_claws_gain", "pusfume_crafty_claws_loss" },
+        },
         { key = "coward_at_heart", icon = "bardin_ranger_movement_speed", buffs = { "pusfume_coward_at_heart" } },
         { key = "elusive_nature", icon = "bardin_ranger_reduced_damage_taken_headshot", buffs = { "pusfume_elusive_nature" } },
     },
@@ -24,8 +28,16 @@ local rows = {
     },
     {
         { key = "opportunism", icon = "bardin_ranger_attack_speed", guarded = true },
-        { key = "enhanced_cunning", icon = "bardin_ranger_activated_ability_duration", guarded = true },
-        { key = "run_it_through_a_filter", icon = "bardin_ranger_activated_ability_duration", guarded = true },
+        {
+            key = "enhanced_cunning",
+            icon = "bardin_ranger_activated_ability_duration",
+            buffs = { "pusfume_enhanced_cunning" },
+        },
+        {
+            key = "run_it_through_a_filter",
+            icon = "bardin_ranger_activated_ability_duration",
+            buffs = { "pusfume_run_it_through_a_filter" },
+        },
     },
     {
         { key = "warpstone_bullets", icon = "bardin_ranger_power_level_unbalance", guarded = true },
@@ -69,6 +81,47 @@ local function register_buff_template(name, definition)
 end
 
 local function register_runtime_buffs()
+    ProcFunctions.pusfume_add_crafty_claws_stack = function(owner_unit, buff, params)
+        if not Unit.alive(owner_unit) then
+            return
+        end
+
+        local breed = params and params[2]
+
+        if not breed or not breed.special then
+            return
+        end
+
+        buff.buff_list = buff.buff_list or {}
+
+        if #buff.buff_list >= buff.template.max_sub_buff_stacks then
+            return
+        end
+
+        local buff_extension = ScriptUnit.extension(owner_unit, "buff_system")
+        buff.buff_list[#buff.buff_list + 1] = buff_extension:add_buff(buff.template.buff_to_add, {
+            attacker_unit = owner_unit,
+        })
+    end
+
+    register_buff_template("pusfume_crafty_claws_gain", {
+        buff_func = "pusfume_add_crafty_claws_stack",
+        buff_to_add = "pusfume_crafty_claws_stack",
+        event = "on_kill",
+        max_stacks = 1,
+        max_sub_buff_stacks = 10,
+    })
+    register_buff_template("pusfume_crafty_claws_stack", {
+        max_stacks = 10,
+        multiplier = -0.01,
+        stat_buff = "reload_speed",
+    })
+    register_buff_template("pusfume_crafty_claws_loss", {
+        buff_func = "remove_ref_buff_stack",
+        event = "on_damage_taken",
+        max_stacks = 1,
+        reference_buff = "pusfume_crafty_claws_gain",
+    })
     register_buff_template("pusfume_coward_at_heart", {
         buff_to_add = "pusfume_coward_at_heart_stack",
         chunk_size = 20,
@@ -88,6 +141,14 @@ local function register_runtime_buffs()
         multiplier = 1.1,
         path_to_movement_setting_to_modify = { "dodging", "distance_modifier" },
         remove_buff_func = "remove_movement_buff",
+    })
+    register_buff_template("pusfume_run_it_through_a_filter", {
+        icon = "bardin_ranger_activated_ability_duration",
+        max_stacks = 1,
+    })
+    register_buff_template("pusfume_enhanced_cunning", {
+        icon = "bardin_ranger_activated_ability_duration",
+        max_stacks = 1,
     })
 end
 
@@ -222,7 +283,8 @@ function M.install()
     end
 
     fassert(Talents and Talents[PROFILE_NAME] and TalentTrees and TalentTrees[PROFILE_NAME]
-            and TalentIDLookup and BuffTemplates and NetworkLookup and NetworkLookup.buff_templates,
+            and TalentIDLookup and BuffTemplates and NetworkLookup and NetworkLookup.buff_templates
+            and type(ProcFunctions) == "table",
         "Pusfume talent registries are unavailable.")
     register_runtime_buffs()
     register_tree()
