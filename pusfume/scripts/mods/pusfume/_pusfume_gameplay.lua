@@ -18,25 +18,83 @@ local iteration_effect_by_breed = {
 }
 
 local poison_damage_types = {
+    aoe_poison_dot = true,
     arrow_poison = true,
     arrow_poison_dot = true,
     poison = true,
 }
 local poison_damage_sources = {
-    aoe_poison_dot = true,
     poison_dot = true,
     skaven_poison_wind_globadier = true,
 }
+local poison_filter_next_heal = setmetatable({}, { __mode = "k" })
 local state = {
     augmentation_activations = 0,
     augmentation_armed = false,
+    enhanced_cunning_procs = 0,
     installed = false,
     iteration_effect = nil,
     iteration_procs = 0,
     iteration_special = nil,
     poison_blocks = 0,
+    poison_filter_heals = 0,
     scaredy_rat_procs = 0,
 }
+
+local function apply_poison_filter_heal(owner_unit)
+    if not Managers.player or not Managers.player.is_server then
+        return
+    end
+
+    local buff_extension = ScriptUnit.has_extension(owner_unit, "buff_system")
+
+    if not buff_extension or not buff_extension:has_buff_type("pusfume_run_it_through_a_filter") then
+        return
+    end
+
+    local time_manager = Managers.time
+    local t = time_manager and time_manager:time("game")
+
+    if not t or t < (poison_filter_next_heal[owner_unit] or 0) then
+        return
+    end
+
+    poison_filter_next_heal[owner_unit] = t + 1
+    DamageUtils.heal_network(owner_unit, owner_unit, 3, "heal_from_proc")
+    state.poison_filter_heals = state.poison_filter_heals + 1
+
+    if state.poison_filter_heals <= 3 then
+        mod:info("[pusfume] Run It Through a Filter restored 3 temporary health")
+    end
+end
+
+local function reduce_owner_cooldown_percent(owner_unit, amount)
+    local player_manager = Managers.player
+    local owner_player = player_manager and player_manager:owner(owner_unit)
+
+    if owner_player and owner_player.remote then
+        local network_manager = Managers.state.network
+        local unit_id = network_manager and network_manager:unit_game_object_id(owner_unit)
+        local network_transmit = network_manager and network_manager.network_transmit
+
+        if unit_id and network_transmit then
+            network_transmit:send_rpc("rpc_reduce_activated_ability_cooldown_percent",
+                owner_player:network_id(), unit_id, amount, 1, false)
+            return true
+        end
+
+        return false
+    end
+
+    local career_extension = ScriptUnit.has_extension(owner_unit, "career_system")
+
+    if career_extension then
+        career_extension:reduce_activated_ability_cooldown_percent(amount)
+        return true
+    end
+
+    return false
+end
 
 local function is_pusfume_unit(unit)
     if not unit or not Unit.alive(unit) then
@@ -257,6 +315,7 @@ local function install_damage_traits()
         if is_pusfume_unit(health_extension.unit)
                 and (poison_damage_types[damage_type] or poison_damage_sources[damage_source_name]) then
             state.poison_blocks = state.poison_blocks + 1
+            apply_poison_filter_heal(health_extension.unit)
 
             if state.poison_blocks <= 3 then
                 mod:info("[pusfume] Hell Pit Native blocked damage type=%s source=%s amount=%s",
@@ -289,6 +348,25 @@ local function install_damage_traits()
 
         return result
     end)
+
+    mod:hook(PlayerUnitHealthExtension, "add_heal", function(func, health_extension, healer_unit,
+            heal_amount, heal_source_name, heal_type)
+        local owner_unit = health_extension.unit
+        local buff_extension = health_extension.is_server and is_pusfume_unit(owner_unit)
+            and ScriptUnit.has_extension(owner_unit, "buff_system")
+        local enhanced_cunning = heal_type == "heal_from_proc" and type(heal_amount) == "number"
+            and buff_extension and buff_extension:has_buff_type("pusfume_enhanced_cunning")
+        local overheal = enhanced_cunning
+            and heal_amount > math.max(health_extension:get_max_health()
+                - health_extension:current_health(), 0)
+        local result = func(health_extension, healer_unit, heal_amount, heal_source_name, heal_type)
+
+        if overheal and reduce_owner_cooldown_percent(owner_unit, 0.02) then
+            state.enhanced_cunning_procs = state.enhanced_cunning_procs + 1
+        end
+
+        return result
+    end)
 end
 
 
@@ -304,8 +382,8 @@ function M.install()
 
     mod:command("pusfume_gameplay", "Show Pusfume career-kit diagnostics.", function()
         mod:echo(string.format(
-            "Pusfume gameplay: poison_blocks=%d scaredy_rat_procs=%d iteration_procs=%d iteration_special=%s iteration_effect=%s augmentation_activations=%d augmentation_armed=%s payloads=guarded",
-            state.poison_blocks, state.scaredy_rat_procs, state.iteration_procs, tostring(state.iteration_special),
+            "Pusfume gameplay: poison_blocks=%d poison_filter_heals=%d enhanced_cunning_procs=%d scaredy_rat_procs=%d iteration_procs=%d iteration_special=%s iteration_effect=%s augmentation_activations=%d augmentation_armed=%s payloads=guarded",
+            state.poison_blocks, state.poison_filter_heals, state.enhanced_cunning_procs, state.scaredy_rat_procs, state.iteration_procs, tostring(state.iteration_special),
             tostring(state.iteration_effect), state.augmentation_activations, tostring(state.augmentation_armed)))
     end)
 end

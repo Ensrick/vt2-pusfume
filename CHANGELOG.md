@@ -10,6 +10,15 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- v0.7.1 implements three previously guarded talents without changing native
+  assets. Crafty Claws uses a Special-only, ten-stack reload-speed listener and
+  Fatshark's reference-stack damage removal contract. Run It Through a Filter
+  turns Hell Pit Native's intercepted poison packets into host-authoritative
+  temporary healing, throttled to 3 health per second. Enhanced Cunning detects
+  server-side temporary overheal before VT2 clamps it and uses the native career
+  API plus owner-targeted RPC to restore 2% cooldown. Runtime preflight,
+  diagnostics, localization, source tests, and the talent ledger now report 11
+  operational and 7 guarded slots. Live gameplay validation remains required.
 - v0.7.0 gives Pusfume a deterministic six-row, 18-slot talent tree and stores
   its six selected columns in VMF data rather than translating talent backend
   calls to Ranger Veteran. The temporary-health row, Coward at Heart, Elusive

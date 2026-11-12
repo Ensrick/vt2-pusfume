@@ -767,10 +767,10 @@ Test-Condition ($preflightText -match 'add\(checks, "career kit"' -and `
 Test-Condition ($mainText -match 'registry\.set_talent_tree_index\(talents\.install\(\)\)' -and `
     $registryText -match 'career\.talent_tree_index\s*=\s*talent_tree_index' -and `
     ([regex]::Matches($talentsText, 'key\s*=\s*"[a-z0-9_]+"')).Count -eq 18 -and `
-    ([regex]::Matches($talentsText, 'guarded\s*=\s*true')).Count -eq 10 -and `
+    ([regex]::Matches($talentsText, 'guarded\s*=\s*true')).Count -eq 7 -and `
     $talentsText -match 'TalentIDLookup\[name\]\s*=\s*\{' -and `
     $talentsText -match 'hero_trees\[tree_index\]\s*=\s*tree') `
-    "Pusfume talent tree" "18 deterministic slots expose 8 operational and 10 guarded talents"
+    "Pusfume talent tree" "18 deterministic slots expose 11 operational and 7 guarded talents"
 Test-Condition ($talentsText -match 'SETTING_KEY\s*=\s*"pusfume_talent_columns"' -and `
     $talentsText -match 'mod:get\(SETTING_KEY\)' -and `
     $talentsText -match 'mod:set\(SETTING_KEY, sanitized\)' -and `
@@ -787,6 +787,25 @@ Test-Condition ($talentsText -match '"thp_tank"' -and `
     $talentsText -match '"tank_unbalance"' -and `
     $talentsText -match '"power_level_unbalance"') `
     "Pusfume operational talents" "stock temporary-health, health-chunk movement, dodge, and stagger contracts"
+Test-Condition ($talentsText -match 'pusfume_add_crafty_claws_stack' -and `
+    $talentsText -match 'max_sub_buff_stacks\s*=\s*10' -and `
+    $talentsText -match 'multiplier\s*=\s*-0\.01' -and `
+    $talentsText -match 'reference_buff\s*=\s*"pusfume_crafty_claws_gain"') `
+    "Crafty Claws" "Special kills add capped reload stacks and enemy damage removes one"
+Test-Condition ($talentsText -match 'pusfume_run_it_through_a_filter' -and `
+    $gameplayText -match 'aoe_poison_dot\s*=\s*true' -and `
+    $gameplayText -match 'Managers\.player\.is_server' -and `
+    $gameplayText -match 'poison_filter_next_heal\[owner_unit\]\s*=\s*t\s*\+\s*1' -and `
+    $gameplayText -match 'DamageUtils\.heal_network\(owner_unit, owner_unit, 3, "heal_from_proc"\)') `
+    "Run It Through a Filter" "host-authoritative poison packets restore at most 3 temporary health per second"
+Test-Condition ($talentsText -match 'pusfume_enhanced_cunning' -and `
+    $gameplayText -match 'PlayerUnitHealthExtension, "add_heal"' -and `
+    $gameplayText -match 'heal_type\s*==\s*"heal_from_proc"' -and `
+    $gameplayText -match 'get_max_health\(\)' -and `
+    $gameplayText -match 'current_health\(\)' -and `
+    $gameplayText -match 'reduce_owner_cooldown_percent\(owner_unit, 0\.02\)' -and `
+    $gameplayText -match 'rpc_reduce_activated_ability_cooldown_percent') `
+    "Enhanced Cunning" "server-side temporary overheal synchronizes two-percent cooldown reduction to the owner"
 Test-Condition ($gameplayText -match 'poison_damage_types' -and `
     $gameplayText -match 'skaven_poison_wind_globadier\s*=\s*true' -and `
     $gameplayText -match 'PlayerUnitHealthExtension, "add_damage"') `

@@ -28,7 +28,7 @@ class TalentContractTests(unittest.TestCase):
             self.assertIn(f"pusfume_talent_{key}_description", LOCALIZATION)
 
     def test_only_source_backed_rows_are_operational(self):
-        self.assertEqual(10, TALENTS.count("guarded = true"))
+        self.assertEqual(7, TALENTS.count("guarded = true"))
         self.assertIn('{ "thp_tank" }', TALENTS)
         self.assertIn('{ "thp_smiter" }', TALENTS)
         self.assertIn('{ "thp_linesman" }', TALENTS)
@@ -39,6 +39,13 @@ class TalentContractTests(unittest.TestCase):
         self.assertRegex(TALENTS, r'multiplier\s*=\s*1\.05')
         self.assertIn('{ "dodging", "distance_modifier" }', TALENTS)
         self.assertRegex(TALENTS, r'multiplier\s*=\s*1\.1')
+        self.assertIn('ProcFunctions.pusfume_add_crafty_claws_stack', TALENTS)
+        self.assertIn('breed.special', TALENTS)
+        self.assertRegex(TALENTS, r'max_sub_buff_stacks\s*=\s*10')
+        self.assertRegex(TALENTS, r'multiplier\s*=\s*-0\.01')
+        self.assertIn('reference_buff = "pusfume_crafty_claws_gain"', TALENTS)
+        self.assertIn('buffs = { "pusfume_run_it_through_a_filter" }', TALENTS)
+        self.assertIn('buffs = { "pusfume_enhanced_cunning" }', TALENTS)
 
     def test_runtime_registration_is_deterministic_and_reload_safe(self):
         self.assertIn("find_existing_tree", TALENTS)
@@ -60,8 +67,8 @@ class TalentContractTests(unittest.TestCase):
         self.assertIn("career.talent_tree_index = talent_tree_index", REGISTRY)
         self.assertIn('add(checks, "custom talent tree"', PREFLIGHT)
         self.assertIn("talent_status.talent_count == 18", PREFLIGHT)
-        self.assertIn("talent_status.operational_count == 8", PREFLIGHT)
-        self.assertIn("talent_status.guarded_count == 10", PREFLIGHT)
+        self.assertIn("talent_status.operational_count == 11", PREFLIGHT)
+        self.assertIn("talent_status.guarded_count == 7", PREFLIGHT)
 
 
 if __name__ == "__main__":

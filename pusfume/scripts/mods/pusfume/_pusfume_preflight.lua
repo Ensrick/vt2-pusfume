@@ -89,10 +89,10 @@ function M.collect(registry, career_index, backend, compat, ui, native, weapons,
     local talent_status = talents and talents.status()
     local custom_tree_ready = talent_status and career
         and talent_status.tree_index == career.talent_tree_index
-        and talent_status.talent_count == 18 and talent_status.operational_count == 8
-        and talent_status.guarded_count == 10
+        and talent_status.talent_count == 18 and talent_status.operational_count == 11
+        and talent_status.guarded_count == 7
     add(checks, "custom talent tree", custom_tree_ready and "PASS" or "FAIL",
-        custom_tree_ready and "18 unique slots: 8 operational, 10 explicitly guarded"
+        custom_tree_ready and "18 unique slots: 11 operational, 7 explicitly guarded"
             or "custom six-row talent registry is incomplete")
     local persisted_selection = talents and talents.get_selection()
     local persistence_ready = type(persisted_selection) == "table" and #persisted_selection == 6
@@ -187,6 +187,27 @@ function M.collect(registry, career_index, backend, compat, ui, native, weapons,
     add(checks, "career buff registry", custom_buffs_ready and "PASS" or "FAIL",
         custom_buffs_ready and "five v2 normalized templates have synchronized native lookup IDs"
             or "a custom template name or network lookup is missing")
+
+    local talent_buffs = {
+        "pusfume_crafty_claws_gain",
+        "pusfume_crafty_claws_stack",
+        "pusfume_crafty_claws_loss",
+        "pusfume_enhanced_cunning",
+        "pusfume_run_it_through_a_filter",
+    }
+    local talent_buffs_ready = type(ProcFunctions.pusfume_add_crafty_claws_stack) == "function"
+
+    for _, buff_name in ipairs(talent_buffs) do
+        local template = BuffTemplates and BuffTemplates[buff_name]
+
+        talent_buffs_ready = talent_buffs_ready and template and template.buffs
+            and template.buffs[1] and template.buffs[1].name == buff_name
+            and NetworkLookup and rawget(NetworkLookup.buff_templates, buff_name)
+    end
+
+    add(checks, "operational custom talents", talent_buffs_ready and "PASS" or "FAIL",
+        talent_buffs_ready and "Crafty Claws, Enhanced Cunning, and Filter contracts are registered"
+            or "an operational custom-talent runtime contract is unavailable")
 
     local scaredy_template = BuffTemplates and BuffTemplates.pusfume_scaredy_rat_listener
     local scaredy_perks = scaredy_template and scaredy_template.buffs[1].perks
