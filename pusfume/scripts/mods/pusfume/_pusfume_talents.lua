@@ -27,7 +27,11 @@ local rows = {
         { key = "enhanced_power", icon = "bardin_ranger_power_level_unbalance", buffs = { "power_level_unbalance" }, buffer = "server" },
     },
     {
-        { key = "opportunism", icon = "bardin_ranger_attack_speed", guarded = true },
+        {
+            key = "opportunism",
+            icon = "bardin_ranger_attack_speed",
+            buffs = { "pusfume_opportunism_listener" },
+        },
         {
             key = "enhanced_cunning",
             icon = "bardin_ranger_activated_ability_duration",
@@ -81,6 +85,12 @@ local function register_buff_template(name, definition)
 end
 
 local function register_runtime_buffs()
+    ProcFunctions.pusfume_consume_opportunism = function(owner_unit, buff, params, world, param_order)
+        local attack_type = params and param_order and params[param_order.buff_attack_type]
+
+        return attack_type == "light_attack" or attack_type == "heavy_attack"
+    end
+
     ProcFunctions.pusfume_add_crafty_claws_stack = function(owner_unit, buff, params)
         if not Unit.alive(owner_unit) then
             return
@@ -121,6 +131,21 @@ local function register_runtime_buffs()
         event = "on_damage_taken",
         max_stacks = 1,
         reference_buff = "pusfume_crafty_claws_gain",
+    })
+    register_buff_template("pusfume_opportunism_listener", {
+        buff_func = "add_buff",
+        buff_to_add = "pusfume_opportunism_armed",
+        event = "on_timed_block",
+        max_stacks = 1,
+    })
+    register_buff_template("pusfume_opportunism_armed", {
+        buff_func = "pusfume_consume_opportunism",
+        duration = 5,
+        event = "on_player_damage_dealt",
+        icon = "bardin_ranger_attack_speed",
+        max_stacks = 1,
+        refresh_durations = true,
+        remove_on_proc = true,
     })
     register_buff_template("pusfume_coward_at_heart", {
         buff_to_add = "pusfume_coward_at_heart_stack",

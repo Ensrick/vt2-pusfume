@@ -767,10 +767,18 @@ Test-Condition ($preflightText -match 'add\(checks, "career kit"' -and `
 Test-Condition ($mainText -match 'registry\.set_talent_tree_index\(talents\.install\(\)\)' -and `
     $registryText -match 'career\.talent_tree_index\s*=\s*talent_tree_index' -and `
     ([regex]::Matches($talentsText, 'key\s*=\s*"[a-z0-9_]+"')).Count -eq 18 -and `
-    ([regex]::Matches($talentsText, 'guarded\s*=\s*true')).Count -eq 7 -and `
+    ([regex]::Matches($talentsText, 'guarded\s*=\s*true')).Count -eq 6 -and `
     $talentsText -match 'TalentIDLookup\[name\]\s*=\s*\{' -and `
     $talentsText -match 'hero_trees\[tree_index\]\s*=\s*tree') `
-    "Pusfume talent tree" "18 deterministic slots expose 11 operational and 7 guarded talents"
+    "Pusfume talent tree" "18 deterministic slots expose 12 operational and 6 guarded talents"
+Test-Condition ($talentsText -match 'event\s*=\s*"on_timed_block"' -and `
+    $talentsText -match 'buff_to_add\s*=\s*"pusfume_opportunism_armed"' -and `
+    $talentsText -match 'duration\s*=\s*5' -and `
+    $talentsText -match 'remove_on_proc\s*=\s*true' -and `
+    $gameplayText -match 'mod:hook\(BuffExtension,\s*"trigger_procs"' -and `
+    $gameplayText -match 'opportunism_proc_depth\[owner_unit\]' -and `
+    $gameplayText -match 'heal_amount\s*=\s*heal_amount\s*\*\s*2') `
+    "Opportunism talent" "native timed block arms one frame-scoped melee THP multiplier"
 Test-Condition ($talentsText -match 'SETTING_KEY\s*=\s*"pusfume_talent_columns"' -and `
     $talentsText -match 'mod:get\(SETTING_KEY\)' -and `
     $talentsText -match 'mod:set\(SETTING_KEY, sanitized\)' -and `

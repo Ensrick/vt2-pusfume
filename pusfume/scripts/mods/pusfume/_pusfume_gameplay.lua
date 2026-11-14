@@ -28,6 +28,8 @@ local poison_damage_sources = {
     skaven_poison_wind_globadier = true,
 }
 local poison_filter_next_heal = setmetatable({}, { __mode = "k" })
+local opportunism_active_time = setmetatable({}, { __mode = "k" })
+local opportunism_proc_depth = setmetatable({}, { __mode = "k" })
 local state = {
     augmentation_activations = 0,
     augmentation_armed = false,
@@ -36,6 +38,8 @@ local state = {
     iteration_effect = nil,
     iteration_procs = 0,
     iteration_special = nil,
+    opportunism_activations = 0,
+    opportunism_bonus_health = 0,
     poison_blocks = 0,
     poison_filter_heals = 0,
     scaredy_rat_procs = 0,
@@ -104,6 +108,31 @@ local function is_pusfume_unit(unit)
     local career_extension = ScriptUnit.has_extension(unit, "career_system")
 
     return career_extension and career_extension:career_name() == CAREER_NAME
+end
+
+local function current_game_time()
+    local time_manager = Managers.time
+
+    return time_manager and time_manager:time("game")
+end
+
+local function is_melee_opportunism_event(event, ...)
+    local attack_type
+
+    if event == "on_player_damage_dealt" then
+        attack_type = select(6, ...)
+    elseif event == "on_stagger" then
+        local damage_profile = select(2, ...)
+
+        attack_type = damage_profile and damage_profile.charge_value
+    elseif event == "on_kill" then
+        local killing_blow = select(1, ...)
+
+        attack_type = killing_blow and DamageDataIndex
+            and killing_blow[DamageDataIndex.ATTACK_TYPE]
+    end
+
+    return attack_type == "light_attack" or attack_type == "heavy_attack"
 end
 
 local function append_lookup(lookup, name)
@@ -308,6 +337,39 @@ end
 
 
 local function install_damage_traits()
+    mod:hook(BuffExtension, "trigger_procs", function(func, buff_extension, event, ...)
+        local owner_unit = buff_extension._unit
+        local server = Managers.player and Managers.player.is_server
+        local melee_event = server and is_pusfume_unit(owner_unit)
+            and is_melee_opportunism_event(event, ...)
+
+        if not melee_event then
+            return func(buff_extension, event, ...)
+        end
+
+        local t = current_game_time()
+        local armed = buff_extension:has_buff_type("pusfume_opportunism_armed")
+
+        if armed and t and opportunism_active_time[owner_unit] ~= t then
+            opportunism_active_time[owner_unit] = t
+            state.opportunism_activations = state.opportunism_activations + 1
+        end
+
+        local active = t and opportunism_active_time[owner_unit] == t
+
+        if active then
+            opportunism_proc_depth[owner_unit] = (opportunism_proc_depth[owner_unit] or 0) + 1
+        end
+
+        func(buff_extension, event, ...)
+
+        if active then
+            local depth = opportunism_proc_depth[owner_unit] - 1
+
+            opportunism_proc_depth[owner_unit] = depth > 0 and depth or nil
+        end
+    end)
+
     mod:hook(PlayerUnitHealthExtension, "add_damage", function(func, health_extension, attacker_unit,
             damage_amount, hit_zone_name, damage_type, hit_position, damage_direction, damage_source_name,
             hit_ragdoll_actor, source_attacker_unit, hit_react_type, is_critical_strike, added_dot, first_hit,
@@ -352,6 +414,15 @@ local function install_damage_traits()
     mod:hook(PlayerUnitHealthExtension, "add_heal", function(func, health_extension, healer_unit,
             heal_amount, heal_source_name, heal_type)
         local owner_unit = health_extension.unit
+        local opportunism_bonus = health_extension.is_server and healer_unit == owner_unit
+            and heal_type == "heal_from_proc" and type(heal_amount) == "number"
+            and opportunism_proc_depth[owner_unit] and opportunism_proc_depth[owner_unit] > 0
+
+        if opportunism_bonus then
+            state.opportunism_bonus_health = state.opportunism_bonus_health + heal_amount
+            heal_amount = heal_amount * 2
+        end
+
         local buff_extension = health_extension.is_server and is_pusfume_unit(owner_unit)
             and ScriptUnit.has_extension(owner_unit, "buff_system")
         local enhanced_cunning = heal_type == "heal_from_proc" and type(heal_amount) == "number"
@@ -382,8 +453,8 @@ function M.install()
 
     mod:command("pusfume_gameplay", "Show Pusfume career-kit diagnostics.", function()
         mod:echo(string.format(
-            "Pusfume gameplay: poison_blocks=%d poison_filter_heals=%d enhanced_cunning_procs=%d scaredy_rat_procs=%d iteration_procs=%d iteration_special=%s iteration_effect=%s augmentation_activations=%d augmentation_armed=%s payloads=guarded",
-            state.poison_blocks, state.poison_filter_heals, state.enhanced_cunning_procs, state.scaredy_rat_procs, state.iteration_procs, tostring(state.iteration_special),
+            "Pusfume gameplay: poison_blocks=%d poison_filter_heals=%d enhanced_cunning_procs=%d opportunism_activations=%d opportunism_bonus_health=%.2f scaredy_rat_procs=%d iteration_procs=%d iteration_special=%s iteration_effect=%s augmentation_activations=%d augmentation_armed=%s payloads=guarded",
+            state.poison_blocks, state.poison_filter_heals, state.enhanced_cunning_procs, state.opportunism_activations, state.opportunism_bonus_health, state.scaredy_rat_procs, state.iteration_procs, tostring(state.iteration_special),
             tostring(state.iteration_effect), state.augmentation_activations, tostring(state.augmentation_armed)))
     end)
 end

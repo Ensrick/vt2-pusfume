@@ -6,8 +6,8 @@ Steam Workshop development item: [Pusfume - Custom Career Prototype](https://ste
 
 The current milestone registers **Pusfume** as Bardin's fifth career. Pusfume
 now owns a persistent six-row talent tree and no longer writes talent choices
-through Ranger Veteran's PlayFab data. Eleven source-backed talent slots are
-operational; seven complex effects are visibly guarded prototypes. Pusfume also
+through Ranger Veteran's PlayFab data. Twelve source-backed talent slots are
+operational; six complex effects are visibly guarded prototypes. Pusfume also
 owns fixed prototype Packmaster-hook and Warpfire-Thrower items, his v2 identity, Aggressive Iteration
 special-kill capture, Moulder Ingenuity consumable-augmentation state, and
 three career perks. A full-size Pusfume card is placed one virtual UI row above Saltzpyre
@@ -23,7 +23,7 @@ and reproduction steps are recorded in
 
 ## Current development status
 
-The next friends-only live-test candidate is **v0.7.1-dev**. It retains the
+The next friends-only live-test candidate is **v0.7.2-dev**. It retains the
 weapon-aware dual first-person system using Janfon's assets: prototype Versus
 weapons use his 99-bone Skaven attachment, while ordinary hero weapons use his
 160-bone donor-rest human attachment.
@@ -257,8 +257,8 @@ cooldown, but it does not yet transform inventory. Aggressive Iteration records
 the killed Special and displays its ready state, while its ranged-shot payloads
 remain guarded. The custom talent tree now exposes all 18 specified slots with
 Pusfume-owned persistence. The three temporary-health choices, Crafty Claws,
-Coward at Heart, Elusive Nature, the three stagger choices, Enhanced Cunning,
-and Run It Through a Filter are operational; the seven remaining complex
+Coward at Heart, Elusive Nature, the three stagger choices, Opportunism,
+Enhanced Cunning, and Run It Through a Filter are operational; the six remaining complex
 effects are labeled and guarded until their network contracts are safe.
 Consumable assets and animation coverage beyond idle/walk remain deferred.
 

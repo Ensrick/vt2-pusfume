@@ -28,7 +28,7 @@ class TalentContractTests(unittest.TestCase):
             self.assertIn(f"pusfume_talent_{key}_description", LOCALIZATION)
 
     def test_only_source_backed_rows_are_operational(self):
-        self.assertEqual(7, TALENTS.count("guarded = true"))
+        self.assertEqual(6, TALENTS.count("guarded = true"))
         self.assertIn('{ "thp_tank" }', TALENTS)
         self.assertIn('{ "thp_smiter" }', TALENTS)
         self.assertIn('{ "thp_linesman" }', TALENTS)
@@ -46,6 +46,18 @@ class TalentContractTests(unittest.TestCase):
         self.assertIn('reference_buff = "pusfume_crafty_claws_gain"', TALENTS)
         self.assertIn('buffs = { "pusfume_run_it_through_a_filter" }', TALENTS)
         self.assertIn('buffs = { "pusfume_enhanced_cunning" }', TALENTS)
+        self.assertIn('buffs = { "pusfume_opportunism_listener" }', TALENTS)
+
+    def test_opportunism_uses_native_timed_block_and_consume_contracts(self):
+        self.assertIn('event = "on_timed_block"', TALENTS)
+        self.assertIn('buff_func = "add_buff"', TALENTS)
+        self.assertIn('buff_to_add = "pusfume_opportunism_armed"', TALENTS)
+        self.assertRegex(TALENTS, r'duration\s*=\s*5')
+        self.assertIn('event = "on_player_damage_dealt"', TALENTS)
+        self.assertIn('remove_on_proc = true', TALENTS)
+        self.assertIn('params[param_order.buff_attack_type]', TALENTS)
+        self.assertIn('attack_type == "light_attack"', TALENTS)
+        self.assertIn('attack_type == "heavy_attack"', TALENTS)
 
     def test_runtime_registration_is_deterministic_and_reload_safe(self):
         self.assertIn("find_existing_tree", TALENTS)
@@ -67,8 +79,9 @@ class TalentContractTests(unittest.TestCase):
         self.assertIn("career.talent_tree_index = talent_tree_index", REGISTRY)
         self.assertIn('add(checks, "custom talent tree"', PREFLIGHT)
         self.assertIn("talent_status.talent_count == 18", PREFLIGHT)
-        self.assertIn("talent_status.operational_count == 11", PREFLIGHT)
-        self.assertIn("talent_status.guarded_count == 7", PREFLIGHT)
+        self.assertIn("talent_status.operational_count == 12", PREFLIGHT)
+        self.assertIn("talent_status.guarded_count == 6", PREFLIGHT)
+        self.assertIn('add(checks, "Opportunism proc"', PREFLIGHT)
 
 
 if __name__ == "__main__":
