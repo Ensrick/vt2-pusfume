@@ -89,11 +89,17 @@ function M.collect(registry, career_index, backend, compat, ui, native, weapons,
     local talent_status = talents and talents.status()
     local custom_tree_ready = talent_status and career
         and talent_status.tree_index == career.talent_tree_index
-        and talent_status.talent_count == 18 and talent_status.operational_count == 11
-        and talent_status.guarded_count == 7
+        and talent_status.talent_count == 18 and talent_status.operational_count == 12
+        and talent_status.guarded_count == 6
     add(checks, "custom talent tree", custom_tree_ready and "PASS" or "FAIL",
-        custom_tree_ready and "18 unique slots: 11 operational, 7 explicitly guarded"
+        custom_tree_ready and "18 unique slots: 12 operational, 6 explicitly guarded"
             or "custom six-row talent registry is incomplete")
+    local opportunism_ready = BuffTemplates and BuffTemplates.pusfume_opportunism_listener
+        and BuffTemplates.pusfume_opportunism_armed
+        and ProcFunctions and type(ProcFunctions.pusfume_consume_opportunism) == "function"
+    add(checks, "Opportunism proc", opportunism_ready and "PASS" or "FAIL",
+        opportunism_ready and "timed block arms a five-second, consume-on-melee THP bonus"
+            or "Opportunism runtime buff contract is incomplete")
     local persisted_selection = talents and talents.get_selection()
     local persistence_ready = type(persisted_selection) == "table" and #persisted_selection == 6
     add(checks, "talent persistence", persistence_ready and "PASS" or "FAIL",

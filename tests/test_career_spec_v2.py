@@ -64,8 +64,22 @@ class CareerSpecV2Tests(unittest.TestCase):
 
     def test_v2_talent_tree_is_registered_with_guarded_boundaries(self):
         self.assertEqual(18, len(re.findall(r'key\s*=\s*"[a-z0-9_]+"', TALENTS)))
-        self.assertEqual(7, TALENTS.count("guarded = true"))
+        self.assertEqual(6, TALENTS.count("guarded = true"))
         self.assertIn('SETTING_KEY = "pusfume_talent_columns"', TALENTS)
+
+    def test_opportunism_doubles_only_melee_proc_health_for_the_armed_strike(self):
+        self.assertIn('mod:hook(BuffExtension, "trigger_procs"', GAMEPLAY)
+        self.assertIn('event == "on_player_damage_dealt"', GAMEPLAY)
+        self.assertIn('event == "on_stagger"', GAMEPLAY)
+        self.assertIn('event == "on_kill"', GAMEPLAY)
+        self.assertIn('select(6, ...)', GAMEPLAY)
+        self.assertIn('damage_profile and damage_profile.charge_value', GAMEPLAY)
+        self.assertIn('killing_blow[DamageDataIndex.ATTACK_TYPE]', GAMEPLAY)
+        self.assertIn('opportunism_active_time[owner_unit] == t', GAMEPLAY)
+        self.assertIn('opportunism_proc_depth[owner_unit]', GAMEPLAY)
+        self.assertIn('healer_unit == owner_unit', GAMEPLAY)
+        self.assertIn('heal_type == "heal_from_proc"', GAMEPLAY)
+        self.assertIn('heal_amount = heal_amount * 2', GAMEPLAY)
 
     def test_poison_filter_heals_are_host_authoritative_and_throttled(self):
         self.assertIn('has_buff_type("pusfume_run_it_through_a_filter")', GAMEPLAY)

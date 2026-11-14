@@ -91,9 +91,9 @@ return {
     pusfume_talent_enhanced_power_description = {
         en = "Increases total power level by 7.5%.",
     },
-    pusfume_talent_opportunism_name = { en = "Opportunism (Guarded Prototype)" },
+    pusfume_talent_opportunism_name = { en = "Opportunism" },
     pusfume_talent_opportunism_description = {
-        en = "Designed so a timed block makes the next melee strike grant 100% more temporary health for 5 seconds. The consume-on-hit effect is guarded pending combat-proc validation.",
+        en = "A timed block causes your next melee strike within 5 seconds to grant 100% more temporary health.",
     },
     pusfume_talent_enhanced_cunning_name = { en = "Enhanced Cunning" },
     pusfume_talent_enhanced_cunning_description = {

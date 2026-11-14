@@ -10,6 +10,15 @@ request rather than in release notes.
 
 ## [Unreleased]
 
+- v0.7.2 implements Opportunism without changing native assets. VT2's native
+  `on_timed_block` proc arms a synchronized five-second marker, and the first
+  light or heavy attack consumes it. A server-only, frame-scoped dispatch
+  guard covers the damage, stagger, and kill event paths used by all three
+  temporary-health talents, while the existing health hook doubles only
+  self-generated `heal_from_proc` health during that strike. The implementation
+  follows `buff_extension.lua:1303`, `damage_utils.lua:1944/3650`, and
+  `buff_templates.lua:567/651/681`; source tests and preflight now report 12
+  operational and 6 guarded slots. Live gameplay validation remains required.
 - v0.7.1 implements three previously guarded talents without changing native
   assets. Crafty Claws uses a Special-only, ten-stack reload-speed listener and
   Fatshark's reference-stack damage removal contract. Run It Through a Filter
